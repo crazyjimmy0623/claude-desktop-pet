@@ -7,7 +7,7 @@ function runDemo(send) {
   const B = `demo-b-${tag}`;
   const C = `demo-c-${tag}`;
   const a = { session_id: A, cwd: ROOT + 'my-platformer' };
-  const b = { session_id: B, cwd: ROOT + 'claude-desktop-pet' };
+  const b = { session_id: B, cwd: ROOT + 'deskmates' };
   const c = { session_id: C, cwd: ROOT + 'web-api' };
   const tool = (base, name, input) => ({ ...base, tool_name: name, tool_input: input });
 

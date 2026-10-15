@@ -5,7 +5,7 @@ const { summarize } = require('./summarize');
 const { buildTrayIcon } = require('./tray-icon');
 const { runDemo } = require('./demo');
 
-const PORT = Number(process.env.CLAUDE_PET_PORT) || 47321;
+const PORT = Number(process.env.DESKMATES_PORT) || 47321;
 const STRIP_HEIGHT = 260;
 const MAX_BODY = 20 * 1024 * 1024;
 
@@ -103,7 +103,7 @@ function loginItemOptions() {
 function buildTrayMenu() {
   const autoStart = app.getLoginItemSettings(loginItemOptions()).openAtLogin;
   return Menu.buildFromTemplate([
-    { label: `Claude 桌寵 — ${knightCount} 位騎士上工中`, enabled: false },
+    { label: `Deskmates — ${knightCount} 位夥伴上工中`, enabled: false },
     { type: 'separator' },
     {
       label: win?.isVisible() ? '隱藏' : '顯示',
@@ -126,7 +126,7 @@ function buildTrayMenu() {
 
 function createTray() {
   tray = new Tray(buildTrayIcon());
-  tray.setToolTip('Claude 桌寵');
+  tray.setToolTip('Deskmates');
   const popup = () => tray.popUpContextMenu(buildTrayMenu());
   tray.on('click', popup);
   tray.on('right-click', popup);

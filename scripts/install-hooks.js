@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Adds (or with --uninstall removes) the desktop-pet http hooks in ~/.claude/settings.json.
+// Adds (or with --uninstall removes) the Deskmates http hooks in ~/.claude/settings.json.
 // Existing hooks are left untouched; our entries are recognised by their URL.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const PORT = Number(process.env.CLAUDE_PET_PORT) || 47321;
+const PORT = Number(process.env.DESKMATES_PORT) || 47321;
 const URL = `http://127.0.0.1:${PORT}/event`;
 const EVENTS = [
   'SessionStart', 'SessionEnd', 'UserPromptSubmit',
@@ -31,8 +31,8 @@ for (const event of EVENTS) {
 }
 if (!Object.keys(settings.hooks).length) delete settings.hooks;
 
-const backup = `${settingsPath}.bak-pet`;
+const backup = `${settingsPath}.bak-deskmates`;
 if (!fs.existsSync(backup)) fs.writeFileSync(backup, raw);
 fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
-console.log(`${uninstall ? 'Removed' : 'Installed'} desktop-pet hooks for ${EVENTS.length} events in ${settingsPath}`);
+console.log(`${uninstall ? 'Removed' : 'Installed'} Deskmates hooks for ${EVENTS.length} events in ${settingsPath}`);
 console.log(`Original settings backed up at ${backup}`);

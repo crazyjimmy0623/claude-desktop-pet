@@ -1,8 +1,9 @@
 {
-  "name": "claude-desktop-pet",
+  "name": "deskmates",
+  "productName": "Deskmates",
   "version": "0.1.0",
   "private": true,
-  "description": "Pixel knights on your desktop that act out what your Claude Code sessions are doing.",
+  "description": "Tiny pixel deskmates that work beside you and act out what your Claude Code sessions are doing.",
   "license": "MIT",
   "main": "src/main.js",
   "scripts": {
