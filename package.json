@@ -1,0 +1,17 @@
+{
+  "name": "claude-desktop-pet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pixel knights on your desktop that act out what your Claude Code sessions are doing.",
+  "license": "MIT",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "demo": "electron . --demo",
+    "install-hooks": "node scripts/install-hooks.js",
+    "uninstall-hooks": "node scripts/install-hooks.js --uninstall"
+  },
+  "devDependencies": {
+    "electron": "^44.7.2"
+  }
+}
