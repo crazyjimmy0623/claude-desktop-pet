@@ -1,4 +1,4 @@
-// Isometric room: a little tower of cut-away floors joined by a fire escape, with furniture
+// Isometric room: a street-corner diorama of cut-away layers joined by stairs, with furniture
 // drawn pixel by pixel in 2:1 isometric. Loaded by renderers (<script>, exposes window.Iso) and Node.
 //
 // World units: a floor tile is 16x16 units, z is height in the same units. Screen (fine pixels):
@@ -10,13 +10,8 @@
   else root.Iso = factory(root.Sprites);
 })(typeof self !== 'undefined' ? self : this, (Sprites) => {
   const TU = 16; // world units per tile
-  // Each floor is one tile smaller than the one below and sits in its back corner, so every floor
-  // shows in full: a floor's depth on screen never exceeds the floor-to-floor height.
-  const N = 6;
-  const WALL_H = 72;
-  const SLAB = 8;
-  const LEVEL = WALL_H + SLAB;
-  const STEP = 20; // the steepest stair step
+  const WALL_H = 64; // the height wall patterns are painted for
+  const SLAB = 8; // thickness of the ground plate
   const { shade } = Sprites;
 
   // ---- Colour steps -------------------------------------------------------------
@@ -216,6 +211,14 @@
     neon: { base: '#2a1f3d', draw: (P, x, y, z) => {
       P.top(x * TU, y * TU, TU, TU, (x + y) % 2 ? '#2a1f3d' : '#33264a', z);
       P.top(x * TU, y * TU, TU, 1, '#ff3ea5', z);
+    } },
+    terra: { base: '#b35f3c', draw: (P, x, y, z) => { // terracotta, four small tiles per tile
+      P.top(x * TU, y * TU, TU, TU, (x + y) % 2 ? '#b35f3c' : '#a9583a', z);
+      P.top(x * TU, y * TU, TU, 1, '#86432c', z);
+      P.top(x * TU, y * TU, 1, TU, '#86432c', z);
+      P.top(x * TU, y * TU + 8, TU, 1, '#97502f', z);
+      P.top(x * TU + 8, y * TU, 1, TU, '#97502f', z);
+      if ((x * 5 + y * 3) % 4 === 0) P.top(x * TU + 2, y * TU + 2, 3, 1, '#c87452', z);
     } },
     grass: { base: '#5f9a4e', draw: (P, x, y, z) => {
       P.top(x * TU, y * TU, TU, TU, (x * 3 + y) % 4 ? '#5f9a4e' : '#6aa857', z);
@@ -509,6 +512,48 @@
       P.dot(6, 8, 20 + (s.frame % 3), '#e0ffff', 1, 1);
       P.glow(8, 8, 18, 18, 'rgba(54,249,255,0.4)');
     } },
+    bin: { w: 1, d: 1, h: 20, draw: (P) => {
+      P.box(3, 4, 0, 10, 9, 14, '#5a6273');
+      P.box(2, 3, 14, 12, 11, 2, '#6c7588');
+      for (let u = 5; u < 12; u += 3) P.left(u, 2, 1, 10, '#4a5161', 13);
+      P.box(9, 6, 16, 4, 3, 3, '#e8e4d8');
+    } },
+    // Wall-mounted: mount height z, drawn on the plane y = 0; `top` is the highest point drawn.
+    fridge: { w: 2, d: 0, h: 60, top: 58, wall: true, z: 0, draw: (P, s) => {
+      P.box(1, 0, 0, 30, 6, 56, '#2a3044', false);
+      P.top(1, 0, 30, 6, '#3a4258', 56);
+      for (const u of [3, 17]) {
+        P.left(u, 4, 12, 48, '#bfefff', 6);
+        P.left(u + 1, 5, 10, 46, '#7fd6ff', 6);
+        for (let v = 14; v < 50; v += 12) {
+          P.left(u + 1, v, 10, 1, '#e6fbff', 6);
+          for (let i = 0; i < 4; i++) P.left(u + 2 + i * 2.5, v + 1, 1, 4 + ((i + v) % 3), ['#3a9bd9', '#ffffff', '#ff8fb1', '#ffd65a'][(i + v) % 4], 6);
+        }
+        P.left(u + 10, 26, 1, 6, '#e6fbff', 6.5);
+      }
+      P.left(1, 52, 30, 4, '#1c2030', 6);
+      P.left(4, 53, 10, 2, s.frame % 6 ? '*#36f9ff' : '#2a4a55', 6.5);
+      P.glow(16, 8, 28, 30, 'rgba(110,200,255,0.4)');
+    } },
+    shopdoor: { w: 1, d: 0, h: 40, top: 34, wall: true, z: 0, draw: (P, s) => {
+      P.left(1, 0, 14, 30, '#3a2a24', 0.5);
+      P.left(3, 0, 10, 27, '#5a3a2c', 1);
+      P.left(4, 12, 8, 12, '#ffd9a0', 1.5);
+      P.left(4, 18, 8, 1, '#5a3a2c', 2);
+      P.left(11, 10, 1, 2, '#e8b13a', 2);
+      P.left(2, 30, 12, 4, '#1c1a20', 1);
+      P.left(3, 31, 10, 2, s.hour >= 18 || s.hour < 6 ? '*#ff6b5a' : '#7a3a34', 1.5);
+      P.glow(8, 2, 18, 12, 'rgba(255,200,120,0.3)');
+    } },
+    sign: { w: 1, d: 0, h: 40, top: 34, wall: true, z: 20, draw: (P, s) => {
+      P.left(1, 20, 14, 13, '#e8e4d8', 1);
+      P.left(2, 21, 12, 11, '#c2453f', 1.5);
+      P.left(4, 29, 8, 1, '#ffe9b0', 2);
+      P.left(4, 26, 3, 2, '#ffe9b0', 2);
+      P.left(9, 26, 3, 2, '#ffe9b0', 2);
+      P.left(4, 23, 8, 1, '#ffe9b0', 2);
+      if (s.hour >= 18 || s.hour < 6) P.glow(8, 2, 26, 12, 'rgba(255,90,80,0.35)');
+    } },
     // Wall-mounted: mount height z, drawn on the plane y = 0.
     screens: { w: 2, d: 0, h: 60, wall: true, z: 40, draw: (P, s) => {
       const cols = ['*#36f9ff', '*#7cff8c', '*#ff3ea5'];
@@ -582,57 +627,98 @@
   };
 
   // ---- Room model -----------------------------------------------------------------
-  // A stepped tower: floor f is (n - f) tiles square, stacked LEVEL apart in the back corner.
-  // The flights zig-zag up the right side like a fire escape: toward the front, then back.
+  // A street-corner diorama in three layers: the street out front, the shop raised on a brick
+  // base behind it, and a roof terrace on top of the block in the shop's front-left corner.
+  // Each area is a set of rects at one height; stairs are explicit flights between areas.
+  //   [x, y, w, d] in tiles. Walls: [plane, at, from, to, height] - plane 'y' runs along x at
+  //   y = at (face toward +y), plane 'x' runs along y at x = at (face toward +x). `facade` walls
+  //   are the side of a raised base: wall items can hang there, but no wall is drawn.
+  const LAYOUTS = {
+    shop: {
+      areas: [
+        { name: '街道', z: 0, rects: [[0, 6, 7, 2]], walls: [['y', 6, 0, 2, 100, 'facade'], ['y', 6, 2, 7, 36, 'facade']] },
+        { name: '店內', z: 36, rects: [[0, 0, 2, 3], [2, 0, 5, 6], [7, 1, 2, 3]], walls: [['x', 0, 0, 3, 64], ['y', 0, 0, 7, 64], ['x', 2, 3, 6, 64, 'facade']] },
+        { name: '露台', z: 100, rects: [[0, 3, 2, 3]], walls: [], rails: true },
+      ],
+      flights: [
+        // From the street up the front of the shop, climbing toward +x.
+        { from: 0, to: 1, style: 'solid', cells: [[2, 6], [3, 6], [4, 6]], bottom: [1, 6], top: [4, 5] },
+        // Inside, up the back-left corner onto the terrace.
+        { from: 1, to: 2, style: 'open', cells: [[1, 0], [1, 1], [1, 2]], bottom: [2, 0], top: [1, 3] },
+      ],
+      door: [6, 7],
+    },
+  };
+  const layoutOf = (room) => LAYOUTS[room.layout] || LAYOUTS.shop;
 
   const THEMES = {
-    cyber: { name: '賽博塔樓', floors: [['cyber', 'cyber'], ['synth', 'neon'], ['navy', 'carpet']] },
-    cozy: { name: '溫馨小屋', floors: [['brick', 'stone'], ['plum', 'wood'], ['cream', 'tile']] },
-    cafe: { name: '午後咖啡', floors: [['cream', 'tile'], ['mint', 'wood'], ['plum', 'carpet']] },
+    shop: { name: '街角小店', floors: [['brick', 'stone'], ['brick', 'terra'], ['navy', 'stone']] },
+    cyber: { name: '賽博街角', floors: [['navy', 'stone'], ['cyber', 'cyber'], ['synth', 'neon']] },
+    cozy: { name: '溫馨小屋', floors: [['brick', 'grass'], ['cream', 'wood'], ['plum', 'tile']] },
   };
-  const FLOOR_NAMES = ['一樓', '二樓', '三樓'];
+  const FLOOR_NAMES = LAYOUTS.shop.areas.map((a) => a.name);
 
-  const floorZ = (f) => f * LEVEL;
-  const levels = (room) => room.floors.length;
-  const sideOf = (room, f) => room.n - f;
-  // The stair cells of flight f (from floor f to f + 1), bottom step first.
-  function flight(room, f) {
-    const len = sideOf(room, f + 1);
-    const rise = LEVEL / len;
-    return Array.from({ length: len }, (_, k) => ({
-      x: len, y: f % 2 ? len - 1 - k : k, z: floorZ(f) + rise * (k + 1), rise, dir: 0,
-    }));
-  }
+  const levels = (room) => layoutOf(room).areas.length;
+  const floorZ = (room, f) => layoutOf(room).areas[f]?.z || 0;
+  const inRect = (r, x, y) => x >= r[0] && x < r[0] + r[2] && y >= r[1] && y < r[1] + r[3];
 
-  // Every place a character can stand: floors, the porch and each step of the fire escape.
+  // Every place a character can stand: area tiles and each step of every flight.
   function cells(room) {
     if (room._cells) return room._cells;
-    const n = room.n;
+    const L = layoutOf(room);
     const list = [];
-    const add = (x, y, z, f, kind) => list.push({ id: list.length, x, y, z, f, kind });
-    void n;
-    const under = new Set();
-    for (let f = 0; f + 1 < levels(room); f++) {
-      for (const st of flight(room, f)) {
-        under.add(`${f}:${st.x},${st.y}`);
-        list.push({ id: list.length, x: st.x, y: st.y, z: st.z, f, kind: 'stair', rise: st.rise, dir: st.dir });
-      }
-    }
-    for (let f = 0; f < levels(room); f++) {
-      const side = sideOf(room, f);
-      for (let y = 0; y < side; y++) for (let x = 0; x < side; x++) if (!under.has(`${f}:${x},${y}`)) add(x, y, floorZ(f), f, 'floor');
-    }
     const at = new Map();
-    for (const c of list) {
+    const add = (c) => {
+      c.id = list.length;
+      list.push(c);
       const key = `${c.x},${c.y}`;
       if (!at.has(key)) at.set(key, []);
       at.get(key).push(c);
+      return c;
+    };
+    const stairTiles = new Set();
+    for (const fl of L.flights) for (const [x, y] of fl.cells) stairTiles.add(`${fl.from}:${x},${y}`);
+    L.areas.forEach((a, f) => {
+      for (const r of a.rects) {
+        for (let y = r[1]; y < r[1] + r[3]; y++) for (let x = r[0]; x < r[0] + r[2]; x++) {
+          if (!stairTiles.has(`${f}:${x},${y}`)) add({ x, y, z: a.z, f, kind: 'floor' });
+        }
+      }
+    });
+    const floorAt = (x, y, f) => (at.get(`${x},${y}`) || []).find((c) => c.kind === 'floor' && c.f === f);
+    const links = new Map();
+    const link = (a, b) => {
+      if (!a || !b) return;
+      if (!links.has(a.id)) links.set(a.id, []);
+      if (!links.has(b.id)) links.set(b.id, []);
+      links.get(a.id).push(b);
+      links.get(b.id).push(a);
+    };
+    for (const c of [...list]) {
+      link(c, floorAt(c.x + 1, c.y, c.f));
+      link(c, floorAt(c.x, c.y + 1, c.f));
     }
-    Object.defineProperty(room, '_cells', { value: { list, at }, enumerable: false, configurable: true });
+    for (const fl of L.flights) {
+      const z0 = L.areas[fl.from].z;
+      const z1 = L.areas[fl.to].z;
+      const rise = (z1 - z0) / (fl.cells.length + 1);
+      let prev = floorAt(fl.bottom[0], fl.bottom[1], fl.from);
+      // Treads face the way the flight climbs.
+      const dir = fl.cells[1][0] !== fl.cells[0][0] ? 'x' : 'y';
+      fl.cells.forEach(([x, y], k) => {
+        const c = add({ x, y, z: z0 + rise * (k + 1), f: fl.from, kind: 'stair', rise, dir, style: fl.style, base: z0 });
+        link(prev, c);
+        prev = c;
+      });
+      link(prev, floorAt(fl.top[0], fl.top[1], fl.to));
+    }
+    Object.defineProperty(room, '_cells', { value: { list, at, links }, enumerable: false, configurable: true });
     return room._cells;
   }
   const resetCells = (room) => { delete room._cells; };
   const cellAt = (room, x, y, f) => (cells(room).at.get(`${x},${y}`) || []).find((c) => c.kind === 'floor' && c.f === f) || null;
+  const neighbours = (room, c) => cells(room).links.get(c.id) || [];
+  const door = (room) => cellAt(room, layoutOf(room).door[0], layoutOf(room).door[1], 0);
 
   // Footprint in tiles, after flipping onto the left wall.
   function footprint(o) {
@@ -641,17 +727,27 @@
     return o.flip ? { x: o.x, y: o.y, w: def.d, d: def.w } : { x: o.x, y: o.y, w: def.w, d: def.d };
   }
 
+  // The wall of area f that holds a wall item at (x, y): flipped items hang on 'x' walls.
+  function wallFor(room, f, x, y, flip, w) {
+    const a = layoutOf(room).areas[f];
+    if (!a) return null;
+    return a.walls.find(([plane, at, from, to]) => (flip
+      ? plane === 'x' && at === x && y >= from && y + w <= to
+      : plane === 'y' && at === y && x >= from && x + w <= to)) || null;
+  }
+
   function canPlace(room, type, x, y, flip, f, ignoreIndex = -1) {
     const def = OBJECTS[type];
     if (!def) return false;
     const fp = footprint({ type, x, y, flip });
     if (def.wall) {
+      const wall = wallFor(room, f, x, y, flip, def.w);
+      if (!wall || (def.top || 60) > wall[4]) return false;
       const along = flip ? y : x;
-      if (flip ? x !== 0 : y !== 0) return false;
-      if (along < 0 || along + def.w > sideOf(room, f)) return false;
       return room.objects.every((o, i) => {
         const od = OBJECTS[o.type];
         if (i === ignoreIndex || !od?.wall || !!o.flip !== !!flip || (o.f || 0) !== f) return true;
+        if ((flip ? o.x : o.y) !== (flip ? x : y)) return true;
         const oa = o.flip ? o.y : o.x;
         return along + def.w <= oa || oa + od.w <= along;
       });
@@ -680,17 +776,6 @@
     return new Set(cells(room).list.filter((c) => !blocked.has(c.id)).map((c) => c.id));
   }
 
-  // Neighbouring cells connect when they are side by side and at most one step apart in height.
-  function neighbours(room, c) {
-    const out = [];
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      for (const o of cells(room).at.get(`${c.x + dx},${c.y + dy}`) || []) if (Math.abs(o.z - c.z) <= STEP) out.push(o);
-    }
-    // The landing between two flights sits on the same tile, one step up.
-    for (const o of cells(room).at.get(`${c.x},${c.y}`) || []) if (o !== c && o.kind === 'stair' && c.kind === 'stair' && Math.abs(o.z - c.z) <= STEP) out.push(o);
-    return out;
-  }
-
   function stationSpots(room) {
     const open = walkable(room);
     const spots = [];
@@ -711,49 +796,60 @@
     return spots;
   }
 
-  function generateRoom(theme = 'cyber') {
-    const t = THEMES[theme] || THEMES.cyber;
-    const room = { iso: 2, n: N, theme, floors: t.floors.map(([wall, floor]) => ({ wall, floor })), objects: [] };
+  function generateRoom(theme = 'shop') {
+    const t = THEMES[theme] || THEMES.shop;
+    const room = { iso: 3, layout: 'shop', theme, floors: t.floors.map(([wall, floor]) => ({ wall, floor })), objects: [] };
     const add = (f, type, x, y, flip = false) => { if (canPlace(room, type, x, y, flip, f)) room.objects.push({ type, x, y, flip, f }); };
-    // Ground: the workshop.
-    add(0, 'workstation', 0, 0, true);
-    add(0, 'desk', 0, 3, true);
-    add(0, 'server', 2, 0);
-    add(0, 'server', 3, 0);
-    add(0, 'holo', 3, 3);
-    add(0, 'bell', 2, 4);
-    add(0, 'plant', 0, 5);
-    add(0, 'vending', 5, 5);
-    add(0, 'boxes', 4, 5);
-    add(0, 'screens', 0, 0, true);
-    add(0, 'neon', 0, 3, true);
-    add(0, 'pipes', 1, 0);
-    // First floor: somewhere to sleep and play.
-    add(1, 'bed', 1, 0);
-    add(1, 'lamp', 0, 0);
-    add(1, 'tv', 0, 1, true);
-    add(1, 'rug', 1, 2);
-    add(1, 'catbed', 3, 3);
-    add(1, 'window', 1, 0);
-    add(1, 'poster', 0, 3, true);
-    add(1, 'neon', 0, 1, true);
-    // Top: an open-air study.
-    add(2, 'bookshelf', 0, 0);
-    add(2, 'bookshelf', 0, 1, true);
-    add(2, 'plant', 2, 0);
-    add(2, 'desk', 1, 2);
-    add(2, 'globe', 1, 1);
-    add(2, 'clock', 2, 0);
-    add(2, 'shelf', 0, 2, true);
+    // Street: the shop door, a sign, two vending machines and the bins.
+    add(0, 'shopdoor', 6, 6);
+    add(0, 'sign', 3, 6);
+    add(0, 'vending', 5, 6);
+    add(0, 'bin', 0, 7);
+    add(0, 'plant', 0, 6);
+    add(0, 'neon', 0, 6);
+    // Shop: workbench along the back, the glowing fridge on the block, counter in the middle.
+    add(1, 'workstation', 3, 0);
+    add(1, 'coffee', 5, 0);
+    add(1, 'server', 6, 0);
+    add(1, 'screens', 3, 0);
+    add(1, 'window', 5, 0);
+    add(1, 'clock', 2, 0);
+    add(1, 'fridge', 2, 4, true);
+    add(1, 'poster', 2, 3, true);
+    add(1, 'holo', 2, 2);
+    add(1, 'bell', 3, 4);
+    add(1, 'table', 5, 3);
+    add(1, 'bookshelf', 7, 1);
+    add(1, 'plant', 8, 3);
+    add(1, 'plant', 0, 0);
+    add(1, 'boxes', 0, 1);
+    add(1, 'lamp', 0, 2);
+    add(1, 'shelf', 0, 0, true);
+    // Terrace: a sofa under the sky.
+    add(2, 'sofa', 0, 4, true);
+    add(2, 'plant', 0, 3);
     return room;
   }
 
   // ---- Rendering --------------------------------------------------------------------
 
   // Room canvas in fine pixels: world (0, 0, 0) lands at origin().
-  const topZ = (room) => floorZ(levels(room) - 1) + WALL_H + 6;
-  const size = (room) => ({ w: 2 * room.n * TU + 40, h: topZ(room) + room.n * TU + SLAB + 24 });
-  const origin = (room) => ({ x: room.n * TU + 20, y: topZ(room) + 12 });
+  function bounds(room) {
+    const L = layoutOf(room);
+    let top = 0; let bottom = 0; let left = 0; let right = 0;
+    for (const a of L.areas) {
+      const tall = a.walls.some((w) => !w[5]) ? Math.max(...a.walls.filter((w) => !w[5]).map((w) => w[4])) : a.rails ? 16 : 4;
+      for (const [x, y, w, d] of a.rects) {
+        top = Math.max(top, a.z + tall - ((x + y) * TU) / 2);
+        bottom = Math.max(bottom, ((x + w + y + d) * TU) / 2 + SLAB);
+        left = Math.max(left, (y + d - x) * TU);
+        right = Math.max(right, (x + w - y) * TU);
+      }
+    }
+    return { top: Math.ceil(top) + 6, bottom, left, right };
+  }
+  const size = (room) => { const b = bounds(room); return { w: b.left + b.right + 40, h: b.top + b.bottom + 24 }; };
+  const origin = (room) => { const b = bounds(room); return { x: b.left + 20, y: b.top + 12 }; };
   const project = (room, x, y, z) => { const o = origin(room); return { x: o.x + x - y, y: o.y + (x + y) / 2 - z }; };
 
   // A cached sprite with its anchor = the world point it was painted relative to.
@@ -784,85 +880,159 @@
     return cached(key, () => renderSprite(def.w, Math.max(def.d, 1), def.h, (P) => def.draw(P, s), flip));
   }
 
-  // Structure pieces, each anchored at world (0, 0, floor z).
-  function slabSprite(room, f) {
-    const { floor } = room.floors[f];
-    const n = sideOf(room, f);
-    const fl = FLOORS[floor] || FLOORS.wood;
-    return cached(`slab|${n}|${f}|${floor}`, () => renderSprite(n, n, SLAB + 2, (P) => {
-      P.box(-5, -5, -SLAB, n * TU + 5, n * TU + 5, SLAB, { t: fl.base, l: dk(fl.base, 0.35), r: dk(fl.base, 0.5) }, false);
-      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) fl.draw(P, x, y, 0);
-      // A lit trim along the slab's front edges, so stacked floors read as separate.
-      P.left(0, -SLAB + 1, n * TU, 1, lt(fl.base, 0.25), n * TU);
-      P.right(n * TU, -SLAB + 1, n * TU, 1, lt(fl.base, 0.15), n * TU);
-    }, false, SLAB));
+  // Brick courses on the two visible faces of a raised base, h units tall below its top.
+  function brickFaces(P, w, d, h, c) {
+    const L = w * TU;
+    const D = d * TU;
+    const mortar = dk(c, 0.3);
+    P.left(0, -h, L, h, c, D);
+    P.right(D, -h, D, h, dk(c, 0.22), L);
+    for (let v = 3, row = 0; v < h; v += 5, row++) {
+      P.left(0, -v, L, 1, mortar, D);
+      P.right(D, -v, D, 1, dk(mortar, 0.2), L);
+      for (let u = row % 2 ? 3 : 7; u < L; u += 9) P.left(u, -v + 1, 1, 4, mortar, D);
+      for (let u = row % 2 ? 2 : 6; u < D; u += 9) P.right(D - u, -v + 1, 1, 4, dk(mortar, 0.2), L);
+    }
   }
 
-  function wallSprite(room, f, side) {
-    const { wall } = room.floors[f];
-    const n = sideOf(room, f);
-    const L = n * TU;
-    const w = WALLS[wall] || WALLS.plum;
-    return cached(`wall|${n}|${f}|${side}|${wall}`, () => renderSprite(side ? n : 1, side ? 1 : n + 1, WALL_H + 2, (P) => {
-      if (side) { // back-right wall, plane y = 0
-        P.box(0, -5, 0, L, 5, WALL_H, { t: lt(w.trim, 0.25), l: w.base, r: w.trim }, false);
-        w.paint((u, v, ww, hh, c) => P.left(u, v, ww, hh, c, 0), L);
+  // One rect of an area: its floor and, for raised areas, the brick base down to the ground.
+  function slabSprite(room, f, r) {
+    const a = layoutOf(room).areas[f];
+    const { floor } = room.floors[f];
+    const base = (WALLS[room.floors[0].wall] || WALLS.brick).base;
+    const fl = FLOORS[floor] || FLOORS.wood;
+    const [, , w, d] = r;
+    const h = a.z + SLAB;
+    return cached(`slab|${room.layout}|${f}|${r}|${floor}|${base}`, () => renderSprite(w, d, 8, (P) => {
+      if (a.z > 0) brickFaces(P, w, d, h, base);
+      else P.box(0, 0, -SLAB, w * TU, d * TU, SLAB, { t: fl.base, l: dk(fl.base, 0.3), r: dk(fl.base, 0.45) }, false);
+      for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) fl.draw(P, x, y, 0);
+      // A lit lip along the front edges, so each layer reads as separate.
+      P.left(0, -2, w * TU, 2, lt(fl.base, 0.2), d * TU);
+      P.right(d * TU, -2, d * TU, 2, lt(fl.base, 0.1), w * TU);
+      // An arch under a base that has no street in front of it.
+      if (a.z > 0 && f > 0 && !layoutOf(room).areas[0].rects.some((s) => s[1] === r[1] + d || s[0] === r[0] + w)) {
+        const D = d * TU;
+        const R = Math.min(10, D / 2 - 4);
+        const leg = h - 16 - R;
+        for (let u = Math.ceil(D / 2 - R); u < D / 2 + R; u++) {
+          const top = leg + Math.sqrt(Math.max(0, R * R - (u + 0.5 - D / 2) ** 2));
+          P.right(D - u, -h, 1, top, dk(base, 0.6), w * TU);
+        }
+      }
+    }, false, h));
+  }
+
+  function wallSprite(room, f, wall) {
+    const [plane, , from, to, h] = wall;
+    const w = WALLS[room.floors[f].wall] || WALLS.plum;
+    const L = (to - from) * TU;
+    return cached(`wall|${f}|${wall}|${room.floors[f].wall}`, () => renderSprite(plane === 'y' ? to - from : 1, plane === 'y' ? 1 : to - from + 1, h + 2, (P) => {
+      if (plane === 'y') { // plane y = 0 in local space, running along x
+        P.box(0, -5, 0, L, 5, h, { t: lt(w.trim, 0.25), l: w.base, r: w.trim }, false);
+        w.paint((u, v, ww, hh, c) => P.left(u, v, ww, hh, c, 0), L, h);
         P.left(0, 0, L, 5, w.trim, 0);
-        P.left(0, 0, 3, WALL_H, dk(w.base, 0.12), 0);
-      } else { // back-left wall, plane x = 0
-        P.box(-5, -5, 0, 5, L + 5, WALL_H, { t: lt(w.trim, 0.25), l: w.trim, r: dk(w.base, 0.08) }, false);
-        w.paint((u, v, ww, hh, c) => P.right(L - u, v, ww, hh, c, 0), L);
+        P.left(0, 0, 3, h, dk(w.base, 0.12), 0);
+      } else { // plane x = 0, running along y
+        P.box(-5, -5, 0, 5, L + 5, h, { t: lt(w.trim, 0.25), l: w.trim, r: dk(w.base, 0.08) }, false);
+        w.paint((u, v, ww, hh, c) => P.right(L - u, v, ww, hh, c, 0), L, h);
         P.right(L, 0, L, 5, w.trim, 0);
       }
     }, false));
   }
 
-  // One step of the fire escape: a grated tread on a riser, the outer stringer and a handrail post.
-  // dir 0 climbs toward -y along the right side (rail on the +x edge); dir 1 climbs toward +x
-  // across the front (rail on the +y edge).
-  function stairSprite(dir, rise) {
-    return cached(`stair|${dir}|${rise}`, () => renderSprite(1, 1, 26, (P) => {
-      // Open treads on two stringers, so the floor behind shows through.
+  // One step. Solid steps are stone blocks down to the ground; open ones are metal treads.
+  function stairSprite(c, room) {
+    const h = c.z - c.base;
+    const fl = FLOORS[room.floors[c.f].floor] || FLOORS.stone;
+    const base = (WALLS[room.floors[0].wall] || WALLS.brick).base;
+    return cached(`stair|${c.style}|${c.dir}|${h}|${c.rise}|${fl.base}|${base}`, () => renderSprite(1, 1, 8, (P) => {
+      if (c.style === 'solid') {
+        brickFaces(P, 1, 1, h, base);
+        P.top(0, 0, TU, TU, lt(fl.base, 0.05), 0);
+        if (c.dir === 'x') P.top(0, 0, 2, TU, lt(fl.base, 0.25), 0); else P.top(0, 0, TU, 2, lt(fl.base, 0.25), 0);
+        return;
+      }
       P.box(0, 0, -3, TU, TU, 3, { t: '#7a8399', l: '#555c72', r: '#41475a' }, false);
       for (let i = 2; i < TU; i += 3) {
-        if (dir) P.top(1, i, TU - 2, 1, '#636b82', 0); else P.top(i, 1, 1, TU - 2, '#636b82', 0);
+        if (c.dir === 'x') P.top(i, 1, 1, TU - 2, '#636b82', 0); else P.top(1, i, TU - 2, 1, '#636b82', 0);
       }
-      if (dir) {
+      if (c.dir === 'y') {
+        P.box(TU - 2, 0, -7, 2, TU, 4, '#3a3f50', false);
+        P.box(TU - 2, 7, 0, 2, 2, 18, '#5a6075', false);
+        P.box(TU - 2, 0, 17, 2, TU, 2, '#8a92aa', false);
+      } else {
         P.box(0, TU - 2, -7, TU, 2, 4, '#3a3f50', false);
         P.box(7, TU - 2, 0, 2, 2, 18, '#5a6075', false);
         P.box(0, TU - 2, 17, TU, 2, 2, '#8a92aa', false);
-      } else {
-        P.box(TU - 2, 0, -7, 2, TU, 4, '#3a3f50', false);
-        P.box(1, 0, -7, 2, TU, 4, '#3a3f50', false);
-        P.box(TU - 2, 7, 0, 2, 2, 18, '#5a6075', false);
-        P.box(TU - 2, 0, 17, 2, TU, 2, '#8a92aa', false);
       }
-    }, false, rise + 4));
+    }, false, h + 4));
+  }
+
+  // A run of railing along one edge of a tile: posts and a top bar.
+  function railSprite(room, f, plane) {
+    const w = WALLS[room.floors[f].wall] || WALLS.navy;
+    return cached(`rail|${plane}|${w.base}`, () => renderSprite(1, 1, 18, (P) => {
+      const c = lt(w.base, 0.15);
+      if (plane === 'y') {
+        for (const u of [1, 8]) P.box(u, -2, 0, 2, 2, 14, c, false);
+        P.box(0, -2, 13, TU, 2, 2, lt(c, 0.2), false);
+        P.box(0, -2, 6, TU, 2, 1, c, false);
+      } else {
+        for (const u of [1, 8]) P.box(-2, u, 0, 2, 2, 14, c, false);
+        P.box(-2, 0, 13, 2, TU, 2, lt(c, 0.2), false);
+        P.box(-2, 0, 6, 2, TU, 1, c, false);
+      }
+    }, false));
   }
 
   // Everything that needs depth sorting, as boxes in tile space with z in world units.
   function sceneItems(room, s) {
+    const L = layoutOf(room);
     const items = [];
-    for (let f = 0; f < levels(room); f++) {
-      const z = floorZ(f);
-      const n = sideOf(room, f);
-      items.push({ x0: -0.3, y0: -0.3, x1: n, y1: n, z0: z - SLAB, z1: z, sprite: () => slabSprite(room, f), wx: 0, wy: 0, wz: z });
-      items.push({ x0: -0.3, y0: -0.3, x1: -0.02, y1: n, z0: z, z1: z + WALL_H, sprite: () => wallSprite(room, f, 0), wx: 0, wy: 0, wz: z });
-      items.push({ x0: 0, y0: -0.3, x1: n, y1: -0.02, z0: z, z1: z + WALL_H, sprite: () => wallSprite(room, f, 1), wx: 0, wy: 0, wz: z });
-    }
+    const e = 0.02;
+    L.areas.forEach((a, f) => {
+      for (const r of a.rects) {
+        const [x, y, w, d] = r;
+        items.push({ x0: x, y0: y, x1: x + w - e, y1: y + d - e, z0: -SLAB, z1: a.z, sprite: () => slabSprite(room, f, r), wx: x * TU, wy: y * TU, wz: a.z });
+      }
+      for (const wall of a.walls) {
+        if (wall[5]) continue;
+        const [plane, at, from, to, h] = wall;
+        const box = plane === 'y' ? { x0: from, x1: to, y0: at - 0.3, y1: at - e } : { x0: at - 0.3, x1: at - e, y0: from, y1: to };
+        items.push({ ...box, z0: a.z, z1: a.z + h, sprite: () => wallSprite(room, f, wall), wx: (plane === 'y' ? from : at) * TU, wy: (plane === 'y' ? at : from) * TU, wz: a.z });
+      }
+      if (a.rails) {
+        // Railing on every open edge, except where a flight arrives.
+        const arrivals = new Set(L.flights.filter((fl) => fl.to === f).map((fl) => `${fl.top}`));
+        for (const r of a.rects) {
+          for (let x = r[0]; x < r[0] + r[2]; x++) {
+            for (const [y, edge] of [[r[1], r[1]], [r[1] + r[3] - 1, r[1] + r[3]]]) {
+              if (edge === r[1] && arrivals.has(`${x},${y}`)) continue;
+              items.push({ x0: x, x1: x + 1, y0: edge - 0.1, y1: edge - e / 2, z0: a.z, z1: a.z + 16, sprite: () => railSprite(room, f, 'y'), wx: x * TU, wy: edge * TU, wz: a.z });
+            }
+          }
+          for (let y = r[1]; y < r[1] + r[3]; y++) {
+            for (const edge of [r[0], r[0] + r[2]]) {
+              items.push({ x0: edge - 0.1, x1: edge - e / 2, y0: y, y1: y + 1, z0: a.z, z1: a.z + 16, sprite: () => railSprite(room, f, 'x'), wx: edge * TU, wy: y * TU, wz: a.z });
+            }
+          }
+        }
+      }
+    });
     for (const c of cells(room).list) {
       if (c.kind !== 'stair') continue;
-      items.push({ x0: c.x, y0: c.y, x1: c.x + 1, y1: c.y + 1, z0: c.z - c.rise, z1: c.z, sprite: () => stairSprite(c.dir, c.rise), wx: c.x * TU, wy: c.y * TU, wz: c.z });
+      const z0 = c.style === 'solid' ? c.base : c.z - c.rise;
+      items.push({ x0: c.x, y0: c.y, x1: c.x + 1 - e, y1: c.y + 1 - e, z0, z1: c.z, sprite: () => stairSprite(c, room), wx: c.x * TU, wy: c.y * TU, wz: c.z });
     }
     room.objects.forEach((o, i) => {
       const def = OBJECTS[o.type];
       if (!def) return;
-      const z = floorZ(o.f || 0);
+      const z = floorZ(room, o.f || 0);
       const sprite = () => objectSprite(o.type, o.flip, s(i));
       if (def.wall) {
-        const along = o.flip ? o.y : o.x;
-        const box = o.flip ? { x0: -0.01, x1: 0, y0: along, y1: along + def.w } : { y0: -0.01, y1: 0, x0: along, x1: along + def.w };
-        items.push({ ...box, z0: z + 1, z1: z + WALL_H, sprite, wx: o.x * TU, wy: o.y * TU, wz: z });
+        const box = o.flip ? { x0: o.x - 0.01, x1: o.x, y0: o.y, y1: o.y + def.w } : { y0: o.y - 0.01, y1: o.y, x0: o.x, x1: o.x + def.w };
+        items.push({ ...box, z0: z + 1, z1: z + (def.top || 60), sprite, wx: o.x * TU, wy: o.y * TU, wz: z });
         return;
       }
       const fp = footprint(o);
@@ -920,49 +1090,59 @@
     for (const [sp, it] of lights) glows(ctx, room, sp, it.wx, it.wy, it.wz, z);
   }
 
-  // Screen point (fine px) to the topmost floor or porch tile under it.
+  // Screen point (fine px) to the topmost area tile under it.
   function tileAt(room, fx, fy) {
     const o = origin(room);
     const sx = fx - o.x;
-    for (let f = levels(room) - 1; f >= 0; f--) {
-      const s2 = (fy - o.y + floorZ(f)) * 2;
+    const order = layoutOf(room).areas.map((a, f) => f).sort((a, b) => floorZ(room, b) - floorZ(room, a));
+    let best = null;
+    for (const f of order) {
+      const s2 = (fy - o.y + floorZ(room, f)) * 2;
       const x = Math.floor((s2 + sx) / 2 / TU);
       const y = Math.floor((s2 - sx) / 2 / TU);
-      if (cellAt(room, x, y, f)) return { x, y, f };
+      if (cellAt(room, x, y, f) && (!best || x + y > best.x + best.y + 2)) best = { x, y, f };
     }
-    return null;
+    return best;
   }
 
-  // Screen point to a spot on a back wall of some floor: { f, flip, along }.
+  // Screen point to a spot on some wall: { f, flip, x, y } for a wall item's position.
   function wallAt(room, fx, fy) {
     const o = origin(room);
     const sx = fx - o.x;
     const sy = fy - o.y;
-    for (let f = levels(room) - 1; f >= 0; f--) {
-      const base = floorZ(f);
-      const u = Math.abs(sx);
-      const z = u / 2 - sy;
-      if (u < sideOf(room, f) * TU && z >= base && z <= base + WALL_H) return { f, flip: sx < 0, along: Math.floor(u / TU) };
-    }
-    return null;
+    let best = null;
+    layoutOf(room).areas.forEach((a, f) => {
+      for (const [plane, at, from, to, h] of a.walls) {
+        const A = at * TU;
+        // On plane y = A: x = sx + A; on plane x = A: y = A - sx.
+        const u = plane === 'y' ? sx + A : A - sx;
+        const z = (u + A) / 2 - sy;
+        if (u < from * TU || u >= to * TU || z < a.z || z > a.z + h) continue;
+        const depth = u + A;
+        if (best && best.depth >= depth) continue;
+        const along = Math.floor(u / TU);
+        best = plane === 'y' ? { f, flip: false, x: along, y: at, depth } : { f, flip: true, x: at, y: along, depth };
+      }
+    });
+    return best;
   }
 
-  // Click-through mask: the tower's silhouette at 1 fine pixel per pixel.
+  // Click-through mask: the diorama's silhouette at 1 fine pixel per pixel.
   let mask = { key: '', data: null, w: 0 };
   function solidAt(room, fx, fy) {
-    const key = JSON.stringify([room.n, room.floors]);
+    const key = JSON.stringify([room.layout, room.floors]);
     if (mask.key !== key) {
       const S = size(room);
       const c = makeCanvas(S.w, S.h);
       const g = c.getContext('2d');
-      for (const it of sceneItems(room, () => ({ frame: 0, active: false, hour: 12 }))) blit(g, room, it.sprite(), it.wx, it.wy, it.wz, 1);
+      for (const it of sceneItems({ ...room, objects: [] }, () => ({ frame: 0, active: false, hour: 12 }))) blit(g, room, it.sprite(), it.wx, it.wy, it.wz, 1);
       mask = { key, data: g.getImageData(0, 0, S.w, S.h).data, w: S.w, h: S.h };
     }
     if (fx < 0 || fy < 0 || fx >= mask.w || fy >= mask.h) return false;
     return mask.data[(Math.floor(fy) * mask.w + Math.floor(fx)) * 4 + 3] > 0;
   }
 
-  // Dev preview: the default tower in each theme plus every object on its own.
+  // Dev preview: the default room in each theme plus every object on its own.
   function preview(canvas, z = 2) {
     const themes = Object.keys(THEMES);
     const rooms = themes.map((t) => generateRoom(t));
@@ -991,8 +1171,8 @@
   }
 
   return {
-    TU, N, WALL_H, LEVEL, STEP, FLOORS, sideOf, WALLS, OBJECTS, THEMES, FLOOR_NAMES,
-    size, origin, project, floorZ, levels, cells, resetCells, cellAt, neighbours, walkable, footprint, canPlace, stationSpots,
+    TU, SLAB, FLOORS, WALLS, OBJECTS, THEMES, FLOOR_NAMES, LAYOUTS,
+    size, origin, project, floorZ, levels, cells, resetCells, cellAt, neighbours, door, walkable, footprint, canPlace, stationSpots,
     generateRoom, objectSprite, drawRoom, blit, tileAt, wallAt, solidAt, preview,
   };
 });

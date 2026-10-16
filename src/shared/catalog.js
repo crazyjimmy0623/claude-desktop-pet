@@ -59,6 +59,7 @@
     { id: 'floor:carpet', type: 'floor', rarity: 'common', name: '地毯' },
     { id: 'floor:stone', type: 'floor', rarity: 'common', name: '石磚' },
     { id: 'floor:marble', type: 'floor', rarity: 'rare', name: '大理石' },
+    { id: 'floor:terra', type: 'floor', rarity: 'starter', name: '紅陶磚' },
     { id: 'floor:grass', type: 'floor', rarity: 'rare', name: '草地' },
     // Walls
     { id: 'wall:plum', type: 'wall', rarity: 'starter', name: '酒紅牆' },
@@ -81,6 +82,10 @@
     { id: 'obj:boxes', type: 'furniture', rarity: 'starter', name: '紙箱' },
     { id: 'obj:shelf', type: 'furniture', rarity: 'starter', name: '壁架' },
     { id: 'obj:window', type: 'furniture', rarity: 'starter', name: '窗戶' },
+    { id: 'obj:fridge', type: 'furniture', rarity: 'starter', name: '發光冰櫃' },
+    { id: 'obj:shopdoor', type: 'furniture', rarity: 'starter', name: '店門' },
+    { id: 'obj:sign', type: 'furniture', rarity: 'starter', name: '招牌' },
+    { id: 'obj:bin', type: 'furniture', rarity: 'starter', name: '垃圾桶' },
     { id: 'obj:easel', type: 'furniture', rarity: 'common', name: '畫架' },
     { id: 'obj:rug', type: 'furniture', rarity: 'common', name: '小地毯' },
     { id: 'obj:lamp', type: 'furniture', rarity: 'common', name: '立燈' },

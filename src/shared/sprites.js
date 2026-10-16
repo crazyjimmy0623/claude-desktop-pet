@@ -242,15 +242,22 @@
   const EAR_L = ['.a...', '.aa..', '.apa.', 'aappa'];
   const EAR_R = ['...a.', '..aa.', '.apa.', 'appaa'];
 
-  // --- Torsos (16x12) at box (6, 19): narrow shoulders, round tummy and hips, like a small child.
+  // --- Torsos (18x13) at box (5, 19): a pear like a small child - narrow shoulders widening to
+  // big round hips that sit right on short legs.
   const TORSO_SHAPE = [
-    '...xxxxxxxxxx...',
-    '..xxxxxxxxxxxx..',
-    '.xxxxxxxxxxxxxx.',
-    ...Array(8).fill('xxxxxxxxxxxxxxxx'),
-    '.xxxxxxxxxxxxxx.',
+    '....xxxxxxxxxx....',
+    '...xxxxxxxxxxxx...',
+    '...xxxxxxxxxxxx...',
+    '..xxxxxxxxxxxxxx..',
+    '..xxxxxxxxxxxxxx..',
+    '.xxxxxxxxxxxxxxxx.',
+    '.xxxxxxxxxxxxxxxx.',
+    ...Array(5).fill('xxxxxxxxxxxxxxxxxx'),
+    '.xxxxxxxxxxxxxxxx.',
   ];
-  // Outfit details as [x, y, w, h, letter] over a body of 'a'; the back three columns fall into shadow.
+  // Outfit details as [x, y, w, h, letter] on a 16x12 grid over a body of 'a' (moved into the wider
+  // torso, with anything that reaches the hem stretched to the new bottom row); the back three
+  // pixels of each row fall into shadow.
   const OUTFIT = {
     armor: [[4, 1, 9, 6, 'b'], [5, 2, 2, 1, '+'], [11, 2, 1, 5, 'B'], [4, 6, 9, 1, 'B'], [8, 2, 1, 4, 'B'], [0, 7, 16, 2, 'd'], [8, 7, 2, 2, 't'], [6, 9, 1, 3, 'A'], [11, 9, 1, 3, 'A']],
     shirt: [[8, 1, 2, 6, 'c'], [8, 6, 2, 1, 'C'], [5, 1, 2, 1, 'A'], [11, 1, 2, 1, 'A'], [0, 8, 16, 1, 'd'], [11, 8, 2, 1, 't'], [0, 9, 16, 3, 'l'], [8, 10, 1, 2, 'L']],
@@ -266,10 +273,16 @@
   function torsoRows(body) {
     if (torsoCache.has(body)) return torsoCache.get(body);
     const g = TORSO_SHAPE.map((r) => [...r].map((ch) => (ch === 'x' ? 'a' : '.')));
-    for (const [x, y, w, h, ch] of OUTFIT[body] || OUTFIT.shirt) {
+    for (const [x0, y, w0, h0, ch] of OUTFIT[body] || OUTFIT.shirt) {
+      // Full-width bands (belts, trousers) stay full width; the rest shifts to the centre.
+      const [x, w] = x0 === 0 && w0 === 16 ? [0, 18] : [x0 + 1, w0];
+      const h = y + h0 >= 12 ? h0 + 1 : h0;
       for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (g[j]?.[i] && g[j][i] !== '.') g[j][i] = ch;
     }
-    for (const row of g) for (let i = 0; i < 3; i++) if (/[a-z]/.test(row[i])) row[i] = row[i].toUpperCase();
+    for (const row of g) {
+      const first = row.findIndex((ch) => ch !== '.');
+      for (let i = first; i < first + 3; i++) if (/[a-z]/.test(row[i])) row[i] = row[i].toUpperCase();
+    }
     const rows = g.map((r) => r.join(''));
     torsoCache.set(body, rows);
     return rows;
@@ -312,24 +325,24 @@
 
     // --- Back arm.
     const backSwing = pose === 'walk' ? -WALK_ARM[step % 4] : 0;
-    if (armsUp) g([[0, 9, 3, 11, c.bodyShade], [-1, 5, 4, 4, dark(c.hand)]]);
-    else g([[3 + backSwing, 20 + B, 3, 6, c.bodyShade], [2 + backSwing, 25 + B, 4, 4, dark(c.hand)]]);
+    if (armsUp) g([[1, 9, 3, 11, c.bodyShade], [-1, 4, 5, 5, dark(c.hand)]]);
+    else g([[5 + backSwing, 20 + B, 3, 6, c.bodyShade], [3 + backSwing, 25 + B, 5, 5, dark(c.hand)]]);
 
     // --- Legs: back leg in shadow, walk is a 4-step cycle with the lifted foot on passing steps.
     const legPal = (back) => (back ? { l: dark(c.leg), L: dark(dark(c.leg)), s: dark(c.boot), S: dark(dark(c.boot)) } : { l: c.leg, L: dark(c.leg), s: c.boot, S: dark(c.boot) });
-    const leg = (x, lift, back) => L([...Array(3 - lift).fill('llllL'), 'ssssss', 'SSSSSS'], legPal(back), x, 31);
+    const leg = (x, lift, back) => L([...Array(2 - lift).fill('llllL'), 'ssssss', 'SSSSSS'], legPal(back), x, 32);
     if (sleeping) {
-      L(['llllllllllL', 'llllllllllLsss', 'LLLLLLLLLLLsss', '...........SSS'], legPal(false), 8, 32);
+      L(['llllllllL', 'llllllllLsss', 'LLLLLLLLLsss', '.........SSS'], legPal(false), 9, 32);
     } else if (pose === 'walk') {
-      const [bx, bl, fx, fl] = [[6, 0, 16, 0], [9, 1, 13, 0], [15, 0, 7, 0], [12, 0, 10, 1]][step % 4];
+      const [bx, bl, fx, fl] = [[5, 0, 17, 0], [8, 1, 14, 0], [16, 0, 6, 0], [13, 0, 9, 1]][step % 4];
       leg(bx, bl, true);
       leg(fx, fl, false);
     } else if (pose === 'dangle') {
-      L(['llllL', 'llllL', 'llllL', 'sssss', 'SSSSS'], legPal(true), 8, 31);
-      L(['llllL', 'llllL', 'llllL', 'sssss', 'SSSSS'], legPal(false), 15, 31);
+      L(['llllL', 'llllL', 'sssss', 'SSSSS'], legPal(true), 7, 32);
+      L(['llllL', 'llllL', 'sssss', 'SSSSS'], legPal(false), 16, 32);
     } else {
-      leg(7, 0, true);
-      leg(15, 0, false);
+      leg(6, 0, true);
+      leg(16, 0, false);
     }
 
     // --- Torso.
@@ -340,7 +353,7 @@
     };
     tp.B = dark(tp.b);
     tp['+'] = lite(tp.b);
-    L(torsoRows(sk.body), tp, 6, 19 + B);
+    L(torsoRows(sk.body), tp, 5, 19 + B);
 
     // --- Head.
     const H = B;
@@ -415,7 +428,8 @@
     if (sk.specs) g([], glassesAt(H, '#6a5040'));
 
     // --- Front arm and whatever it holds.
-    const arm = (sleeve, hand) => g([[...sleeve, c.body], [...hand, c.hand]], [[sleeve[0], sleeve[1], 1, sleeve[3], lite(c.body)]]);
+    // Hands are drawn a size up from the coordinates given: big mitten hands, like a child's.
+    const arm = (sleeve, [hx0, hy0, hw, hh]) => g([[...sleeve, c.body], [hx0, hy0, hw + 1, hh + 1, c.hand]], [[sleeve[0], sleeve[1], 1, sleeve[3], lite(c.body)]]);
     const sparks = (pts) => g([], pts.flatMap(([x, y, color]) => twinkle(x, y, color)));
     const note = (x, y, color) => g([], [[x, y, 1, 6, color], [x + 1, y, 2, 1, color], [x + 2, y + 1, 1, 1, color], [x - 3, y + 5, 3, 2, color]]);
     switch (pose) {
@@ -449,15 +463,15 @@
         break;
       }
       case 'dance':
-        if (frame) arm([24, 9, 3, 11], [24, 5, 4, 4]); else arm([21, 20 + B, 3, 6], [21, 25 + B, 4, 4]);
+        if (frame) arm([24, 9, 3, 11], [24, 5, 4, 4]); else arm([20, 20 + B, 3, 6], [20, 25 + B, 4, 4]);
         note(frame ? 27 : -2, frame ? -8 : -10, col.main);
         break;
       case 'sleep':
-        arm([21, 21 + B, 3, 4], [21, 25 + B, 4, 3]);
+        arm([20, 21 + B, 3, 4], [20, 25 + B, 4, 3]);
         break;
       default: { // rest / walk, holding the signature item
         const sw = pose === 'walk' ? WALK_ARM[step % 4] : 0;
-        const hx = 21 + (sk.item === 'none' ? sw : 0);
+        const hx = 20 + (sk.item === 'none' ? sw : 0);
         const y = B;
         switch (sk.item) {
           case 'mug':
@@ -480,8 +494,8 @@
         arm([hx, 20 + B, 3, 6], [hx, 25 + B, 4, 4]);
       }
     }
-    if (sk.body === 'armor') g([[19, 19 + B, 6, 3, c.plate]], [[19, 19 + B, 6, 1, lite(c.plate)], [19, 21 + B, 6, 1, c.trim]]);
-    if (sk.spikes) g([[19, 19 + B, 6, 3, c.plate], [21, 16 + B, 2, 3, c.plate]], [[19, 21 + B, 6, 1, c.face]]);
+    if (sk.body === 'armor') g([[17, 19 + B, 6, 3, c.plate]], [[17, 19 + B, 6, 1, lite(c.plate)], [17, 21 + B, 6, 1, c.trim]]);
+    if (sk.spikes) g([[17, 19 + B, 6, 3, c.plate], [19, 16 + B, 2, 3, c.plate]], [[17, 21 + B, 6, 1, c.face]]);
 
     // --- Accessory on top of everything.
     const A = H;

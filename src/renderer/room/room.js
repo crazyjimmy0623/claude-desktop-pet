@@ -1,6 +1,6 @@
 /* global desk, Sprites, Iso, Catalog, Common */
-// Room mode: a little isometric tower floating above the taskbar. Every character walks (and climbs
-// the fire escape) to the furniture that matches what it is doing.
+// Room mode: a little isometric street corner floating above the taskbar. Every character walks (and climbs
+// the stairs) to the furniture that matches what it is doing.
 const DPR = window.devicePixelRatio || 1;
 const TU = Iso.TU;
 const SPEED = 2.5; // tiles per second
@@ -28,7 +28,7 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 const state = {
-  room: Iso.generateRoom('cyber'),
+  room: Iso.generateRoom('shop'),
   zoom: 2,
   settings: null,
   progress: null,
@@ -148,11 +148,10 @@ function route(v, to) {
   return !!path;
 }
 
-// Characters arrive at, and leave from, the front of the ground floor.
+// Characters arrive at, and leave from, the street door.
 function door() {
-  const n = Iso.sideOf(state.room, 0);
-  const c = Iso.cellAt(state.room, Math.floor(n / 2), n - 1, 0);
-  return c && walkable(c.id) ? c : nearestWalkable(n / 2, n, 0);
+  const c = Iso.door(state.room);
+  return c && walkable(c.id) ? c : nearestWalkable(c?.x ?? 0, c?.y ?? 0, 0);
 }
 
 function releaseSpot(v) {
@@ -201,7 +200,7 @@ function decide(v, now) {
     for (const type of prefs) {
       const free = state.spots.filter((s) => s.type === type && !state.claims.has(spotKey(s)));
       if (!free.length) continue;
-      const cost = (s) => Math.abs(s.x - v.x) + Math.abs(s.y - v.y) + Math.abs(Iso.floorZ(s.f) - v.z) / 10;
+      const cost = (s) => Math.abs(s.x - v.x) + Math.abs(s.y - v.y) + Math.abs(Iso.floorZ(state.room, s.f) - v.z) / 10;
       free.sort((a, b) => cost(a) - cost(b));
       for (const s of free) {
         if (route(v, s.cell)) {
@@ -545,7 +544,7 @@ function draw(now) {
   state.onDrawTop?.(ctx, z, now);
 }
 
-// Glowing orbs drifting around the tower, like dust in neon light.
+// Glowing orbs drifting around the diorama, like dust in neon light.
 function drawOrbs(now, z) {
   const S = Iso.size(state.room);
   if (!state.orbs.length) {
@@ -652,7 +651,7 @@ window.addEventListener('mouseup', (e) => {
   if (d.moved) {
     const t = tileAt(e);
     const c = t && Iso.cellAt(state.room, t.x, t.y, t.f);
-    const spot = c && walkable(c.id) ? c : nearestWalkable(t?.x ?? 0, t?.y ?? 0, t ? Iso.floorZ(t.f) : 0);
+    const spot = c && walkable(c.id) ? c : nearestWalkable(t?.x ?? 0, t?.y ?? 0, t ? Iso.floorZ(state.room, t.f) : 0);
     if (spot) place(d.v, spot);
     d.v.path = [];
     d.v.dragging = false;
@@ -727,7 +726,7 @@ desk.on('settings', applySettings);
 desk.on('progress', applyProgress);
 desk.on('fx', onFx);
 desk.on('room', (room) => {
-  if (room?.iso === 2 && JSON.stringify(room) !== JSON.stringify(state.room)) setRoom(room);
+  if (room?.iso === 3 && JSON.stringify(room) !== JSON.stringify(state.room)) setRoom(room);
 });
 desk.on('assets', (assets) => {
   Common.loadSheets(assets);
@@ -742,7 +741,7 @@ desk.invoke('init').then((init) => {
   state.assets = init.assets;
   Common.loadSheets(init.assets);
   applyProgress(init.progress);
-  if (init.room?.iso === 2) state.room = clone(init.room);
+  if (init.room?.iso === 3) state.room = clone(init.room);
   else desk.invoke('room:set', state.room);
   layout();
   syncActors(init.actors);

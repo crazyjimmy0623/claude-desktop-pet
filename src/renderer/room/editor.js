@@ -124,7 +124,7 @@
     if (def?.wall) {
       const w = Iso.wallAt(room(), p.x, p.y);
       if (!w) return null;
-      return w.flip ? { x: 0, y: w.along, f: w.f, flip: true } : { x: w.along, y: 0, f: w.f, flip: false };
+      return { x: w.x, y: w.y, f: w.f, flip: w.flip };
     }
     const t = Iso.tileAt(room(), p.x, p.y);
     return t ? { x: t.x, y: t.y, f: t.f, flip: tool?.flip || false } : null;
@@ -140,9 +140,10 @@
       if (!def) return;
       if ((o.f || 0) !== (def.wall ? w?.f : t?.f)) return;
       if (def.wall) {
-        if (w && !!o.flip === w.flip) {
+        if (w && !!o.flip === w.flip && (o.flip ? o.x === w.x : o.y === w.y)) {
           const along = o.flip ? o.y : o.x;
-          if (w.along >= along && w.along < along + def.w) found = i;
+          const at = w.flip ? w.y : w.x;
+          if (at >= along && at < along + def.w) found = i;
         }
         return;
       }
@@ -230,7 +231,7 @@
       const def = Iso.OBJECTS[tool.type];
       const o = { type: tool.type, x: hover.x, y: hover.y, flip: hover.flip };
       const ok = Iso.canPlace(r, tool.type, o.x, o.y, o.flip, hover.f);
-      const h = Iso.floorZ(hover.f);
+      const h = Iso.floorZ(r, hover.f);
       if (!def.wall) diamond(ctx, z, Iso.footprint(o), h, ok ? 'rgba(124,196,127,0.35)' : 'rgba(224,64,90,0.4)');
       ctx.globalAlpha = ok ? 0.75 : 0.4;
       Iso.blit(ctx, r, Iso.objectSprite(tool.type, o.flip, still), o.x * TU, o.y * TU, h, z);
@@ -238,7 +239,7 @@
     } else if (hover.pick >= 0) {
       const o = r.objects[hover.pick];
       const def = o && Iso.OBJECTS[o.type];
-      if (def && !def.wall) diamond(ctx, z, Iso.footprint(o), Iso.floorZ(o.f || 0), 'rgba(255,224,102,0.35)');
+      if (def && !def.wall) diamond(ctx, z, Iso.footprint(o), Iso.floorZ(r, o.f || 0), 'rgba(255,224,102,0.35)');
     }
   };
 
