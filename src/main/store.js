@@ -74,6 +74,8 @@ class Store extends EventEmitter {
       this.data.room = null;
     }
     delete s.roomBounds;
+    // Rooms from before themes existed switch to the cyberpunk look once.
+    if (this.data.room && !this.data.room.theme) Object.assign(this.data.room, { theme: 'cyber', wall: 'cyber', floor: 'cyber' });
     this.saveTimer = null;
   }
 

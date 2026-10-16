@@ -708,9 +708,11 @@ desk.invoke('init').then((init) => {
   Common.loadSheets(init.assets);
   loadCustomTiles(init.assets);
   applyProgress(init.progress);
-  state.room = init.room || Furniture.generateRoom(tilesAcross(), ROOM_ROWS);
+  const needsSave = !init.room || !init.room.theme;
+  state.room = init.room ? RoomApp.clone(init.room) : Furniture.generateRoom(tilesAcross(), ROOM_ROWS);
+  // Rooms from before themes existed switch to the cyberpunk look once.
   if (!state.room.theme) Object.assign(state.room, { theme: 'cyber', wall: 'cyber', floor: 'cyber' });
-  if (!init.room || !init.room.theme) desk.invoke('room:set', state.room);
+  if (needsSave) desk.invoke('room:set', state.room);
   layout();
   syncActors(init.actors);
   window.RoomEditor?.refresh();
