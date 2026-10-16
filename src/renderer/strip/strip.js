@@ -483,6 +483,7 @@ document.addEventListener('mouseleave', (e) => {
 
 function applySettings(s) {
   settings = s;
+  Sprites.useCustoms(s.characters?.customs);
   if (s.scale !== scale) {
     scale = s.scale;
     rebuildCanvases();
@@ -529,6 +530,7 @@ desk.on('command', (cmd) => {
 desk.invoke('init').then((init) => {
   scale = init.settings.scale;
   settings = init.settings;
+  Sprites.useCustoms(init.settings.characters?.customs);
   Common.loadSheets(init.assets);
   syncActors(init.actors);
 });

@@ -6,7 +6,7 @@ const INVOKE = new Set([
   'focus:start', 'focus:stop', 'hooks:install', 'hooks:uninstall', 'hooks:status', 'assets:reload',
   'assets:open-folder', 'window:open', 'demo', 'share:save', 'share:copy',
   'autostart:get', 'autostart:set', 'actors:clear', 'actors:regroup', 'app:quit', 'focus:toggle',
-  'coins:spend', 'resident:add', 'resident:rename', 'resident:remove',
+  'coins:spend', 'resident:add', 'resident:rename', 'resident:remove', 'custom:save', 'custom:remove',
 ]);
 const SEND = new Set(['mouse:ignore', 'room:hide', 'room:drag', 'actor:pat', 'actor:menu']);
 const LISTEN = new Set(['actors', 'progress', 'settings', 'room', 'fx', 'assets', 'command', 'guild:tab', 'dock:open']);

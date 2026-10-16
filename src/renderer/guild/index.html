@@ -17,6 +17,7 @@
   </header>
   <nav class="tabs">
     <button data-tab="equip" class="active">🧑‍🤝‍🧑 夥伴</button>
+    <button data-tab="studio">✨ 創角</button>
     <button data-tab="gacha">🎰 招募</button>
     <button data-tab="book">📚 圖鑑</button>
     <button data-tab="achievements">🏆 成就</button>
@@ -42,6 +43,29 @@
             <button class="btn danger" id="resident-remove">請他搬走</button>
           </div>
         </div>
+      </section>
+    </div>
+
+    <div id="tab-studio" class="tab hidden">
+      <section class="card studio-stage">
+        <canvas id="studio-canvas" class="pixel"></canvas>
+        <div class="studio-controls">
+          <input type="text" id="studio-name" maxlength="12" placeholder="幫他取個名字">
+          <button class="btn big" id="studio-random" title="隨機變一個">🎲 隨機</button>
+          <button class="btn primary big" id="studio-save">✨ 完成</button>
+          <div class="studio-actions">
+            <button class="btn" id="studio-wear" title="讓代表你的角色穿上">👕 我要穿</button>
+            <button class="btn danger" id="studio-delete" title="刪掉這個角色">🗑</button>
+          </div>
+        </div>
+      </section>
+      <section class="card studio-parts">
+        <div id="studio-cats" class="studio-cats"></div>
+        <div id="studio-options" class="studio-options"></div>
+      </section>
+      <section class="card studio-mine">
+        <h2>🧸 我的角色</h2>
+        <div id="studio-list" class="studio-list"></div>
       </section>
     </div>
 

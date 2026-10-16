@@ -144,6 +144,30 @@ function boot() {
     chars.residents = (chars.residents || []).filter((x) => x.id !== id);
     store.updateSettings({ characters: chars });
   });
+  // The character studio: save a home-made character (new or edited), or throw one away.
+  handle('custom:save', ({ id, name, recipe }) => {
+    const chars = JSON.parse(JSON.stringify(store.settings.characters));
+    chars.customs ??= [];
+    const clean = {};
+    for (const k of ['head', 'hat', 'body', 'extra']) if (typeof recipe?.[k] === 'string') clean[k] = recipe[k].slice(0, 20);
+    clean.colors = {};
+    for (const [k, v] of Object.entries(recipe?.colors || {})) if (/^#[0-9a-f]{6}$/i.test(v)) clean.colors[k] = v;
+    const n = String(name || '').trim().slice(0, 12) || '我的角色';
+    let m = id && chars.customs.find((x) => x.id === id);
+    if (m) Object.assign(m, { name: n, recipe: clean });
+    else {
+      if (chars.customs.length >= 12) return { error: '最多做 12 個角色，先刪掉一個吧' };
+      m = { id: Date.now().toString(36), name: n, recipe: clean };
+      chars.customs.push(m);
+    }
+    store.updateSettings({ characters: chars });
+    return { id: m.id };
+  });
+  handle('custom:remove', (id) => {
+    const chars = JSON.parse(JSON.stringify(store.settings.characters));
+    chars.customs = (chars.customs || []).filter((x) => x.id !== id);
+    store.updateSettings({ characters: chars });
+  });
   handle('project:forget', (name) => {
     const chars = JSON.parse(JSON.stringify(store.settings.characters));
     delete chars.projects[name];

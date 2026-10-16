@@ -747,6 +747,7 @@ document.getElementById('btn-quit').addEventListener('click', () => desk.invoke(
 
 function applySettings(s) {
   state.settings = s;
+  Sprites.useCustoms(s.characters?.customs);
   if (s.roomZoom !== state.zoom) {
     state.zoom = s.roomZoom;
     layout();
@@ -776,6 +777,7 @@ window.RoomApp = { state, setRoom, layout, tileAt, finePoint, Z, clone, rebuildN
 
 desk.invoke('init').then((init) => {
   state.settings = init.settings;
+  Sprites.useCustoms(init.settings.characters?.customs);
   state.zoom = init.settings.roomZoom;
   state.assets = init.assets;
   Common.loadSheets(init.assets);

@@ -150,3 +150,32 @@ canvas.share {
 .gacha-top canvas { flex: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35)); }
 .gacha-buttons .btn { display: inline-flex; flex-direction: column; align-items: center; padding: 6px 18px; font-size: 13px; }
 .gacha-buttons .btn small { font-weight: 600; opacity: 0.75; }
+
+/* ---- Character studio ---- */
+.studio-stage { display: flex; align-items: center; gap: 12px; width: auto; }
+.studio-controls { display: flex; flex-direction: column; gap: 6px; width: 150px; }
+.studio-controls .btn.big { padding: 6px 10px; font-size: 13px; font-weight: 700; }
+.studio-stage canvas { background: radial-gradient(circle at 50% 40%, #4a3e34, #2a2420 72%); border-radius: var(--r-l); border: 1px solid var(--line); }
+.studio-stage input { width: 100%; text-align: center; font-weight: 700; }
+.studio-actions { display: flex; gap: 6px; }
+.studio-actions .btn:first-child { flex: 1; }
+.studio-parts { display: flex; flex-direction: column; gap: 8px; }
+.studio-cats { display: flex; gap: 4px; }
+.studio-cats button { display: flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text-2); font: inherit; font-weight: 700; cursor: pointer; }
+.studio-cats button .ico { font-size: 16px; }
+.studio-cats button.active { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+.studio-options { display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; padding-bottom: 6px; }
+.studio-options.colors { flex-direction: column; gap: 6px; overflow: visible; }
+.studio-options .part, .studio-list .mine { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 4px 6px; width: 92px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: 11px; cursor: pointer; }
+.studio-options .part:hover, .studio-list .mine:hover { background: var(--surface-3); }
+.studio-options .part.active, .studio-list .mine.active { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent); }
+.studio-options .part.locked { opacity: 0.45; cursor: default; }
+.studio-options .part.locked canvas { filter: brightness(0) opacity(0.4); }
+.swatch-row { display: flex; align-items: center; gap: 6px; }
+.swatch-row b { width: 76px; flex: none; font-size: 11px; color: var(--text-3); font-weight: 600; }
+.swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(0, 0, 0, 0.25); cursor: pointer; padding: 0; }
+.swatch.active { border-color: var(--text); box-shadow: 0 0 0 2px var(--accent); }
+.studio-mine { width: auto; }
+.studio-list { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto); grid-auto-columns: 92px; gap: 6px; }
+.studio-list .mine.new { justify-content: center; min-height: 70px; color: var(--text-2); }
+.studio-list .mine.new .ico { font-size: 22px; }

@@ -915,9 +915,92 @@
     return { main: `hsl(${hue}, 65%, 55%)`, dark: `hsl(${hue}, 60%, 38%)` };
   }
 
+  // ---- The character studio --------------------------------------------------
+  // A home-made character is a recipe: a head, hair, a body, a tail, a cape or a backpack, and a
+  // few colours. It becomes a skin like any other ('mix:<id>'). Parts that come from a recruited
+  // character unlock with that character.
+  const PARTS = {
+    head: { face: '人臉', cat: '貓貓', robot: '機器人', droid: '暴走機器人', ninja: '忍者頭巾', astronaut: '太空頭盔', helmet: '白盔', plush: '絨毛玩偶', okai: '大圓貓頭' },
+    hat: { none: '光頭', hair: '短髮', messy: '亂髮', chef: '廚師帽' },
+    body: { shirt: '襯衫', labcoat: '實驗袍', fur: '毛茸茸', metal: '金屬', mech: '機甲', gi: '忍者服', apron: '圍裙', suit: '太空衣', plain: '素面', blanket: '抱毯子', chubby: '圓肚肚' },
+    extra: { none: '無', tail: '貓尾巴', flat: '扁尾巴', cape: '披風', backpack: '背包', specs: '眼鏡' },
+  };
+  const PART_FROM = {
+    'head:ninja': 'ninja', 'body:gi': 'ninja', 'hat:chef': 'chef', 'body:apron': 'chef', 'head:astronaut': 'astronaut',
+    'body:suit': 'astronaut', 'extra:backpack': 'astronaut', 'head:helmet': 'commander', 'body:plain': 'commander',
+    'extra:cape': 'commander', 'head:plush': 'platypus', 'body:blanket': 'platypus', 'extra:flat': 'platypus',
+    'head:okai': 'whitecat', 'body:chubby': 'whitecat',
+  };
+  // Colour swatches to pick from: skin or fur, clothes, trousers, shoes, hair.
+  const SWATCHES = {
+    skin: ['#f6cfa6', '#e8b48a', '#c98e64', '#8d5a3c', '#f6f4f0', '#f0a35e', '#9a9aa6', '#b8c0cc'],
+    body: ['#f4f4f6', '#e2564a', '#f0b54d', '#7cc47f', '#5aa7ff', '#8a6ad8', '#ff8fb1', '#34373f'],
+    leg: ['#3b4256', '#6b4a32', '#5a7a4a', '#2c3a5a', '#7a2a3a', '#d8d4cc', '#34373f', '#4a5a8a'],
+    boot: ['#262a38', '#5a3a24', '#c9473d', '#f4f4f6', '#3a5a8a', '#e8b13a'],
+    hair: ['#3a2a20', '#6b4423', '#d9a24a', '#e8e0d0', '#c9473d', '#5aa7ff', '#ff8fb1', '#2b2233'],
+  };
+  const FURRY = new Set(['cat', 'plush', 'okai']);
+  function composeSkin(r = {}) {
+    const C = r.colors || {};
+    const head = PARTS.head[r.head] ? r.head : 'face';
+    const body = PARTS.body[r.body] ? r.body : 'shirt';
+    const extra = PARTS.extra[r.extra] ? r.extra : 'none';
+    // Fur heads and metal heads take their colour from the "skin" swatch; clothes from "body".
+    const skin = C.skin || PAL.skin;
+    const cloth = C.body || '#f4f4f6';
+    const coat = FURRY.has(head) || ['robot', 'droid', 'astronaut', 'helmet'].includes(head) ? skin : cloth;
+    return {
+      head,
+      hat: head === 'face' && PARTS.hat[r.hat] && r.hat !== 'none' ? r.hat : undefined,
+      specs: extra === 'specs' && head === 'face',
+      body,
+      item: 'none',
+      tail: extra === 'tail' ? true : extra === 'flat' ? 'flat' : undefined,
+      cape: extra === 'cape',
+      backpack: extra === 'backpack',
+      spikes: head === 'droid',
+      mitts: body === 'blanket',
+      drop: head === 'okai' ? 4 : 0,
+      torsoAt: body === 'chubby' ? [4, 23] : body === 'blanket' ? [5, 21] : undefined,
+      c: {
+        skin, hair: C.hair || '#3a2a20', body: cloth, bodyShade: dark(cloth), belly: lite(cloth), trim: dark(cloth),
+        leg: C.leg || '#3b4256', boot: C.boot || '#262a38', hand: head === 'face' || head === 'ninja' ? skin : coat,
+        head: head === 'ninja' ? cloth : coat, headShade: dark(coat), helmet: coat, helmetShade: dark(coat),
+        plate: lite(coat), face: '#16171c', glow: '#d8f1ff', bill: lite(coat),
+        cape: C.cape || '#b8323a', capeDark: dark(C.cape || '#b8323a'), capeLite: lite(C.cape || '#b8323a'),
+      },
+    };
+  }
+  // A furry head on a furry body is one creature, all in the fur colour.
+  function skinFor(recipe) {
+    const sk = composeSkin(recipe);
+    if (FURRY.has(sk.head) && ['fur', 'blanket', 'chubby'].includes(sk.body)) {
+      Object.assign(sk.c, { body: sk.c.head, bodyShade: dark(sk.c.head), belly: lite(sk.c.head), leg: sk.c.head, boot: dark(sk.c.head) });
+    }
+    return sk;
+  }
+  function useCustoms(list = []) {
+    for (const k of Object.keys(SKINS)) if (k.startsWith('mix:')) delete SKINS[k];
+    for (const m of list) SKINS[`mix:${m.id}`] = skinFor(m.recipe);
+  }
+  // A surprise character from the unlocked parts.
+  function randomRecipe(unlocked = () => true) {
+    const pick = (kind, keys) => {
+      const ok = keys.filter((k) => unlocked(kind, k));
+      return ok[Math.floor(Math.random() * ok.length)];
+    };
+    const one = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    return {
+      head: pick('head', Object.keys(PARTS.head)), hat: pick('hat', Object.keys(PARTS.hat)), body: pick('body', Object.keys(PARTS.body)),
+      extra: Math.random() < 0.5 ? 'none' : pick('extra', Object.keys(PARTS.extra)),
+      colors: { skin: one(SWATCHES.skin), body: one(SWATCHES.body), leg: one(SWATCHES.leg), boot: one(SWATCHES.boot), hair: one(SWATCHES.hair) },
+    };
+  }
+
   return {
     W, H, RES, PAL, SKINS, FX, MINI, grouper, shade,
     buildCharacter, buildMini, drawMiniAt, drawCharacter, drawCharacterAt, drawFx, drawFxAt, paint,
     parseSheet, drawCustomAt, colorsFor,
+    PARTS, PART_FROM, SWATCHES, skinFor, useCustoms, randomRecipe,
   };
 });
