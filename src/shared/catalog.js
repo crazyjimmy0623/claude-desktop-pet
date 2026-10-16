@@ -132,9 +132,10 @@
 
   // Room upgrades, bought in order with coins: each one opens another layer of the room.
   const ROOM_UPGRADES = [
-    { level: 1, name: '屋頂露台', desc: '轉角磚樓頂上的露台，掛滿小燈泡', cost: 60 },
-    { level: 2, name: '二樓閣樓', desc: '店後面加蓋一層木地板閣樓，放得下一張床', cost: 150 },
-    { level: 3, name: '屋頂花園', desc: '閣樓上的小花園，晚上可以看星星', cost: 300 },
+    // What each step opens depends on the blueprint: its zones carry the level.
+    { level: 1, name: '第一次擴建', desc: '打開藍圖裡的下一層', cost: 60 },
+    { level: 2, name: '第二次擴建', desc: '再加蓋一層', cost: 150 },
+    { level: 3, name: '第三次擴建', desc: '最後一層，蓋到完整', cost: 300 },
   ];
 
   return { STATIONS, RARITY, ITEMS, ACHIEVEMENTS, PULL_COST, DUPLICATE_REFUND, ROOM_UPGRADES };

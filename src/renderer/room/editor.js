@@ -15,9 +15,13 @@
   let tool = null; // { type, flip, moving?, orig? }
   let hover = null; // { x, y, f, flip } — a floor tile, or a wall spot for wall items
   let storey = 0; // which floor the floor/wall tabs paint
+  // Terrain: the layer being built on, the tool, and the first end of a stair being laid.
+  const build = { zone: 2, tool: 'paint', stairFrom: null, drag: null, hover: null };
 
   const HINTS = {
     furniture: '點家具放進房間；R 或右下按鈕換方向；點房間裡的家具可搬動，右鍵刪除',
+    terrain: '選一層，在房間上點擊或拖曳鋪地板，右鍵拆掉；▲▼ 調整整層高度',
+    stairs: '樓梯：先點低處的地板，再點同一排高處的地板',
     floor: '選樓層，再點一下換那層的地板',
     wall: '選樓層，再點一下換那層的牆面',
     room: '換整體風格，或重設成預設房間',
@@ -65,7 +69,7 @@
 
   function refresh() {
     if (!state.editing) return;
-    hint.textContent = HINTS[tab];
+    hint.textContent = tab === 'terrain' && build.tool === 'stairs' ? HINTS.stairs : HINTS[tab];
     tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
     palette.replaceChildren();
     if (tab === 'furniture') {
@@ -78,6 +82,8 @@
         }));
       }
       if (tool) palette.append(button('↻ 換方向', null, false, () => { tool.flip = !tool.flip; }));
+    } else if (tab === 'terrain') {
+      refreshTerrain();
     } else if (tab === 'floor' || tab === 'wall') {
       const key = tab;
       const row = document.createElement('div');
@@ -101,20 +107,30 @@
         }));
       }
     } else if (tab === 'room') {
+      // Blueprints: designed rooms to move into and then make your own.
+      const plans = document.createElement('div');
+      plans.className = 'row';
+      for (const [id, bp] of Object.entries(Iso.BLUEPRINTS)) {
+        const b = button(`藍圖：${bp.name}`, blueprintThumb(id), room().blueprint === id, () => {
+          if (!window.confirm(`套用「${bp.name}」會取代目前的房間（家具和地形），確定嗎？`)) return;
+          RoomApp.setRoom(Iso.generateRoom(id), { save: true });
+          refresh();
+          hint.textContent = `已套用「${bp.name}」，可以再用地形和家具分頁慢慢改`;
+        });
+        b.title = bp.desc;
+        plans.append(b);
+      }
+      palette.append(plans);
+      // Themes reskin whatever is built, by what each layer is.
       const row = document.createElement('div');
       row.className = 'row';
       for (const [id, t] of Object.entries(Iso.THEMES)) {
-        row.append(button(t.name, null, room().theme === id, () => {
-          room().theme = id;
-          room().zones.forEach((zn, i) => { if (t.floors[i]) [zn.wall, zn.floor] = t.floors[i]; });
+        row.append(button(`風格：${t.name}`, null, room().theme === id, () => {
+          Iso.applyTheme(room(), id);
           save();
           refresh();
         }));
       }
-      row.append(button('重設為預設房間', null, false, () => {
-        RoomApp.setRoom(Iso.generateRoom(room().theme), { save: true });
-        refresh();
-      }));
       palette.append(row);
       // Upgrades: spend coins to open the next layer of the room.
       const up = document.createElement('div');
@@ -122,9 +138,10 @@
       const level = state.progress?.roomLevel || 0;
       const next = Catalog.ROOM_UPGRADES.find((u) => u.level === level + 1);
       if (next) {
-        const b = button(`升級：${next.name}（${next.cost} 🪙）`, null, false, async () => {
+        const opens = room().zones.filter((zn) => zn.level === next.level).map((zn) => zn.name).join('、') || next.name;
+        const b = button(`擴建：${opens}（${next.cost} 🪙）`, null, false, async () => {
           const res = await desk.invoke('room:upgrade');
-          hint.textContent = res?.error || `房間升級完成：${res.name}！`;
+          hint.textContent = res?.error || `擴建完成：${opens}！`;
         });
         b.title = next.desc;
         if ((state.progress?.coins || 0) < next.cost) b.classList.add('locked');
@@ -134,6 +151,76 @@
       }
       palette.append(up);
     }
+  }
+
+  function refreshTerrain() {
+    const r = room();
+    if (!r.zones[build.zone] || !Iso.isOpen(r, build.zone)) build.zone = 0;
+    const layers = document.createElement('div');
+    layers.className = 'row';
+    r.zones.forEach((zn, i) => {
+      if (!Iso.isOpen(r, i)) return;
+      layers.append(button(`${zn.name}（${zn.z / Iso.STEP_Z * 0.5}F）`, null, build.zone === i && build.tool === 'paint', () => {
+        Object.assign(build, { zone: i, tool: 'paint', stairFrom: null });
+        refresh();
+      }));
+    });
+    palette.append(layers);
+    const tools = document.createElement('div');
+    tools.className = 'row';
+    tools.append(button('▲ 整層升高', null, false, () => terrain(Iso.setZoneZ(r, build.zone, r.zones[build.zone].z + Iso.STEP_Z))));
+    tools.append(button('▼ 整層降低', null, false, () => terrain(Iso.setZoneZ(r, build.zone, r.zones[build.zone].z - Iso.STEP_Z))));
+    tools.append(button('🪜 樓梯', null, build.tool === 'stairs', () => {
+      Object.assign(build, { tool: build.tool === 'stairs' ? 'paint' : 'stairs', stairFrom: null });
+      refresh();
+    }));
+    for (const [type, k] of Object.entries(Iso.ZONE_KINDS)) {
+      tools.append(button(`＋新${k.name}層`, null, false, () => {
+        build.zone = Iso.addZone(r, type, r.zones[build.zone].z + Iso.STEP_Z);
+        build.tool = 'paint';
+        terrain(null, '新的一層建好了，在房間上點擊鋪地板');
+      }));
+    }
+    palette.append(tools);
+  }
+
+  // Apply a terrain edit: save, re-lay the room (its size may change) and report.
+  function terrain(err, ok) {
+    RoomApp.setRoom(room(), { save: true });
+    refresh();
+    if (err || ok) hint.textContent = err || ok;
+  }
+
+  // A small picture of a blueprint, fully built, for its button.
+  const thumbs = new Map();
+  function blueprintThumb(id) {
+    if (!thumbs.has(id)) {
+      const r = Object.assign(Iso.generateRoom(id), {});
+      Object.defineProperty(r, 'level', { value: 3, enumerable: false });
+      const S = Iso.size(r);
+      const full = document.createElement('canvas');
+      full.width = S.w;
+      full.height = S.h;
+      const fx = full.getContext('2d');
+      fx.imageSmoothingEnabled = false;
+      Iso.drawRoom(fx, r, 1, () => ({ frame: 1, active: true, now: Date.now(), hour: 20, meeting: false }), []);
+      const out = document.createElement('canvas');
+      const k = 110 / S.w;
+      out.width = Math.round(S.w * k);
+      out.height = Math.round(S.h * k);
+      const ox = out.getContext('2d');
+      ox.imageSmoothingQuality = 'high';
+      ox.drawImage(full, 0, 0, out.width, out.height);
+      thumbs.set(id, out);
+    }
+    const src = thumbs.get(id);
+    const c = document.createElement('canvas');
+    c.width = src.width;
+    c.height = src.height;
+    c.getContext('2d').drawImage(src, 0, 0);
+    c.style.width = `${src.width / DPR}px`;
+    c.style.height = `${src.height / DPR}px`;
+    return c;
   }
 
   // ---- Canvas interaction -----------------------------------------------------------
@@ -174,11 +261,62 @@
     return found;
   }
 
+  // Terrain: the tile under the mouse on the layer being built.
+  function buildTarget(e) {
+    const p = RoomApp.finePoint(e);
+    if (build.tool === 'stairs') return Iso.tileAt(room(), p.x, p.y);
+    const zn = room().zones[build.zone];
+    return zn ? { ...Iso.pick(room(), p.x, p.y, zn.z), f: build.zone } : null;
+  }
+
+  function terrainDown(e) {
+    const r = room();
+    const t = buildTarget(e);
+    if (build.tool === 'stairs') {
+      if (e.button === 2) {
+        const p = RoomApp.finePoint(e);
+        const c = Iso.cells(r).list.find((cc) => cc.kind === 'stair' && Math.abs(Iso.project(r, (cc.x + 0.5) * TU, (cc.y + 0.5) * TU, cc.z).x - p.x) < 12
+          && Math.abs(Iso.project(r, (cc.x + 0.5) * TU, (cc.y + 0.5) * TU, cc.z).y - p.y) < 10);
+        build.stairFrom = null;
+        terrain(c && Iso.removeFlightAt(r, c.x, c.y) ? null : '右鍵點在樓梯上可以拆掉它', c ? '樓梯拆掉了' : null);
+        return;
+      }
+      if (!t) return;
+      if (!build.stairFrom) {
+        build.stairFrom = t;
+        hint.textContent = `起點：${r.zones[t.f].name}，再點另一端`;
+        return;
+      }
+      const err = Iso.addFlight(r, build.stairFrom, t);
+      build.stairFrom = null;
+      terrain(err, '樓梯蓋好了');
+      return;
+    }
+    if (!t) return;
+    build.drag = e.button === 2 ? 'erase' : 'paint';
+    build.last = null;
+    terrainPaint(t);
+  }
+
+  function terrainPaint(t) {
+    if (!t || `${t.x},${t.y}` === build.last) return;
+    build.last = `${t.x},${t.y}`;
+    const err = build.drag === 'erase' ? Iso.removeTile(room(), t.x, t.y, t.f) : Iso.addTile(room(), t.x, t.y, t.f);
+    terrain(err);
+  }
+
+  window.addEventListener('mouseup', () => { build.drag = null; });
+
   canvas.addEventListener('mousemove', (e) => {
     if (!state.editing) return;
+    if (tab === 'terrain') {
+      build.hover = buildTarget(e);
+      if (build.drag) terrainPaint(build.hover);
+      return;
+    }
     hover = tool ? target(e) : { pick: objectAt(e) };
   });
-  canvas.addEventListener('mouseleave', () => { hover = null; });
+  canvas.addEventListener('mouseleave', () => { hover = null; build.hover = null; });
 
   function cancelMove() {
     if (tool?.moving) room().objects.push({ type: tool.type, ...tool.orig });
@@ -187,6 +325,7 @@
 
   canvas.addEventListener('mousedown', (e) => {
     if (!state.editing) return;
+    if (tab === 'terrain') { terrainDown(e); return; }
     const r = room();
     if (e.button === 2) {
       if (tool) {
@@ -246,7 +385,15 @@
 
   // Ghost preview, drawn on top of the room.
   state.onDrawTop = (ctx, z) => {
-    if (!state.editing || !hover) return;
+    if (!state.editing) return;
+    if (tab === 'terrain') {
+      const r = room();
+      const mark = (t, color) => t && r.zones[t.f] && diamond(ctx, z, { x: t.x, y: t.y, w: 1, d: 1 }, r.zones[t.f].z, color);
+      mark(build.stairFrom, 'rgba(255,214,90,0.55)');
+      mark(build.hover, build.tool === 'stairs' ? 'rgba(255,214,90,0.35)' : 'rgba(124,196,255,0.4)');
+      return;
+    }
+    if (!hover) return;
     const r = room();
     if (tool && hover.x !== undefined) {
       const def = Iso.OBJECTS[tool.type];
@@ -281,6 +428,8 @@
   tabButtons.forEach((b) => b.addEventListener('click', () => {
     tab = b.dataset.tab;
     tool = null;
+    build.stairFrom = null;
+    build.hover = null;
     refresh();
   }));
 

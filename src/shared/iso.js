@@ -672,33 +672,114 @@
   // (face toward +y), plane 'x' runs along y at x = at (face toward +x).
   const STEP_Z = 32; // heights come in steps of half a storey
 
-  // The default street corner, as rects per zone.
-  const DEFAULT = {
-    zones: [
-      { name: '街道', z: 0, kind: 'street', rects: [[2, 6, 5, 2], [0, 8, 7, 1]] },
-      { name: '樓梯平台', z: 32, kind: 'outdoor', rects: [[0, 6, 2, 2]] },
-      { name: '店內', z: 64, kind: 'room', rects: [[0, 0, 2, 3], [2, 0, 5, 6], [7, 1, 2, 3]] },
-      { name: '露台', z: 128, kind: 'outdoor', level: 1, keep: true, rails: true, lights: true, rects: [[0, 3, 2, 3]] },
-      { name: '閣樓', z: 128, kind: 'room', level: 2, thin: true, rails: true, rects: [[2, 0, 5, 3], [2, 3, 1, 1]] },
-      { name: '屋頂花園', z: 192, kind: 'outdoor', level: 3, thin: true, rails: true, lights: true, rects: [[3, 0, 3, 2]] },
-    ],
-    flights: [
-      // The front stairs switch back: up from the street to the landing, then on into the shop.
-      { from: 0, to: 1, style: 'solid', cells: [[3, 7], [2, 7]], bottom: [4, 7], top: [1, 7] },
-      { from: 1, to: 2, style: 'solid', cells: [[2, 6], [3, 6]], bottom: [1, 6], top: [3, 5] },
-      // Inside, up the back-left corner onto the terrace.
-      { from: 2, to: 3, style: 'open', cells: [[1, 0], [1, 1], [1, 2]], bottom: [2, 0], top: [1, 3] },
-      // From the loft up its right side to the garden.
-      { from: 4, to: 5, style: 'open', cells: [[6, 2], [6, 1], [6, 0]], bottom: [5, 2], top: [5, 0] },
-    ],
-    door: [6, 7],
+  // Blueprints: finished little worlds to start from, like showrooms - shape, materials and
+  // furniture - for anyone who would rather move in than build. Zones are given as rects;
+  // objects as [zone, type, x, y, flip]. Each keeps three layers for the coin upgrades.
+  const BLUEPRINTS = {
+    shop: {
+      name: '街角小店',
+      desc: '墊高一層的磚造小店，樓下是街道，露台、閣樓和屋頂花園可以一路加蓋',
+      zones: [
+        { name: '街道', z: 0, kind: 'street', wall: 'brick', floor: 'stone', rects: [[2, 6, 5, 2], [0, 8, 7, 1]] },
+        { name: '樓梯平台', z: 32, kind: 'outdoor', wall: 'brick', floor: 'stone', rects: [[0, 6, 2, 2]] },
+        { name: '店內', z: 64, kind: 'room', wall: 'brick', floor: 'terra', rects: [[0, 0, 2, 3], [2, 0, 5, 6], [7, 1, 2, 3]] },
+        { name: '露台', z: 128, kind: 'outdoor', level: 1, keep: true, rails: true, lights: true, wall: 'navy', floor: 'stone', rects: [[0, 3, 2, 3]] },
+        { name: '閣樓', z: 128, kind: 'room', level: 2, thin: true, rails: true, wall: 'cream', floor: 'wood', rects: [[2, 0, 5, 3], [2, 3, 1, 1]] },
+        { name: '屋頂花園', z: 192, kind: 'outdoor', level: 3, thin: true, rails: true, lights: true, wall: 'navy', floor: 'grass', rects: [[3, 0, 3, 2]] },
+      ],
+      flights: [
+        // The front stairs switch back: up from the street to the landing, then on into the shop.
+        { from: 0, to: 1, style: 'solid', cells: [[3, 7], [2, 7]], bottom: [4, 7], top: [1, 7] },
+        { from: 1, to: 2, style: 'solid', cells: [[2, 6], [3, 6]], bottom: [1, 6], top: [3, 5] },
+        // Inside, up the back-left corner onto the terrace.
+        { from: 2, to: 3, style: 'open', cells: [[1, 0], [1, 1], [1, 2]], bottom: [2, 0], top: [1, 3] },
+        // From the loft up its right side to the garden.
+        { from: 4, to: 5, style: 'open', cells: [[6, 2], [6, 1], [6, 0]], bottom: [5, 2], top: [5, 0] },
+      ],
+      door: [6, 7],
+      objects: [
+        // Street: a little shop under the big one, two vending machines, a lamp and the bins.
+        [0, 'shopdoor', 6, 6], [0, 'sign', 6, 6], [0, 'vending', 4, 6], [0, 'vending', 5, 6],
+        [0, 'streetlamp', 6, 8], [0, 'bin', 0, 8], [0, 'plant', 1, 8],
+        // Landing: a plant where the stairs turn, the neon sign and an aircon on the block.
+        [1, 'plant', 0, 6], [1, 'neon', 0, 6], [1, 'aircon', 1, 6],
+        // Shop: workbench along the back, the glowing fridge on the block, counter in the middle.
+        [2, 'workstation', 3, 0], [2, 'coffee', 5, 0], [2, 'server', 6, 0], [2, 'screens', 3, 0], [2, 'window', 5, 0],
+        [2, 'clock', 2, 0], [2, 'fridge', 2, 4, true], [2, 'poster', 2, 3, true], [2, 'holo', 2, 2], [2, 'bell', 3, 4],
+        [2, 'table', 5, 3], [2, 'bookshelf', 7, 1], [2, 'plant', 8, 3], [2, 'plant', 0, 0], [2, 'boxes', 0, 1],
+        [2, 'lamp', 0, 2], [2, 'shelf', 0, 0, true],
+        // Terrace: a sofa under the sky. Loft: a bed under the garden. Garden: a telescope.
+        [3, 'sofa', 0, 4, true], [3, 'plant', 0, 3],
+        [4, 'bed', 3, 0], [4, 'lamp', 2, 0], [4, 'poster', 2, 1, true], [4, 'window', 3, 0], [4, 'neon', 5, 0],
+        [5, 'telescope', 4, 1], [5, 'plant', 3, 0], [5, 'plant', 4, 0], [5, 'catbed', 3, 1],
+      ],
+    },
+    cottage: {
+      name: '森林小屋',
+      desc: '草地上的木頭小屋，有壁爐和閣樓，旁邊一座瞭望台，再擴建出一片花園',
+      zones: [
+        { name: '草地', z: 0, kind: 'outdoor', wall: 'brick', floor: 'grass', rects: [[0, 5, 7, 3]] },
+        { name: '小屋', z: 32, kind: 'room', wall: 'cream', floor: 'wood', rects: [[0, 0, 5, 5], [5, 0, 1, 3]] },
+        { name: '瞭望台', z: 96, kind: 'outdoor', level: 1, keep: true, rails: true, lights: true, wall: 'navy', floor: 'stone', rects: [[5, 3, 2, 2]] },
+        { name: '閣樓', z: 96, kind: 'room', level: 2, thin: true, rails: true, wall: 'plum', floor: 'carpet', rects: [[0, 0, 5, 2]] },
+        { name: '花園', z: 0, kind: 'outdoor', level: 3, wall: 'brick', floor: 'grass', rects: [[7, 0, 2, 8]] },
+      ],
+      flights: [
+        { from: 0, to: 1, style: 'solid', cells: [[2, 5]], bottom: [2, 6], top: [2, 4] },
+        { from: 1, to: 2, style: 'open', cells: [[5, 1], [5, 2]], bottom: [5, 0], top: [5, 3] },
+        { from: 1, to: 3, style: 'open', cells: [[4, 2]], bottom: [4, 3], top: [4, 1] },
+      ],
+      door: [6, 7],
+      objects: [
+        [0, 'plant', 0, 5], [0, 'sofa', 0, 6, true], [0, 'bell', 4, 5], [0, 'streetlamp', 6, 5],
+        [1, 'lamp', 0, 0], [1, 'fireplace', 1, 0], [1, 'desk', 0, 1, true], [1, 'bookshelf', 0, 3, true], [1, 'table', 2, 2],
+        [1, 'coffee', 3, 0], [1, 'clock', 1, 0], [1, 'window', 3, 0], [1, 'poster', 0, 1, true],
+        [2, 'telescope', 6, 3],
+        [3, 'sofa', 0, 0], [3, 'catbed', 2, 0], [3, 'plant', 3, 0], [3, 'window', 1, 0],
+        [4, 'easel', 7, 1], [4, 'plant', 7, 0], [4, 'streetlamp', 8, 5], [4, 'catbed', 8, 3],
+      ],
+    },
+    cyber: {
+      name: '賽博公寓',
+      desc: '霓虹街道上方的公寓，附發光陽台，可以加蓋頂樓、小房間和後巷',
+      zones: [
+        { name: '街道', z: 0, kind: 'street', wall: 'navy', floor: 'stone', rects: [[0, 5, 8, 3]] },
+        { name: '公寓', z: 64, kind: 'room', wall: 'cyber', floor: 'cyber', rects: [[0, 0, 6, 5]] },
+        { name: '陽台', z: 64, kind: 'outdoor', rails: true, lights: true, wall: 'synth', floor: 'neon', rects: [[6, 1, 2, 4]] },
+        { name: '頂樓', z: 128, kind: 'outdoor', level: 1, thin: true, rails: true, lights: true, wall: 'synth', floor: 'neon', rects: [[0, 0, 3, 2]] },
+        { name: '加蓋小房', z: 128, kind: 'room', level: 2, thin: true, rails: true, wall: 'synth', floor: 'carpet', rects: [[3, 0, 3, 2]] },
+        { name: '後巷', z: 0, kind: 'street', level: 3, wall: 'navy', floor: 'stone', rects: [[8, 0, 2, 8]] },
+      ],
+      flights: [
+        { from: 0, to: 2, style: 'solid', cells: [[6, 6], [6, 5]], bottom: [6, 7], top: [6, 4] },
+        { from: 1, to: 3, style: 'open', cells: [[2, 3], [2, 2]], bottom: [2, 4], top: [2, 1] },
+      ],
+      door: [1, 7],
+      objects: [
+        [0, 'vending', 0, 5], [0, 'shopdoor', 3, 5], [0, 'sign', 3, 5], [0, 'neon', 4, 5], [0, 'streetlamp', 7, 5], [0, 'bin', 5, 5],
+        [1, 'workstation', 3, 0], [1, 'server', 5, 0], [1, 'screens', 3, 0], [1, 'bed', 0, 0, true], [1, 'tv', 0, 3, true],
+        [1, 'arcade', 5, 2], [1, 'neon', 0, 1, true], [1, 'window', 1, 0], [1, 'poster', 0, 3, true],
+        [2, 'bell', 6, 1], [2, 'holo', 7, 3], [2, 'plant', 7, 2],
+        [3, 'table', 0, 0],
+        [4, 'bookshelf', 3, 0], [4, 'aquarium', 5, 0, true], [4, 'neon', 3, 0],
+        [5, 'vending', 8, 0], [5, 'arcade', 9, 0], [5, 'boxes', 8, 3], [5, 'bin', 9, 6], [5, 'streetlamp', 9, 5],
+      ],
+    },
   };
 
+  // Materials by what a zone is, so a theme can reskin any blueprint.
+  const roleOf = (zn) => (zn.kind === 'room' ? (zn.thin ? 'loft' : 'room') : zn.kind === 'street' ? 'street' : 'outdoor');
   const THEMES = {
-    shop: { name: '街角小店', floors: [['brick', 'stone'], ['brick', 'stone'], ['brick', 'terra'], ['navy', 'stone'], ['cream', 'wood'], ['navy', 'grass']] },
-    cyber: { name: '賽博街角', floors: [['navy', 'stone'], ['navy', 'cyber'], ['cyber', 'cyber'], ['synth', 'neon'], ['synth', 'carpet'], ['cyber', 'grass']] },
-    cozy: { name: '溫馨小屋', floors: [['brick', 'grass'], ['brick', 'stone'], ['cream', 'wood'], ['plum', 'tile'], ['plum', 'carpet'], ['brick', 'grass']] },
+    shop: { name: '紅磚暖調', street: ['brick', 'stone'], outdoor: ['navy', 'stone'], room: ['brick', 'terra'], loft: ['cream', 'wood'] },
+    cyber: { name: '霓虹賽博', street: ['navy', 'stone'], outdoor: ['synth', 'neon'], room: ['cyber', 'cyber'], loft: ['synth', 'carpet'] },
+    cozy: { name: '溫馨木屋', street: ['brick', 'grass'], outdoor: ['plum', 'tile'], room: ['cream', 'wood'], loft: ['plum', 'carpet'] },
   };
+  function applyTheme(room, id) {
+    const t = THEMES[id];
+    if (!t) return;
+    room.theme = id;
+    for (const zn of room.zones) [zn.wall, zn.floor] = t[roleOf(zn)];
+  }
 
   // Split a set of tiles ("x,y") into rects, greedily: widest run first, then as deep as it goes.
   function toRects(tiles) {
@@ -800,26 +881,25 @@
   }
   const layoutOf = (room) => derive(room);
 
-  // Build a room's zones/tiles/flights from a rect description like DEFAULT.
-  function fromSpec(spec, theme) {
-    const t = THEMES[theme] || THEMES.shop;
+  // A blueprint's zones/tiles/flights, ready to be a room.
+  function fromSpec(bp) {
     return {
-      zones: spec.zones.map(({ rects, ...zn }, i) => ({ ...zn, wall: t.floors[i]?.[0] || 'brick', floor: t.floors[i]?.[1] || 'stone' })),
-      tiles: spec.zones.flatMap(({ rects }, f) => rects.flatMap(([x, y, w, d]) => {
+      zones: bp.zones.map(({ rects, ...zn }) => ({ ...zn })),
+      tiles: bp.zones.flatMap(({ rects }, f) => rects.flatMap(([x, y, w, d]) => {
         const out = [];
         for (let j = 0; j < d; j++) for (let i = 0; i < w; i++) out.push([x + i, y + j, f]);
         return out;
       })),
-      flights: JSON.parse(JSON.stringify(spec.flights)),
-      door: [...spec.door],
+      flights: JSON.parse(JSON.stringify(bp.flights)),
+      door: [...bp.door],
     };
   }
 
-  // Rooms saved before the grid (iso 4) keep their furniture and materials.
+  // Rooms saved before the grid (iso 4) were the street corner: keep their furniture and materials.
   function migrate(room) {
     if (room?.iso === 5) return room;
     if (room?.iso !== 4) return null;
-    const out = { iso: 5, theme: room.theme, ...fromSpec(DEFAULT, room.theme), objects: room.objects || [] };
+    const out = { iso: 5, blueprint: 'shop', theme: null, ...fromSpec(BLUEPRINTS.shop), objects: room.objects || [] };
     out.zones.forEach((zn, i) => { if (room.floors?.[i]) Object.assign(zn, { wall: room.floors[i].wall, floor: room.floors[i].floor }); });
     return out;
   }
@@ -833,7 +913,8 @@
 
   // Every place a character can stand: open area tiles and each step of every open flight.
   function cells(room) {
-    if (room._cells && room._cells.level === (room.level || 0)) return room._cells;
+    const key = `${layoutOf(room).id}|${room.level || 0}`;
+    if (room._cells && room._cells.key === key) return room._cells;
     const L = layoutOf(room);
     const list = [];
     const at = new Map();
@@ -877,7 +958,7 @@
       const rise = (z1 - z0) / (fl.cells.length + 1);
       let prev = floorAt(fl.bottom[0], fl.bottom[1], fl.from);
       // Treads face the way the flight climbs.
-      const dir = fl.cells[1][0] !== fl.cells[0][0] ? 'x' : 'y';
+      const dir = fl.top[0] !== fl.bottom[0] ? 'x' : 'y';
       fl.cells.forEach(([x, y], k) => {
         // Solid steps stand on the ground; open treads hang one rise deep.
         const c = add({ x, y, z: z0 + rise * (k + 1), f: fl.from, kind: 'stair', rise, dir, style: fl.style, base: fl.style === 'solid' ? 0 : z0 });
@@ -886,7 +967,7 @@
       });
       link(prev, floorAt(fl.top[0], fl.top[1], fl.to));
     }
-    Object.defineProperty(room, '_cells', { value: { list, at, links, level: room.level || 0 }, enumerable: false, configurable: true });
+    Object.defineProperty(room, '_cells', { value: { list, at, links, key }, enumerable: false, configurable: true });
     return room._cells;
   }
   const resetCells = (room) => { delete room._cells; };
@@ -973,58 +1054,123 @@
   }
 
   // The default room, furnished on every layer; locked layers keep their furniture for later.
-  function generateRoom(theme = 'shop') {
-    const t = THEMES[theme] || THEMES.shop;
-    void t;
-    const room = { iso: 5, theme, ...fromSpec(DEFAULT, theme), objects: [], level: 99 };
-    const add = (f, type, x, y, flip = false) => { if (canPlace(room, type, x, y, flip, f)) room.objects.push({ type, x, y, flip, f }); };
-    // Street: a little shop under the big one, two vending machines, a lamp and the bins.
-    add(0, 'shopdoor', 6, 6);
-    add(0, 'sign', 6, 6);
-    add(0, 'vending', 4, 6);
-    add(0, 'vending', 5, 6);
-    add(0, 'streetlamp', 6, 8);
-    add(0, 'bin', 0, 8);
-    add(0, 'plant', 1, 8);
-    // Landing: a plant where the stairs turn, the neon sign and an aircon on the block.
-    add(1, 'plant', 0, 6);
-    add(1, 'neon', 0, 6);
-    add(1, 'aircon', 1, 6);
-    // Shop: workbench along the back, the glowing fridge on the block, counter in the middle.
-    add(2, 'workstation', 3, 0);
-    add(2, 'coffee', 5, 0);
-    add(2, 'server', 6, 0);
-    add(2, 'screens', 3, 0);
-    add(2, 'window', 5, 0);
-    add(2, 'clock', 2, 0);
-    add(2, 'fridge', 2, 4, true);
-    add(2, 'poster', 2, 3, true);
-    add(2, 'holo', 2, 2);
-    add(2, 'bell', 3, 4);
-    add(2, 'table', 5, 3);
-    add(2, 'bookshelf', 7, 1);
-    add(2, 'plant', 8, 3);
-    add(2, 'plant', 0, 0);
-    add(2, 'boxes', 0, 1);
-    add(2, 'lamp', 0, 2);
-    add(2, 'shelf', 0, 0, true);
-    // Terrace: a sofa under the sky.
-    add(3, 'sofa', 0, 4, true);
-    add(3, 'plant', 0, 3);
-    // Loft: a bed tucked under the garden.
-    add(4, 'bed', 3, 0);
-    add(4, 'lamp', 2, 0);
-    add(4, 'poster', 2, 1, true);
-    add(4, 'window', 3, 0);
-    add(4, 'neon', 5, 0);
-    // Garden: plants and a telescope.
-    add(5, 'telescope', 4, 1);
-    add(5, 'plant', 3, 0);
-    add(5, 'plant', 4, 0);
-    add(5, 'catbed', 3, 1);
+  // A fresh room from a blueprint, furnished on every layer; locked layers keep their furniture.
+  function generateRoom(id = 'shop') {
+    const bp = BLUEPRINTS[id] || BLUEPRINTS.shop;
+    const room = { iso: 5, blueprint: BLUEPRINTS[id] ? id : 'shop', theme: null, ...fromSpec(bp), objects: [], level: 99 };
+    for (const [f, type, x, y, flip = false] of bp.objects) {
+      if (canPlace(room, type, x, y, flip, f)) room.objects.push({ type, x, y, flip, f });
+    }
     delete room.level;
     resetCells(room);
     return room;
+  }
+
+  // ---- Building -----------------------------------------------------------------------
+  // Terrain edits for the editor. Each returns an error message, or null when it worked.
+  const LAND = 12; // tiles each way the room may spread over
+  const ZONE_KINDS = {
+    room: { name: '室內', kind: 'room' },
+    outdoor: { name: '戶外', kind: 'outdoor', rails: true },
+    loft: { name: '閣樓', kind: 'room', thin: true, rails: true },
+  };
+
+  // The tile under a screen point (fine px) on the plane z.
+  function pick(room, fx, fy, z) {
+    const o = origin(room);
+    const sx = fx - o.x;
+    const s2 = (fy - o.y + z) * 2;
+    return { x: Math.floor((s2 + sx) / 2 / TU), y: Math.floor((s2 - sx) / 2 / TU) };
+  }
+
+  const tileIndex = (room, x, y, f) => room.tiles.findIndex((t) => t[0] === x && t[1] === y && t[2] === f);
+
+  function addZone(room, type, z) {
+    const k = ZONE_KINDS[type] || ZONE_KINDS.outdoor;
+    const like = room.zones.find((zn) => zn.kind === k.kind) || room.zones[0];
+    const n = room.zones.filter((zn) => zn.name.startsWith(k.name)).length + 1;
+    room.zones.push({ ...k, name: `${k.name} ${n}`, z: Math.max(STEP_Z, z), wall: like?.wall || 'brick', floor: like?.floor || 'stone' });
+    return room.zones.length - 1;
+  }
+
+  // Lay a floor tile of zone f at (x, y). A solid floor buries any lower floor in its column;
+  // nothing can go under a solid floor.
+  function addTile(room, x, y, f) {
+    const zn = room.zones[f];
+    if (!zn) return '沒有這一層';
+    if (x < 0 || y < 0 || x >= LAND || y >= LAND) return '超出土地範圍';
+    if (tileIndex(room, x, y, f) >= 0) return null;
+    const column = room.tiles.filter((t) => t[0] === x && t[1] === y);
+    if (column.some((t) => room.zones[t[2]].z > zn.z && !room.zones[t[2]].thin)) return '上面有實心的地基，蓋不進去';
+    room.tiles = room.tiles.filter((t) => !(t[0] === x && t[1] === y && (room.zones[t[2]].z === zn.z || (!zn.thin && room.zones[t[2]].z < zn.z))));
+    room.tiles.push([x, y, f]);
+    tidy(room);
+    return null;
+  }
+
+  function removeTile(room, x, y, f) {
+    const i = tileIndex(room, x, y, f);
+    if (i < 0) return null;
+    room.tiles.splice(i, 1);
+    tidy(room);
+    return null;
+  }
+
+  // Stairs in a straight line from tile a to tile b on different heights; the steps fill the
+  // tiles between. Solid stone outdoors, open metal treads indoors.
+  function addFlight(room, a, b) {
+    const za = room.zones[a.f]?.z;
+    const zb = room.zones[b.f]?.z;
+    if (za === undefined || zb === undefined || za === zb) return '樓梯要連接兩個不同高度的地方';
+    if (tileIndex(room, a.x, a.y, a.f) < 0 || tileIndex(room, b.x, b.y, b.f) < 0) return '樓梯兩端都要是地板';
+    const [lo, hi] = za < zb ? [a, b] : [b, a];
+    if (lo.x !== hi.x && lo.y !== hi.y) return '樓梯要走直線：兩端要在同一排';
+    const n = Math.abs(hi.x - lo.x) + Math.abs(hi.y - lo.y) - 1;
+    const dz = Math.abs(zb - za);
+    if (n < 1 || dz / (n + 1) > STEP_Z) return `太陡了：這個高度至少要隔 ${Math.ceil(dz / STEP_Z)} 格`;
+    const dx = Math.sign(hi.x - lo.x);
+    const dy = Math.sign(hi.y - lo.y);
+    const cells = Array.from({ length: n }, (_, k) => [lo.x + dx * (k + 1), lo.y + dy * (k + 1)]);
+    const used = new Set(room.flights.flatMap((fl) => fl.cells.map((c) => `${c}`)));
+    if (cells.some((c) => used.has(`${c}`))) return '這裡已經有樓梯了';
+    const from = room.zones[lo.f];
+    const style = !from.thin && from.kind !== 'room' ? 'solid' : 'open';
+    room.flights.push({ from: lo.f, to: hi.f, style, cells, bottom: [lo.x, lo.y], top: [hi.x, hi.y] });
+    tidy(room);
+    return null;
+  }
+
+  function removeFlightAt(room, x, y) {
+    const before = room.flights.length;
+    room.flights = room.flights.filter((fl) => !fl.cells.some(([cx, cy]) => cx === x && cy === y));
+    if (room.flights.length !== before) tidy(room);
+    return room.flights.length !== before;
+  }
+
+  function setZoneZ(room, f, z) {
+    const zn = room.zones[f];
+    if (!zn) return '沒有這一層';
+    z = Math.max(f === 0 ? 0 : STEP_Z, Math.min(8 * STEP_Z, Math.round(z / STEP_Z) * STEP_Z));
+    if (zn.z === z) return null;
+    zn.z = z;
+    tidy(room);
+    return null;
+  }
+
+  // After an edit: drop stairs whose ends are gone or too steep, furniture that no longer fits,
+  // and keep the street door on a real tile.
+  function tidy(room) {
+    resetCells(room);
+    const has = (x, y, f) => tileIndex(room, x, y, f) >= 0;
+    room.flights = room.flights.filter((fl) => has(fl.bottom[0], fl.bottom[1], fl.from) && has(fl.top[0], fl.top[1], fl.to)
+      && Math.abs(room.zones[fl.to].z - room.zones[fl.from].z) / (fl.cells.length + 1) <= STEP_Z + 1);
+    resetCells(room);
+    room.objects = room.objects.filter((o, i) => !isOpen(room, o.f || 0) || canPlace(room, o.type, o.x, o.y, o.flip, o.f || 0, i));
+    if (!has(room.door[0], room.door[1], 0)) {
+      const t = room.tiles.filter((tt) => tt[2] === 0).sort((p, q) => (q[0] + q[1]) - (p[0] + p[1]))[0];
+      if (t) room.door = [t[0], t[1]];
+    }
+    resetCells(room);
   }
 
   // ---- Rendering --------------------------------------------------------------------
@@ -1395,11 +1541,11 @@
     return mask.data[(Math.floor(fy) * mask.w + Math.floor(fx)) * 4 + 3] > 0;
   }
 
-  // Dev preview: the default room at each upgrade level, the last in another theme, plus every
+  // Dev preview: the street corner unbuilt and built, the other blueprints fully built, plus every
   // object on its own.
   function preview(canvas, z = 2) {
-    const rooms = [0, 1, 2, 3, 3].map((level, i) => Object.assign(generateRoom(i === 4 ? 'cyber' : 'shop'), { level }));
-    const S = size(rooms[3]);
+    const rooms = [['shop', 0], ['shop', 3], ['cottage', 3], ['cyber', 3]].map(([id, level]) => Object.assign(generateRoom(id), { level }));
+    const S = rooms.map(size).reduce((m, q) => ({ w: Math.max(m.w, q.w), h: Math.max(m.h, q.h) }));
     const themes = rooms;
     canvas.width = S.w * z * themes.length;
     canvas.height = S.h * z + 300;
@@ -1425,7 +1571,8 @@
   }
 
   return {
-    TU, SLAB, STEP_Z, FLOORS, WALLS, OBJECTS, THEMES, isOpen, migrate, derive,
+    TU, SLAB, STEP_Z, LAND, ZONE_KINDS, FLOORS, WALLS, OBJECTS, THEMES, BLUEPRINTS, applyTheme, isOpen, migrate, derive,
+    pick, addZone, addTile, removeTile, addFlight, removeFlightAt, setZoneZ,
     size, origin, project, floorZ, levels, cells, resetCells, cellAt, neighbours, door, walkable, footprint, canPlace, stationSpots,
     generateRoom, objectSprite, drawRoom, blit, tileAt, wallAt, solidAt, preview,
   };
