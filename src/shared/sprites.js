@@ -31,7 +31,7 @@
   // Each skin: head shape, hat, torso, held item, colours.
   const SKINS = {
     commander: { head: 'helmet', body: 'armor', item: 'none', cape: true,
-      c: { helmet: '#f1f1f4', helmetShade: '#c4c6d4', plume: '#3a3c48', plumeDark: '#26272f', body: '#2f313c', bodyShade: '#23242d', plate: '#444755', trim: '#9097a8',
+      c: { helmet: '#f1f1f4', helmetShade: '#c4c6d4', plume: '#3a3c48', plumeDark: '#26272f', body: '#2f313c', bodyShade: '#23242d', plate: '#8f929b', trim: '#c3c6ce',
         leg: '#34363f', boot: '#22232a', hand: '#3a3c47', cape: '#45464f', capeDark: '#2e2f37' } },
     office: { head: 'face', hat: 'hair', body: 'shirt', item: 'mug',
       c: { skin: PAL.skin, hair: '#3a2a20', body: '#f4f4f6', bodyShade: '#c9ccd6', leg: '#3b4256', boot: '#262a38', hand: PAL.skin } },
@@ -268,11 +268,31 @@
     apron: [[4, 1, 1, 3, 'c'], [11, 1, 1, 3, 'c'], [3, 4, 10, 8, 'c'], [6, 6, 4, 2, 'C'], [3, 4, 10, 1, 'C']],
     suit: [[3, 3, 2, 2, 'c'], [7, 3, 5, 3, 's'], [8, 4, 1, 1, 'x'], [10, 4, 1, 1, 'y'], [0, 7, 16, 1, 't'], [6, 9, 1, 3, 'A']],
   };
+  // Outfits drawn whole on the 18x13 torso, shape included.
+  const OUTFIT_FULL = {
+    // Steel plate over black cloth: a mail collar under the helm, broad pauldrons, a ridged
+    // breastplate, a buckled belt and a ragged skirt.
+    armor: [
+      '....dddddddddd....',
+      '...dddddddddddd...',
+      '...ddd+bbbbbdddd..',
+      '++++db+bbbbbBd++++',
+      'bbbbtb+bbbbbbtbbbb',
+      'BBBBtb+bbbbbbtBBBB',
+      '.tttabbbbbbbbBattt',
+      'dddddddttddddddddd',
+      'aaaaaaaaaaaaaaaaaa',
+      'aaaaAaaaaaaaaAaaaa',
+      'aaaaAaaaaaaaaAaaaa',
+      'aAaaaaaAaaaaaaAaaa',
+      '.aaaa.aaaaaa.aaaa.',
+    ],
+  };
   const torsoCache = new Map();
   function torsoRows(body) {
     if (torsoCache.has(body)) return torsoCache.get(body);
-    const g = TORSO_SHAPE.map((r) => [...r].map((ch) => (ch === 'x' ? 'a' : '.')));
-    for (const [x0, y, w0, h0, ch] of OUTFIT[body] || OUTFIT.shirt) {
+    const g = (OUTFIT_FULL[body] || TORSO_SHAPE).map((r) => [...r].map((ch) => (OUTFIT_FULL[body] ? ch : ch === 'x' ? 'a' : '.')));
+    for (const [x0, y, w0, h0, ch] of OUTFIT_FULL[body] ? [] : OUTFIT[body] || OUTFIT.shirt) {
       // Full-width bands (belts, trousers) stay full width; the rest shifts to the centre.
       const [x, w] = x0 === 0 && w0 === 16 ? [0, 18] : [x0 + 1, w0];
       const h = y + h0 >= 12 ? h0 + 1 : h0;
@@ -346,6 +366,8 @@
       x: glow(sk.body === 'suit' ? '#3dffb0' : col.main), y: glow('#5ef0ff'), z: glow(PAL.spark), f: c.face || '#16171c', p: '#5aa7ff',
     };
     tp.B = dark(tp.b);
+    tp.T = dark(tp.t);
+    tp.D = dark(tp.d);
     tp['+'] = lite(tp.b);
     L(torsoRows(sk.body), tp, 5, 19 + B);
 
