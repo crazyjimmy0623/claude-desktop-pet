@@ -10,7 +10,13 @@
   const hint = document.getElementById('editor-hint');
   const btnEdit = document.getElementById('btn-edit');
   const tabButtons = [...document.querySelectorAll('.tabs button[data-tab]')];
+  const modeButtons = [...document.querySelectorAll('.modes button[data-mode]')];
+  const buildTabs = document.getElementById('build-tabs');
 
+  // Two modes: building (furniture, blocks, floors, walls, scenery, blueprints by category) and
+  // deleting, where whatever is under the mouse turns see-through red and a click takes it away.
+  let mode = 'build';
+  let doomed = null; // erase mode: { object: i } | { stair: cell } | { block: hit } under the mouse
   let tab = 'furniture';
   let tool = null; // { type, flip, moving?, orig? }
   let hover = null; // { x, y, f, flip } — a floor tile, or a wall spot for wall items
@@ -24,7 +30,7 @@
     terrain: '半透明的方塊就是會放下去的位置：點頂面往上疊、點側面往旁邊接、點空地鋪地面',
     stairs: '樓梯：放在高台旁邊的地板上，會自動朝高的那邊爬上去；落差大會多幾階',
     spiral: '旋轉樓梯：放在高處旁邊的地板上，一格就能繞上去，最多五層',
-    erase: '刪除：指到的方塊會變紅，點一下拆掉一顆（實心的變矮一層），也可以拆樓梯',
+    erase: '刪除模式：指到的東西會變成紅色透明，點一下就刪掉。家具、樓梯、方塊、地板都可以（疊高的方塊一次拆一層）',
     floor: '選樓層，再點一下換那層的地板',
     wall: '選樓層，再點一下換那層的牆面',
     room: '套用設計好的藍圖，或換時間和天氣',
@@ -73,9 +79,19 @@
 
   function refresh() {
     if (!state.editing) return;
-    hint.textContent = tab === 'terrain' && build.tool !== 'block' ? HINTS[build.tool] : HINTS[tab];
+    modeButtons.forEach((b) => b.classList.toggle('active', b.dataset.mode === mode));
+    buildTabs.classList.toggle('hidden', mode === 'erase');
     tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
     palette.replaceChildren();
+    if (mode === 'erase') {
+      hint.textContent = HINTS.erase;
+      const note = document.createElement('div');
+      note.className = 'erase-note';
+      note.textContent = '🗑 把滑鼠移到房間裡想刪的東西上，它會變成紅色透明；點一下刪掉。按上面的「🔨 建造」回到建造。';
+      palette.append(note);
+      return;
+    }
+    hint.textContent = tab === 'terrain' && build.tool !== 'block' ? HINTS[build.tool] : HINTS[tab];
     if (tab === 'furniture') {
       for (const type of owned('obj')) {
         if (!Iso.OBJECTS[type]) continue;
@@ -233,10 +249,6 @@
       build.tool = build.tool === 'spiral' ? 'block' : 'spiral';
       refresh();
     }));
-    row.append(button('🗑 刪除', null, build.tool === 'erase', () => {
-      build.tool = build.tool === 'erase' ? 'block' : 'erase';
-      refresh();
-    }));
     palette.append(row);
   }
 
@@ -339,17 +351,50 @@
     const r = room();
     const hit = buildHit(e);
     if (e.button !== 0) return;
-    if (build.tool === 'erase') {
-      if (!hit.ground) terrain(Iso.removeBlock(r, hit));
-      return;
-    }
     if (build.tool === 'stairs') terrain(Iso.placeStairs(r, hit), '樓梯蓋好了');
     else if (build.tool === 'spiral') terrain(Iso.placeSpiral(r, hit), '旋轉樓梯蓋好了');
     else terrain(Iso.placeBlock(r, build.block, targetOf(hit)));
   }
 
+  // Erase mode: what a click would take away, and taking it.
+  function eraseHit(e) {
+    const p = RoomApp.finePoint(e);
+    return Iso.pickAt(room(), p.x, p.y, () => still);
+  }
+  let eraseMove = null;
+  function eraseDown(e) {
+    const d = eraseHit(e);
+    if (!d) return;
+    const r = room();
+    if (d.object !== undefined) {
+      const [o] = r.objects.splice(d.object, 1);
+      save();
+      hint.textContent = `已刪除：${itemName(`obj:${o.type}`)}（還在背包裡，可以再放回來）`;
+    } else if (d.stair) {
+      Iso.removeFlightAt(r, d.stair.x, d.stair.y);
+      terrain(null, '已刪除樓梯');
+    } else {
+      Iso.removeBlock(r, d.block);
+      terrain(null, '已拆掉一格');
+    }
+    doomed = eraseHit(e);
+  }
+
   canvas.addEventListener('mousemove', (e) => {
     if (!state.editing) return;
+    if (mode === 'erase') {
+      // Picking reads sprite pixels, so at most once a frame.
+      const pending = !eraseMove;
+      eraseMove = e;
+      if (pending) {
+        requestAnimationFrame(() => {
+          if (eraseMove && mode === 'erase') doomed = eraseHit(eraseMove);
+          canvas.style.cursor = doomed ? 'pointer' : '';
+          eraseMove = null;
+        });
+      }
+      return;
+    }
     if (tab === 'terrain') {
       build.hover = buildHit(e);
       build.stairs = build.tool === 'stairs' || build.tool === 'spiral' ? stairGhost(build.hover, build.tool) : null;
@@ -357,7 +402,7 @@
     }
     hover = tool ? target(e) : { pick: objectAt(e) };
   });
-  canvas.addEventListener('mouseleave', () => { hover = null; build.hover = null; });
+  canvas.addEventListener('mouseleave', () => { hover = null; build.hover = null; doomed = null; });
 
   function cancelMove() {
     if (tool?.moving) room().objects.push({ type: tool.type, ...tool.orig });
@@ -366,6 +411,7 @@
 
   canvas.addEventListener('mousedown', (e) => {
     if (!state.editing) return;
+    if (mode === 'erase') { if (e.button === 0 || e.button === 2) eraseDown(e); return; }
     if (tab === 'terrain') { terrainDown(e); return; }
     const r = room();
     if (e.button === 2) {
@@ -458,20 +504,14 @@
   // Ghost preview, drawn on top of the room.
   state.onDrawTop = (ctx, z) => {
     if (!state.editing) return;
+    if (mode === 'erase') {
+      drawDoomed(ctx, z);
+      return;
+    }
     if (tab === 'terrain') {
       const h = build.hover;
       if (!h) return;
       const r = room();
-      if (build.tool === 'erase') {
-        // The block that would go, in red.
-        if (h.stair) ghost(ctx, z, h.x, h.y, h.z, h.z - h.stair.rise, 'rgba(235,60,80,0.5)');
-        else if (!h.ground) {
-          const zn = r.zones[h.f];
-          const low = zn.kind === 'water' ? h.z - (zn.depth || 40) : zn.thin ? h.z - Iso.SLAB : Math.max(h.z - Iso.STEP_Z, -Iso.SLAB);
-          ghost(ctx, z, h.x, h.y, h.z, low, 'rgba(235,60,80,0.5)');
-        }
-        return;
-      }
       if (build.tool === 'stairs' || build.tool === 'spiral') {
         // The steps themselves, see-through, or the tile in red with why they can't go there.
         const g = build.stairs;
@@ -518,6 +558,33 @@
     }
   };
 
+  // Erase mode: the thing under the mouse, drawn again over itself in see-through red.
+  function drawDoomed(ctx, z) {
+    const d = doomed;
+    if (!d) return;
+    const r = room();
+    const pulse = 0.75 + 0.2 * Math.sin(Date.now() / 160);
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    if (d.object !== undefined) {
+      const o = r.objects[d.object];
+      if (o && Iso.OBJECTS[o.type]) Iso.blit(ctx, r, Iso.tinted(Iso.objectSprite(o.type, o.flip, still)), o.x * TU, o.y * TU, Iso.floorZ(r, o.f || 0), z);
+    } else if (d.stair) {
+      // The whole flight goes, so all of it turns red.
+      const fl = r.flights.find((f) => f.cells.some(([x, y]) => x === d.stair.x && y === d.stair.y));
+      const mine = new Set((fl?.cells || [[d.stair.x, d.stair.y]]).map(([x, y]) => `${x},${y}`));
+      for (const c of Iso.cells(r).list) {
+        if (c.kind === 'stair' && mine.has(`${c.x},${c.y}`)) Iso.blit(ctx, r, Iso.tinted(Iso.stairSprite(c, r)), c.x * TU, c.y * TU, c.z, z);
+      }
+    } else {
+      const h = d.block;
+      const zn = r.zones[h.f];
+      const low = zn.kind === 'water' ? h.z - (zn.depth || 40) : zn.thin ? h.z - Iso.SLAB : Math.max(h.z - Iso.STEP_Z, -Iso.SLAB);
+      ghost(ctx, z, h.x, h.y, h.z, low, 'rgba(235,50,70,0.6)');
+    }
+    ctx.restore();
+  }
+
   // ---- Toggle -------------------------------------------------------------------------
 
   // The edit button opens the editor in the drawer; the drawer tells us when editing starts or stops.
@@ -528,11 +595,25 @@
     if (!on) cancelMove();
     tool = null;
     build.hover = null;
+    doomed = null;
+    mode = 'build';
+    canvas.style.cursor = '';
     btnEdit.classList.toggle('on', on);
     document.getElementById('toolbar').classList.toggle('pinned', on);
     if (!on) save();
     refresh();
   }
+
+  modeButtons.forEach((b) => b.addEventListener('click', () => {
+    if (mode === 'build' && tool?.moving) cancelMove();
+    mode = b.dataset.mode;
+    tool = null;
+    build.hover = null;
+    doomed = null;
+    canvas.style.cursor = '';
+    save();
+    refresh();
+  }));
 
   tabButtons.forEach((b) => b.addEventListener('click', () => {
     tab = b.dataset.tab;

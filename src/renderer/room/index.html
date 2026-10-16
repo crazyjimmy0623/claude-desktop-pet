@@ -30,15 +30,19 @@
     </div>
     </div>
     <div id="editor" class="hidden">
-      <div class="tabs">
-        <button data-tab="furniture" class="active">家具</button>
-        <button data-tab="terrain">建造</button>
-        <button data-tab="floor">地板</button>
-        <button data-tab="wall">牆面</button>
-        <button data-tab="scenery">背景</button>
-        <button data-tab="room">房間</button>
+      <div class="modes">
+        <button data-mode="build" class="active">🔨 建造</button>
+        <button data-mode="erase">🗑 刪除</button>
         <span class="spacer"></span>
         <span id="editor-hint" class="hint"></span>
+      </div>
+      <div class="tabs" id="build-tabs">
+        <button data-tab="furniture" class="active">🪑 家具</button>
+        <button data-tab="terrain">🧱 方塊</button>
+        <button data-tab="floor">地板</button>
+        <button data-tab="wall">牆面</button>
+        <button data-tab="scenery">🌲 背景</button>
+        <button data-tab="room">🏠 房間</button>
       </div>
       <div id="palette"></div>
     </div>

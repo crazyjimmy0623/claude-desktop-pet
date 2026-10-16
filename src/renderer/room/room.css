@@ -56,11 +56,11 @@ html, body {
   border-radius: 3px;
 }
 
-#toolbar .spacer, .tabs .spacer {
+#toolbar .spacer, .tabs .spacer, .modes .spacer {
   flex: 1;
 }
 
-#toolbar button, .tabs button, #palette button {
+#toolbar button, .tabs button, .modes button, #palette button {
   font: inherit;
   color: inherit;
   background: rgba(255, 255, 255, 0.08);
@@ -70,11 +70,11 @@ html, body {
   cursor: pointer;
 }
 
-#toolbar button:hover, .tabs button:hover, #palette button:hover {
+#toolbar button:hover, .tabs button:hover, .modes button:hover, #palette button:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 
-#toolbar button.on, .tabs button.active, #palette button.selected {
+#toolbar button.on, .tabs button.active, .modes button.active, #palette button.selected {
   background: #e8b13a;
   color: var(--ink);
   border-color: #e8b13a;
@@ -144,7 +144,30 @@ html, body {
   padding: 5px 6px;
 }
 
-.tabs .hint {
+/* The two big switches: building things, or deleting them. */
+.modes {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 6px 2px;
+}
+
+.modes button {
+  font-size: 13px;
+  padding: 5px 16px;
+}
+
+.modes button[data-mode="erase"].active {
+  background: #e0405a;
+  border-color: #ff8095;
+  color: #fff;
+}
+
+.tabs.hidden {
+  display: none;
+}
+
+.modes .hint {
   color: #b8b0c8;
   font-size: 11px;
 }
@@ -195,4 +218,10 @@ html, body {
 
 #palette button.locked {
   opacity: 0.55;
+}
+
+#palette .erase-note {
+  color: #ffb8c4;
+  font-size: 12px;
+  padding: 10px 4px;
 }

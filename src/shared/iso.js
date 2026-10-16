@@ -2566,7 +2566,7 @@
     for (const c of cells(room).list) {
       if (c.kind !== 'stair') continue;
       const z0 = c.style === 'solid' ? c.base : c.z - c.rise;
-      items.push({ x0: c.x, y0: c.y, x1: c.x + 1 - e, y1: c.y + 1 - e, z0, z1: c.span ? c.span[1] : c.z + c.rise / 2, sprite: () => stairSprite(c, room), wx: c.x * TU, wy: c.y * TU, wz: c.z });
+      items.push({ x0: c.x, y0: c.y, x1: c.x + 1 - e, y1: c.y + 1 - e, z0, z1: c.span ? c.span[1] : c.z + c.rise / 2, sprite: () => stairSprite(c, room), wx: c.x * TU, wy: c.y * TU, wz: c.z, stair: c });
     }
     room.objects.forEach((o, i) => {
       const def = OBJECTS[o.type];
@@ -2575,11 +2575,11 @@
       const sprite = () => objectSprite(o.type, o.flip, s(i));
       if (def.wall) {
         const box = o.flip ? { x0: o.x - 0.01, x1: o.x, y0: o.y, y1: o.y + def.w } : { y0: o.y - 0.01, y1: o.y, x0: o.x, x1: o.x + def.w };
-        items.push({ ...box, z0: z + 1, z1: z + (def.top || 60), sprite, wx: o.x * TU, wy: o.y * TU, wz: z });
+        items.push({ ...box, z0: z + 1, z1: z + (def.top || 60), sprite, wx: o.x * TU, wy: o.y * TU, wz: z, obj: i });
         return;
       }
       const fp = footprint(o);
-      items.push({ x0: fp.x, y0: fp.y, x1: fp.x + fp.w, y1: fp.y + fp.d, z0: z + (def.flat ? 0 : 0.02), z1: z + (def.flat ? 0.01 : def.h), sprite, wx: o.x * TU, wy: o.y * TU, wz: z });
+      items.push({ x0: fp.x, y0: fp.y, x1: fp.x + fp.w, y1: fp.y + fp.d, z0: z + (def.flat ? 0 : 0.02), z1: z + (def.flat ? 0.01 : def.h), sprite, wx: o.x * TU, wy: o.y * TU, wz: z, obj: i });
     });
     return items;
   }
@@ -2912,6 +2912,54 @@
     ctx.restore();
   }
 
+  // Pixel-exact picking for deleting: whatever is drawn frontmost under the point (fine px) - a
+  // piece of furniture { object: i }, a step of some stairs { stair: cell }, or else the block face
+  // there { block: hit }; null over nothing.
+  const ALPHA = new WeakMap();
+  function spriteHit(room, sp, wx, wy, wz, fx, fy) {
+    const p = project(room, wx, wy, wz);
+    const x = Math.floor(fx - (p.x - sp.ax));
+    const y = Math.floor(fy - (p.y - sp.ay));
+    const c = sp.canvas;
+    if (x < 0 || y < 0 || x >= c.width || y >= c.height) return false;
+    let a = ALPHA.get(c);
+    if (!a) {
+      a = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      ALPHA.set(c, a);
+    }
+    return a[(y * c.width + x) * 4 + 3] > 16;
+  }
+  let PICK = { key: '', items: null };
+  function pickAt(room, fx, fy, s) {
+    const key = `${layoutOf(room).id}|${JSON.stringify(room.objects)}`;
+    if (PICK.key !== key) PICK = { key, items: sortItems(sceneItems(room, s)).reverse() };
+    for (const it of PICK.items) {
+      if (!spriteHit(room, it.sprite(), it.wx, it.wy, it.wz, fx, fy)) continue;
+      if (it.obj !== undefined) return { object: it.obj };
+      if (it.stair) return { stair: it.stair };
+      break;
+    }
+    const hit = pickBlock(room, fx, fy);
+    if (!hit) return null;
+    return hit.stair ? { stair: hit.stair } : { block: hit };
+  }
+  // A sprite washed over in one colour, for showing what a click would delete.
+  const TINTS = new WeakMap();
+  function tinted(sp, color = 'rgba(235,50,70,0.78)') {
+    let t = TINTS.get(sp.canvas);
+    if (!t) {
+      const c = makeCanvas(sp.canvas.width, sp.canvas.height);
+      const g = c.getContext('2d');
+      g.drawImage(sp.canvas, 0, 0);
+      g.globalCompositeOperation = 'source-atop';
+      g.fillStyle = color;
+      g.fillRect(0, 0, c.width, c.height);
+      t = { canvas: c, ax: sp.ax, ay: sp.ay, glows: [] };
+      TINTS.set(sp.canvas, t);
+    }
+    return t;
+  }
+
   // Screen point (fine px) to the topmost area tile under it.
   function tileAt(room, fx, fy) {
     const o = origin(room);
@@ -3011,7 +3059,7 @@
   }
 
   return {
-    TU, SLAB, STEP_Z, LAND, WEATHERS, weatherFor, BACKDROPS, BACKDROP_PRESETS, BACKDROP_PLANTS, BACKDROP_GROUNDS, backdropOf, backdropThumb, ZONE_KINDS, FLOORS, WALLS, OBJECTS, BLUEPRINTS, migrate, derive,
+    TU, SLAB, STEP_Z, LAND, WEATHERS, weatherFor, pickAt, tinted, BACKDROPS, BACKDROP_PRESETS, BACKDROP_PLANTS, BACKDROP_GROUNDS, backdropOf, backdropThumb, ZONE_KINDS, FLOORS, WALLS, OBJECTS, BLUEPRINTS, migrate, derive,
     pick, addZone, addTile, removeTile, addFlight, removeFlightAt, setZoneZ,
     BLOCKS, pickBlock, blockTarget, placeBlock, removeBlock, stairPlan, placeStairs, placeSpiral, stairSprite, blockSprite,
     size, origin, project, floorZ, levels, cells, resetCells, cellAt, neighbours, door, walkable, footprint, canPlace, stationSpots,
