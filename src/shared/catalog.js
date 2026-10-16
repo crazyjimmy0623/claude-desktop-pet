@@ -26,21 +26,22 @@
     common: { name: '普通', color: '#7cc47f', weight: 60 },
     rare: { name: '稀有', color: '#5aa7ff', weight: 30 },
     epic: { name: '史詩', color: '#c27bff', weight: 10 },
+    legend: { name: '傳說', color: '#ffc83d', weight: 3 },
   };
 
   const ITEMS = [
     // Characters
-    { id: 'skin:commander', type: 'skin', rarity: 'starter', name: '黑騎士', desc: 'Deskmates 的創始成員，披風破了也不換' },
     { id: 'skin:office', type: 'skin', rarity: 'starter', name: '上班族', desc: '準時打卡，偶爾摸魚' },
     { id: 'skin:scientist', type: 'skin', rarity: 'starter', name: '研究員', desc: '把 bug 變成 feature' },
     { id: 'skin:cat', type: 'skin', rarity: 'starter', name: '貓貓', desc: '會踩鍵盤' },
     { id: 'skin:robot', type: 'skin', rarity: 'starter', name: '機器人', desc: '嗶嗶，任務完成' },
     { id: 'skin:droid', type: 'skin', rarity: 'starter', name: '暴走機器人', desc: 'AI 的預設造型，不要惹它' },
-    { id: 'skin:platypus', type: 'skin', rarity: 'starter', name: '鴨嘴獸', desc: 'OUKAI 的夥伴' },
-    { id: 'skin:whitecat', type: 'skin', rarity: 'starter', name: '白貓', desc: '布魯的夥伴' },
     { id: 'skin:ninja', type: 'skin', rarity: 'epic', name: '忍者', desc: '悄悄地 commit' },
     { id: 'skin:chef', type: 'skin', rarity: 'epic', name: '廚師', desc: '義大利麵程式碼專家' },
     { id: 'skin:astronaut', type: 'skin', rarity: 'epic', name: '太空人', desc: '在雲端工作' },
+    { id: 'skin:commander', type: 'skin', rarity: 'legend', name: '冷酷吉米', desc: '黑盔、破披風，話不多' },
+    { id: 'skin:platypus', type: 'skin', rarity: 'legend', name: 'OUKAI', desc: '鴨嘴獸，嘴很扁、技術很硬' },
+    { id: 'skin:whitecat', type: 'skin', rarity: 'legend', name: '布魯', desc: '白貓，畫什麼都可愛' },
     // Accessories
     { id: 'acc:partyhat', type: 'accessory', rarity: 'common', name: '派對帽' },
     { id: 'acc:flower', type: 'accessory', rarity: 'common', name: '小花' },

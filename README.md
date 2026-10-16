@@ -7,7 +7,7 @@
 ## 兩種模式
 
 - **工作列**：角色直接站在工作列上，可以拖、可以甩，點一下看資訊、雙擊摸頭
-- **房間**：一間貼著工作列、橫跨整個螢幕的小辦公室（比例同 Pixel Crew：16px 地磚、12x16 的小人）。角色會走到對應的家具：寫程式去電腦桌、下指令去伺服器、讀檔去書櫃、開 subagent 去會議桌、等批准去按櫃台鈴、閒置去沙發
+- **房間**：一間貼著工作列、橫跨整個螢幕的小辦公室（16px 地磚，小人跟工作列上的角色是同一套圖）。角色會走到對應的家具：寫程式去電腦桌、下指令去伺服器、讀檔去書櫃、開 subagent 去會議桌、等批准去按櫃台鈴、閒置去沙發
 
 兩邊都有按鈕可以互相切換（工作列右下角的小工具列、房間右上角的工具列）。
 
@@ -32,7 +32,8 @@
 
 ## 自訂
 
-- 11 種內建角色（黑騎士、暴走機器人、鴨嘴獸、白貓、上班族、研究員、貓貓、機器人、忍者、廚師、太空人）和 8 種配件；AI session 預設是暴走機器人
+- 11 種角色和 8 種配件；AI session 預設是暴走機器人。傳說角色是我們團隊本人：冷酷吉米（黑騎士）、OUKAI（鴨嘴獸）、布魯（白貓），只能抽到
+- 角色是一格一格點的 Q 版像素（約 28x36 細像素、兩頭身），沒有黑色描邊，邊緣用同色系的深色收
 - 房間編輯器：擺家具、塗地板、換牆面、調高度
 - 自己的素材放進 `%APPDATA%\Deskmates\custom\`：
   - `characters/<名稱>/`：Aseprite 匯出的 PNG + JSON，用 frame tag 命名動作（idle、walk、work、type、command、game、read、wait、done、sleep…）
@@ -45,7 +46,7 @@ npm install
 npm start              # 啟動
 npm run demo           # 播放示範
 npm run install-hooks  # 安裝 Claude Code hooks（設定視窗也有按鈕）
-npm run preview -- chars out.png   # 輸出角色/家具預覽圖（chars | fx | room）
+npm run preview -- chars out.png   # 輸出角色/家具預覽圖（chars | lineup | minis | anim | fx | room）
 ```
 
 啟動參數：`--demo`、`--mode=room|strip`、`--open=settings|guild`；設 `DESKMATES_DEBUG=1` 會印出 hook 事件和視窗 console。

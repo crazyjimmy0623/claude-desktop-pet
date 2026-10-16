@@ -20,7 +20,7 @@ const DEFAULTS = {
     idleMinutes: 5,
     appMap: {}, // process name (lower case) -> station id or 'ignore'; overrides the built-in table
     characters: {
-      user: { skin: 'commander', accessory: null },
+      user: { skin: 'office', accessory: null },
       ai: { skin: 'droid', accessory: null }, // 'auto' = a different owned character per session
       projects: {}, // project name -> { skin, accessory }
     },

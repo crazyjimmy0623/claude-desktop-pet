@@ -88,7 +88,7 @@
     if (actor.skin?.startsWith('custom:') && sheets.has(actor.skin)) {
       Sprites.drawCustomAt(ctx, unit, x, y, sheets.get(actor.skin), pose, now, facing);
     } else {
-      Sprites.drawCharacterAt(ctx, unit, x, y, actor.skin || 'commander', pose, frame, colors, facing, { accessory: actor.accessory, ...opts });
+      Sprites.drawCharacterAt(ctx, unit, x, y, actor.skin || 'office', pose, frame, colors, facing, { accessory: actor.accessory, ...opts });
     }
   }
 
@@ -99,7 +99,7 @@
       Sprites.drawCustomAt(ctx, half, x + (Sprites.MINI.W * unit - Sprites.W * half) / 2, y + (Sprites.MINI.H * unit - Sprites.H * half), sheets.get(actor.skin), pose, now, facing);
       return;
     }
-    Sprites.drawMiniAt(ctx, unit, x, y, actor.skin || 'commander', pose, frame, Sprites.colorsFor(actor.hue ?? actor.id), facing, { accessory: actor.accessory });
+    Sprites.drawMiniAt(ctx, unit, x, y, actor.skin || 'office', pose, frame, Sprites.colorsFor(actor.hue ?? actor.id), facing, { accessory: actor.accessory });
   }
 
   const colorOf = (actor) => Sprites.colorsFor(actor.hue ?? actor.id);

@@ -31,8 +31,8 @@
   // Each skin: head shape, hat, torso, held item, colours.
   const SKINS = {
     commander: { head: 'helmet', body: 'armor', item: 'none', cape: true,
-      c: { helmet: '#eceef3', helmetShade: '#bfc3cf', plume: '#3a3c48', plumeDark: '#26272f', body: '#2a2c36', bodyShade: '#1f2029', plate: '#3d404d', trim: '#8a90a0',
-        leg: '#33353f', boot: '#1c1d24', hand: '#33353f', cape: '#45464f', capeDark: '#2e2f37' } },
+      c: { helmet: '#f1f1f4', helmetShade: '#c4c6d4', plume: '#3a3c48', plumeDark: '#26272f', body: '#2f313c', bodyShade: '#23242d', plate: '#444755', trim: '#9097a8',
+        leg: '#34363f', boot: '#22232a', hand: '#3a3c47', cape: '#45464f', capeDark: '#2e2f37' } },
     office: { head: 'face', hat: 'hair', body: 'shirt', item: 'mug',
       c: { skin: PAL.skin, hair: '#3a2a20', body: '#f4f4f6', bodyShade: '#c9ccd6', leg: '#3b4256', boot: '#262a38', hand: PAL.skin } },
     scientist: { head: 'face', hat: 'messy', specs: true, body: 'labcoat', item: 'flask',
@@ -85,480 +85,577 @@
   const WALK_FLAP = [2, 3, 2, 1];
 
   // ---- Character -------------------------------------------------------------
-  // Chibi proportions: a wide, flat head (30x18) on a small body, bean eyes.
+  // Hand-placed pixel maps at the size of our in-house game sprites: a 28x36 box (fine pixels) with
+  // a 24-wide head, about two heads tall. Every layer's outer pixels are re-coloured a deeper shade
+  // of their own colour, so parts separate without black lines. The same art serves the taskbar
+  // strip (with props) and the room (without).
 
-  function buildCharacter(skinId, pose, frame, col, opts = {}) {
+  const BOX = { W: 28, H: 36 };
+
+  // Lowercase letters are base colours; uppercase is the same colour in shadow (see `pal`).
+  function layer(groups, rows, pal, ox, oy, edge = true) {
+    const at = (x, y) => (y < 0 || y >= rows.length ? '.' : rows[y][x] || '.');
+    const solid = (ch) => ch !== '.' && ch !== ' ' && pal[ch] !== undefined;
+    const details = [];
+    rows.forEach((row, y) => {
+      let run = null;
+      for (let x = 0; x <= row.length; x++) {
+        const ch = at(x, y);
+        let color = solid(ch) ? pal[ch] : null;
+        if (color && edge && color[0] !== '*' && ![at(x - 1, y), at(x + 1, y), at(x, y - 1), at(x, y + 1)].every(solid)) color = shade(color);
+        if (run && run.color === color) { run.w++; continue; }
+        if (run && run.color) details.push([ox + run.x, oy + y, run.w, 1, run.color]);
+        run = { x, w: 1, color };
+      }
+    });
+    groups.push({ rects: [], details });
+  }
+  // {a: '#..'} -> {a: base, A: shadow}, plus any extra entries passed through.
+  const pal = (base, extra = {}) => {
+    const out = { ...extra };
+    for (const [k, v] of Object.entries(base)) {
+      out[k] = v;
+      if (out[k.toUpperCase()] === undefined) out[k.toUpperCase()] = dark(v);
+    }
+    return out;
+  };
+
+  // --- Heads (24 wide), drawn at box (2, 0) unless noted.
+  const FACE = [
+    '....kkkkkkkkkkkkkkkk....',
+    '..kkkkkkkkkkkkkkkkkkkk..',
+    '.kkkkkkkkkkkkkkkkkkkkkk.',
+    ...Array(12).fill('kkkkkkkkkkkkkkkkkkkkkkkk'),
+    '.Kkkkkkkkkkkkkkkkkkkkkk.',
+    '..KKkkkkkkkkkkkkkkkkkk..',
+    '....KKKKKKKKKKKKKKKK....',
+  ];
+  // The knight's closed helm, exactly the original: T visor, shine top-left, no eyes.
+  const HELM = [
+    '..WWWWWWWWWWWWWWWWWWWW..',
+    '..WWWWWWWWWWWWWWWWWWWW..',
+    'WWWWHHHHWWWWWWWWWWWWWWWW',
+    'WWWWHHHHWWWWWWWWWWWWWWWW',
+    'WWHHWWWWWWWWWWWWWWWWWWWW',
+    'WWHHWWWWWWWWWWWWWWWWWWWW',
+    'WWHHWWVVVVVVVVVVVVVVVVWW',
+    'WWHHWWVVVVVVVVVVVVVVVVWW',
+    'WWWWWWVVVVVVVVVVVVVVVVWW',
+    'WWWWWWVVVVVVVVVVVVVVVVWW',
+    ...Array(4).fill('WWWWWWWWWWWWVVVVWWWWWWWW'),
+    ...Array(4).fill('SSWWWWWWWWWWVVVVWWWWWWWW'),
+    '..SSSSSSSSSSVVVVSSSSSS..',
+    '..SSSSSSSSSSVVVVSSSSSS..',
+  ];
+  const PLUME = [
+    '......pppppppp',
+    '......pppppppp',
+    '..pppppppppppp',
+    '..pppppppppppp',
+    'PPPPPPPPPP....',
+    'PPPPPPPPPP....',
+    'PPPPPPPPPP....',
+    'PPPPPPPPPP....',
+  ];
+  // Hair maps sit at box (1, -1): face columns are 1..24, the face's top row is row 2.
+  const HAIR = {
+    hair: [
+      '........hhhhhhhhhh........',
+      '.....hhhhhhhhhhhhhhhh.....',
+      '...hhhhhh++++hhhhhhhhhh...',
+      '..hhhhh++++hhhhhhhhhhhhh..',
+      '.hhhhhhhhhhhhhhhhhhhhhhhh.',
+      '.hhhhhhhhhhhhhhhhhhhhhhhhh',
+      'hhhhhhhhhHhhhhhhhhhHhhhhhh',
+      'hhhhhHHh.hhh....hhh..hhhh.',
+      'hhhhH.....h..........hh...',
+      'hhhH......................',
+      '.hH.......................',
+    ],
+    messy: [
+      '....h...hh.....h..........',
+      '...hhh.hhhh...hhh...h.....',
+      '..hhhhhhhhhhhhhhhhhhhh....',
+      '.hhhh++++hhhhhhhhhhhhhh...',
+      'hhhhhhhhhhhhhhhhhhhhhhhhh.',
+      'hhhhhhhhhhhhhhhhhhhhhhhhhh',
+      'hhhhhhHhhhhHhhhhhhHhhhhhhh',
+      'hhhhhH..hhh......hh...hhhh',
+      'hhhhH.................hhh.',
+      'hhhH..................h...',
+      'hhH.......................',
+      '.h........................',
+    ],
+  };
+  const CHEF_HAT = [
+    '.....wwwww..wwwww.....',
+    '...wwwwwwwwwwwwwwwww..',
+    '..wwwwwwwwwwwwwwwwwww.',
+    '.wwwwwwwwwwwwwwwwwwwww',
+    '.wwwWwwwwwWwwwwwWwwwww',
+    '.wwwWwwwwwWwwwwwWwwww.',
+    '..wwWwwwwwWwwwwwWwww..',
+    '..wwwwwwwwwwwwwwwwww..',
+    '..WWWWWWWWWWWWWWWWWW..',
+    '..wwwwwwwwwwwwwwwwww..',
+    '..wwwwwwwwwwwwwwwwww..',
+    '..WWWWWWWWWWWWWWWWWW..',
+  ];
+  const ROBOT_HEAD = [
+    '..aaaaaaaaaaaaaaaaaaaa..',
+    '.a++aaaaaaaaaaaaaaaaaaa.',
+    'aa+aaaaaaaaaaaaaaaaaaaaa',
+    ...Array(11).fill('aaasssssssssssssssssssaa'),
+    'aaaaaaaaaaaaaaaaaaaaaaaa',
+    'AaaaaaaaaaaaaaaaaaaaaaaA',
+    '.AAAAAAAAAAAAAAAAAAAAAA.',
+  ];
+  const DROID_HEAD = [
+    '..aaaaaaaaaaaaaaaaaaaa..',
+    '.aaaaaaaaaaaaaaaaaaaaaa.',
+    'aa+++aaaaaaaaaaaaaaaaaaa',
+    ...Array(9).fill('aaffffffffffffffffffffaa'),
+    'AaaaaaaaaaaaaaaaaaaaaaaA',
+    '.AAaffffffffffffffffaAA.',
+    '..AaftfftfftfftfftfaAA..',
+    '...AAaaaaaaaaaaaaaaAA...',
+  ];
+  const HORN = ['a..', 'aa.', 'aa.', 'aaa', 'aaa'];
+  const ASTRO_HELMET = [
+    '.....wwwwwwwwwwwwwwww.....',
+    '...wwwwwwwwwwwwwwwwwwww...',
+    '..ww+++wwwwwwwwwwwwwwwww..',
+    '.ww+wwwwwwwwwwwwwwwwwwwww.',
+    '.wwwwvvvvvvvvvvvvvvvvvwww.',
+    ...Array(9).fill('wwwwvvvvvvvvvvvvvvvvvvvwww'),
+    '.wwwwvvvvvvvvvvvvvvvvvwww.',
+    '.Wwwwwwwwwwwwwwwwwwwwwwww.',
+    '..WWwwwwwwwwwwwwwwwwwwWW..',
+    '...WWWWWWWWWWWWWWWWWWWW...',
+  ];
+  const BILL = [
+    '.bbbbbbb.',
+    'bbbbbbbbb',
+    'bbbbbbbbB',
+    '.BBBBBBB.',
+  ];
+  const EAR_L = ['.a...', '.aa..', '.apa.', 'aappa'];
+  const EAR_R = ['...a.', '..aa.', '.apa.', 'appaa'];
+
+  // --- Torsos (14x11) at box (7, 19).
+  const TORSO = {
+    armor: [
+      '..AAaaaaaaaa..',
+      '.AAabbbbbbbaa.',
+      'AAAbb+bbbbbbaa',
+      'AAAbbbbbbbbBaa',
+      'AAAbbbbbbbbBaa',
+      'AAAABbbbbbBBaa',
+      'AAAAaBBBBBBaaa',
+      'dddddddtdddddd',
+      'AAAaaaaaaaaaaa',
+      'AAAaaaaAaaaaaa',
+      'AAAaaaaAaaaaaa',
+    ],
+    shirt: [
+      '..AAaaaaaaaa..',
+      '.AAaaaaccaaaa.',
+      'AAAaaaaccaaaaa',
+      'AAAaaaaccaaaaa',
+      'AAAaaaaccaaaaa',
+      'AAAaaaaccaaaaa',
+      'AAAaaaaCCaaaaa',
+      'AAAaaaaaaaaaaa',
+      'dddddddddtdddd',
+      'LLLlllllllllll',
+      'LLLllllLllllll',
+    ],
+    labcoat: [
+      '..AAaaaaaaaa..',
+      '.AAaaaccccaaa.',
+      'AAAaaaccccaaaa',
+      'AAAaaAccccAaaa',
+      'AAAaaAccccAapa',
+      'AAAaaAccccAapa',
+      'AAAaaAccccAaaa',
+      'AAAaaACCCCAaaa',
+      'AAAaaAllllAaaa',
+      'AAAaaAllllAaaa',
+      'AAAaaALLLLAaaa',
+      'AAAaa.....aaaa',
+      'AAAa........aa',
+    ],
+    fur: [
+      '..AAaaaaaaaa..',
+      '.AAccccccccca.',
+      'AAAaaaaggaaaaa',
+      'AAAaabbbbbbaaa',
+      'AAAabbbbbbbbaa',
+      'AAAabbbbbbbbaa',
+      'AAAabbbbbbbbaa',
+      'AAAaabbbbbbaaa',
+      'AAAaaaaaaaaaaa',
+      'AAAaaaaaaaaaaa',
+      'AAAaaaaAaaaaaa',
+    ],
+    metal: [
+      '..AAaaaaaaaa..',
+      '.AAaaaaaaaaaa.',
+      'AAAassssssssaa',
+      'AAAasxsysz.saa',
+      'AAAassssssssaa',
+      'AAAaaaaaaaaaaa',
+      'AAAaAAAAAAAAaa',
+      'AAAaaaaaaaaaaa',
+      'AAAaAAAAAAAAaa',
+      'AAAaaaaaaaaaaa',
+      'AAAaaaaAaaaaaa',
+    ],
+    mech: [
+      '..AAaaaaaaaa..',
+      '.AAabbbbbbbaa.',
+      'AAAbbbffffbbaa',
+      'AAAbbfeeeefbaa',
+      'AAAbbfeEEefbaa',
+      'AAAbbfeeeefbaa',
+      'AAAbbbffffbbaa',
+      'AAAAbbbbbbbbaa',
+      'AAAffffffffffa',
+      'AAAaafaafaafaa',
+      'AAAaaaaAaaaaaa',
+    ],
+    gi: [
+      '..AAaaaaaaaa..',
+      '.AAabaaaabaaa.',
+      'AAAaabaabaaaaa',
+      'AAAaaabbaaaaaa',
+      'AAAaaabbaaaaaa',
+      'AAAaabaabaaaaa',
+      'AAAabaaaabaaaa',
+      'ccccccccCCcccc',
+      'AAAaaaaaCaaaaa',
+      'AAAaaaaaCaaaaa',
+      'AAAaaaaAaaaaaa',
+    ],
+    apron: [
+      '..AAaaaaaaaa..',
+      '.AAaaaaaaaaaa.',
+      'AAAacaaaaacaaa',
+      'AAAacaaaaacaaa',
+      'AAAaccccccccaa',
+      'AAAaccccccccaa',
+      'AAAaccCCCcccaa',
+      'AAAaccccccccaa',
+      'AAAaccccccccaa',
+      'lllLccccccccll',
+      'LLLlCCCCCCCCll',
+    ],
+    suit: [
+      '..AAaaaaaaaa..',
+      '.AAaaaaaaaaaa.',
+      'AAAaaaaaaaaaaa',
+      'AAAaccasssssaa',
+      'AAAaccasxsysaa',
+      'AAAaaaasssssaa',
+      'AAAaaaaaaaaaaa',
+      'tttttttttttttt',
+      'AAAaaaaaaaaaaa',
+      'AAAaaaaaaaaaaa',
+      'AAAaaaaAaaaaaa',
+    ],
+  };
+
+  function buildBody(skinId, pose, step, col, opts, ox, oy) {
     const sk = SKINS[skinId] || SKINS.commander;
     const c = sk.c;
-    const prop = opts.prop !== false;
     const groups = [];
-    const g = fineGrouper(groups);
+    const L = (rows, p, x, y, edge) => layer(groups, rows, p, ox + x, oy + y, edge);
+    const t = ([x, y, w, h, color]) => [ox + x, oy + y, w, h, color];
+    const g = (rects, details = []) => groups.push({ rects: rects.map(t), details: details.map(t) });
+    const frame = step % 2;
     const sleeping = pose === 'sleep';
-    // walk is a 4-step cycle and rest an 8-frame breath; every other pose alternates two frames.
-    const step = frame;
-    frame %= 2;
 
-    let dy = 0;
-    if (pose === 'read') dy = frame;
-    if (pose === 'dance') dy = frame ? -1 : 1;
-    if (sleeping) dy = 2 + frame;
     let bob = 0;
     if (pose === 'rest') bob = BREATH[step % 8];
     if (pose === 'walk') bob = step % 2 ? -1 : 0;
+    if (pose === 'read') bob = frame;
+    if (pose === 'dance') bob = frame ? -1 : 1;
+    if (sleeping) bob = 3;
     const sway = pose === 'walk' ? WALK_SWAY[step % 4] : pose === 'rest' ? BREATH[(step + 6) % 8] : 0;
-    const F = dy * RES + bob;
-    const HY = F;
-    const TY = 36 + F;
+    const B = bob;
+    const armsUp = pose === 'done' || pose === 'dangle' || (pose === 'dance' && !frame);
 
-    // --- Props behind the body.
-    if (pose === 'type' && prop) {
-      g([[40, 42, 20, 4, PAL.wood], [42, 46, 2, 8, PAL.woodDark], [56, 46, 2, 8, PAL.woodDark]], [[40, 42, 20, 1, HL], [40, 45, 20, 1, SH], [46, 43, 6, 1, 'rgba(60,30,10,0.18)']]);
-      const keys = [];
-      for (let i = 0; i < 6; i++) keys.push([45 + i * 2, 40, 1, 1, (i + frame) % 4 ? '#8a91a3' : PAL.shine]);
-      g([[44, 40, 14, 2, '#c9ced8'], [54, 28, 4, 12, '#3a3f4c']], [...keys, [55, 30, 2, 8, glow(PAL.screen)], [55, 31 + frame * 3, 2, 1, PAL.shine]]);
-    }
-    if (pose === 'command' && prop) {
-      // A retro terminal on a little cart.
-      g([[49, 42, 4, 10, '#4a4f5e'], [44, 52, 14, 2, '#4a4f5e']], [[49, 42, 1, 10, HL]]);
-      const blink = frame ? glow('#3dffb0') : '#0d2a1a';
-      g([[44, 24, 16, 16, '#d6cfb8'], [42, 40, 16, 2, '#bdb59c']], [
-        [46, 26, 12, 11, '#0d2a1a'], [47, 28, 6, 1, glow('#3dffb0')], [47, 30, 4, 1, glow('#3dffb0')], [47, 32, 8, 1, glow('#3dffb0')], [47, 34, 2, 1, glow('#3dffb0')], [50, 34, 1, 1, blink],
-        [44, 24, 16, 1, HL], [58, 26, 2, 14, SH], [44, 40, 14, 1, SH],
-      ]);
-    }
-    if (pose === 'paint' && prop) {
-      g([[48, 24, 2, 30, PAL.wood], [58, 24, 2, 30, PAL.wood]], [[49, 24, 1, 30, SH]]);
-      g([[44, 18, 18, 18, PAL.page]], [
-        [48, 22, 6, 2, col.main], [50, 26, 8, 2, '#5aa7ff'], [46, 30, 4, 2, '#7cc47f'], [52, 30, 2, 1, '#ffd65a'],
-        ...(frame ? [[54, 22, 4, 4, PAL.spark]] : [[46, 24, 2, 4, '#e0405a']]), [44, 34, 18, 2, SH],
-      ]);
-    }
+    // --- Behind the body: cape, tail, backpack.
     if (sk.cape) {
+      // Torn and ragged: the hem hangs in uneven strips that flutter out of step.
       const flap = pose === 'walk' ? WALK_FLAP[step % 4] : pose === 'dance' ? frame * 2 : sway;
-      // A torn, ragged cape: the hem hangs in uneven strips that flutter out of step.
-      const x0 = 8 - flap;
-      const strips = [[0, 3, 7], [3, 2, 3], [5, 3, 9], [8, 2, 4], [10, 2 + flap, 6]].map(([dx, w, h], i) => [x0 + dx, 44 + F, w, h + ((step + i) % 2), c.cape]);
-      g([[10 - flap, 36 + F, 10 + flap, 9, c.cape], ...strips], [[10 - flap, 36 + F, 2, 9, c.capeDark], [x0 + 6, 39 + F, 1, 7, c.capeDark], [x0 + 3, 44 + F, 1, 3, c.capeDark],
-        [x0 + 9, 41 + F, 2, 1, c.capeDark], [x0 + 1, 47 + F, 1, 2, c.capeDark], [16, 37 + F, 1, 6, HL]]);
+      const x0 = 2 - flap;
+      const strips = [[0, 2, 5], [2, 2, 2], [4, 2, 6], [6, 2, 3], [8, 1 + flap, 4]].map(([dx, w, h], i) => [x0 + dx, 29 + B, w, h + ((step + i) % 2), c.cape]);
+      g([[4 - flap, 19 + B, 7 + flap, 10, c.cape], ...strips], [[4 - flap, 20 + B, 1, 9, c.capeDark], [x0 + 4, 24 + B, 1, 6, c.capeDark], [x0 + 2, 29 + B, 1, 2, c.capeDark], [x0 + 7, 27 + B, 1, 2, c.capeDark]]);
     }
-    if (sk.tail === 'flat') g([[4, 42 + F, 15, 5, c.bodyShade], [2, 43 + F, 3, 3, c.bodyShade]], [[6, 42 + F, 11, 1, HL], [7, 44 + F, 1, 1, '#5f3f28'], [11, 45 + F, 1, 1, '#5f3f28'], [14, 44 + F, 1, 1, '#5f3f28']]);
-    else if (sk.tail) g([[8, 30 + F, 4, 10, c.body], [10, 38 + F, 8, 4, c.body]], [[8, 33 + F, 4, 1, c.bodyShade], [8, 36 + F, 4, 1, c.bodyShade], [9, 30 + F, 2, 2, c.belly]]);
-    if (sk.backpack) g([[11, 34 + F, 7, 12, c.body]], [[11, 36 + F, 2, 9, c.bodyShade], [13, 40 + F, 3, 3, '#8a93a6'], [14, 41 + F, 1, 1, glow('#3dffb0')]]);
+    if (sk.tail === 'flat') g([[-1, 29, 9, 4, c.bodyShade]], [[0, 29, 7, 1, lite(c.bodyShade)], [2, 31, 1, 1, dark(c.bodyShade)], [5, 30, 1, 1, dark(c.bodyShade)]]);
+    else if (sk.tail) {
+      const tip = pose === 'walk' ? WALK_SWAY[step % 4] : frame;
+      g([[1 + tip, 13 + B, 2, 4, c.body], [1, 16 + B, 2, 9, c.body], [2, 24 + B, 6, 2, c.body]], [[1 + tip, 13 + B, 2, 2, c.bodyShade], [1, 19 + B, 2, 1, c.bodyShade]]);
+    }
+    if (sk.backpack) g([[2, 20 + B, 6, 9, c.body]], [[2, 21 + B, 1, 7, c.bodyShade], [4, 23 + B, 2, 3, '#8a93a6'], [4, 24 + B, 1, 1, glow('#3dffb0')]]);
 
-    // --- Back arm (and a shoulder plate for the commander).
-    const backUp = pose === 'dangle' || pose === 'done' || (pose === 'dance' && frame === 0);
+    // --- Back arm.
     const backSwing = pose === 'walk' ? -WALK_ARM[step % 4] : 0;
-    if (backUp) g([[14, 22, 4, 14, c.bodyShade], [14, 19, 4, 4, c.hand]], [[14, 22, 1, 14, HL]]);
-    else g([[14 + backSwing, 38 + F, 4, 7, c.bodyShade], [14 + backSwing, 44 + F, 4, 3, c.hand]], [[14 + backSwing, 38 + F, 1, 6, HL]]);
-    if (sk.body === 'armor') g([[12, 35 + F, 8, 5, c.plate]], [[12, 35 + F, 8, 1, HL], [12, 39 + F, 8, 1, c.trim]]);
-    if (sk.spikes) g([[12, 35 + F, 8, 5, c.plate], [13, 31 + F, 2, 4, c.plate], [16, 32 + F, 2, 3, c.plate]], [[12, 35 + F, 8, 1, HL], [12, 39 + F, 8, 1, c.face]]);
+    if (armsUp) g([[0, 9, 3, 11, c.bodyShade], [0, 6, 3, 3, dark(c.hand)]]);
+    else g([[4 + backSwing, 20 + B, 3, 5, c.bodyShade], [4 + backSwing, 25 + B, 3, 3, dark(c.hand)]]);
 
-    // --- Legs.
-    const legs = {
-      walk: [[[18, 46, 6, 8], [32, 46, 6, 8]], [[22, 46, 6, 6], [29, 46, 6, 8]], [[18, 46, 6, 8], [32, 46, 6, 8]], [[22, 46, 6, 8], [30, 46, 6, 6]]][step % 4],
-      dangle: [[22, 46, 4, 8], [30, 46, 4, 8]],
-      sleep: [[30, 48, 14, 4]],
-    }[pose] || [[20, 46, 6, 8], [30, 46, 6, 8]];
-    g(legs.map((r) => [...r, c.leg]), sleeping
-      ? [[40, 48, 4, 4, c.boot], [30, 48, 14, 1, HL]]
-      : legs.flatMap(([x, y, w, h]) => [[x, y + h - 3, w, 3, c.boot], [x, y + h - 3, w, 1, HL], [x + w - 1, y, 1, h - 3, SH], [x + 1, y + 1, 1, 2, HL]]));
+    // --- Legs: back leg in shadow, walk is a 4-step cycle with the lifted foot on passing steps.
+    const legPal = (back) => (back ? { l: dark(c.leg), L: dark(dark(c.leg)), s: dark(c.boot), S: dark(dark(c.boot)) } : { l: c.leg, L: dark(c.leg), s: c.boot, S: dark(c.boot) });
+    const leg = (x, lift, back) => L([...Array(4 - lift).fill('lllL'), 'sssss', 'SSSSS'], legPal(back), x, 30);
+    if (sleeping) {
+      L(['llllllllllL', 'llllllllllLsss', 'LLLLLLLLLLLsss', '...........SSS'], legPal(false), 8, 32);
+    } else if (pose === 'walk') {
+      const [bx, bl, fx, fl] = [[6, 0, 17, 0], [9, 2, 14, 0], [16, 0, 7, 0], [13, 0, 10, 2]][step % 4];
+      leg(bx, bl, true);
+      leg(fx, fl, false);
+    } else if (pose === 'dangle') {
+      L(['lllL', 'lllL', 'lllL', 'lllL', 'ssss', 'SSSS'], legPal(true), 9, 30);
+      L(['lllL', 'lllL', 'lllL', 'lllL', 'ssss', 'SSSS'], legPal(false), 15, 30);
+    } else {
+      leg(8, 0, true);
+      leg(15, 0, false);
+    }
 
     // --- Torso.
-    const torso = [[18, TY, 20, 12, c.body]];
-    const light = [[36, TY + 1, 1, 9, HL], [18, TY + 11, 20, 1, SH], [18, TY, 2, 12, c.bodyShade]];
-    switch (sk.body) {
-      case 'armor':
-        g(torso, [...light, [21, TY + 1, 14, 7, c.plate], [21, TY + 1, 14, 1, HL], [27, TY + 2, 2, 5, c.bodyShade], [23, TY + 3, 2, 1, c.trim], [31, TY + 3, 2, 1, c.trim],
-          [18, TY + 8, 20, 2, c.boot], [27, TY + 8, 3, 2, c.trim], [27, TY + 8, 1, 1, PAL.shine], [22, TY + 10, 2, 2, c.bodyShade], [31, TY + 10, 2, 2, c.bodyShade]]);
-        break;
-      case 'mech':
-        g(torso, [...light, [20, TY + 1, 16, 7, c.plate], [20, TY + 1, 16, 1, HL], [26, TY + 3, 4, 4, c.face], [27, TY + 4, 2, 2, glow(c.glow)],
-          [21, TY + 9, 14, 1, c.face], [23, TY + 11, 2, 1, c.face], [31, TY + 11, 2, 1, c.face], [21, TY + 2, 1, 1, '#7a808e'], [34, TY + 2, 1, 1, '#7a808e']]);
-        break;
-      case 'shirt':
-        g(torso, [...light, [26, TY, 4, 2, col.dark], [27, TY + 2, 2, 6, col.main], [27, TY + 4, 2, 1, SH], [22, TY, 4, 2, '#ffffff'], [30, TY, 4, 2, '#ffffff'],
-          [32, TY + 3, 3, 3, SH], [33, TY + 2, 1, 2, '#5aa7ff'], [18, TY + 8, 20, 2, '#3b3b45'], [27, TY + 8, 3, 2, '#c9ced8']]);
-        break;
-      case 'labcoat':
-        g([[18, TY, 20, 14, c.body]], [...light, [25, TY, 6, 5, col.main], [26, TY + 5, 4, 2, col.main], [24, TY, 1, 13, c.bodyShade], [31, TY, 1, 13, c.bodyShade],
-          [33, TY + 4, 3, 4, SH], [33, TY + 2, 1, 3, '#e0405a'], [35, TY + 2, 1, 3, '#5aa7ff'], [19, TY + 8, 4, 3, SH], [18, TY + 13, 20, 1, SH]]);
-        break;
-      case 'fur':
-        g(torso, [...light, [24, TY + 2, 12, 8, c.belly], [18, TY, 20, 2, col.main], [27, TY + 2, 3, 3, PAL.gold], [27, TY + 2, 1, 1, PAL.shine], [19, TY + 5, 3, 1, c.bodyShade], [19, TY + 8, 3, 1, c.bodyShade]]);
-        break;
-      case 'metal':
-        g(torso, [...light, [22, TY + 2, 12, 6, '#2c3442'], [24, TY + 4, 2, 2, glow(col.main)], [28, TY + 4, 2, 2, glow('#5ef0ff')], [32, TY + 4, 1, 2, glow(PAL.spark)],
-          [21, TY + 1, 1, 1, SH2], [35, TY + 1, 1, 1, SH2], [22, TY + 9, 12, 1, SH], [22, TY + 11, 12, 1, SH]]);
-        break;
-      case 'gi':
-        g(torso, [...light, [24, TY, 2, 6, '#4a5175'], [30, TY, 2, 6, '#4a5175'], [26, TY + 2, 4, 1, '#4a5175'], [18, TY + 6, 20, 2, col.main], [28, TY + 6, 3, 2, col.dark], [29, TY + 8, 1, 3, col.main]]);
-        break;
-      case 'apron':
-        g(torso, [...light, [22, TY + 2, 12, 10, '#ffffff'], [20, TY, 16, 2, col.main], [24, TY, 8, 2, '#e0405a'], [25, TY + 6, 6, 3, SH], [20, TY + 3, 1, 1, SH2], [35, TY + 3, 1, 1, SH2]]);
-        break;
-      case 'suit':
-        g(torso, [...light, [22, TY + 2, 4, 4, col.main], [23, TY + 3, 2, 1, HL2], [28, TY + 2, 6, 4, '#c3c9d6'], [29, TY + 3, 1, 1, glow('#ff5f5f')], [31, TY + 3, 1, 1, glow('#3dffb0')], [18, TY + 8, 20, 2, '#8a93a6']]);
-        break;
-      default:
-        g(torso, light);
-    }
+    const tp = {
+      a: c.body, A: c.bodyShade, b: c.plate || c.belly || c.bodyShade, c: col.main, C: col.dark, t: c.trim || '#8a93a6', d: '#2a2b33',
+      l: c.leg, L: dark(c.leg), g: PAL.gold, s: c.face || '#2c3442', e: glow(c.glow || PAL.screen), E: glow('#ffffff'),
+      x: glow(sk.body === 'suit' ? '#3dffb0' : col.main), y: glow('#5ef0ff'), z: glow(PAL.spark), f: c.face || '#16171c', p: '#5aa7ff',
+    };
+    tp.B = dark(tp.b);
+    tp['+'] = lite(tp.b);
+    L(TORSO[sk.body] || TORSO.shirt, tp, 7, 19 + B);
 
-    // --- Head: wide and flat.
-    const headRects = (color) => [[16, 18 + HY, 26, 18, color], [14, 20 + HY, 30, 14, color], [15, 19 + HY, 28, 16, color]];
-    const eyes = (color = PAL.eye) => (sleeping
-      ? [[24, 28 + HY, 4, 1, color], [38, 28 + HY, 4, 1, color]]
-      : [[25, 27 + HY, 2, 2, color], [39, 27 + HY, 2, 2, color]]);
-    const cheeks = [[22, 30 + HY, 3, 2, PAL.blush], [41, 30 + HY, 3, 2, PAL.blush]];
-    const faceShade = [[15, 33 + HY, 28, 2, SH], [42, 22 + HY, 1, 8, HL]];
+    // --- Head.
+    const H = B;
+    const eyeDots = (color = PAL.eye, at = [[11, 10], [20, 10]]) => at.map(([x, y]) => (sleeping ? [x - 1, y + 1 + H, 4, 1, color] : [x, y + H, 2, 2, color]));
+    const blush = [[7, 12 + H, 3, 2, PAL.blush], [22, 12 + H, 3, 2, PAL.blush]];
+    const face = (skin) => {
+      L(FACE, { k: skin, K: dark(skin) }, 2, 1 + H);
+      g([], [...eyeDots(), ...blush, [16, 13 + H, 2, 1, dark(dark(skin))]]);
+    };
     switch (sk.head) {
-      case 'face':
-        g(headRects(c.skin), [...faceShade, ...eyes(), ...cheeks, [32, 31 + HY, 2, 1, '#b0705a'], [17, 26 + HY, 3, 4, '#e8b48c']]);
-        break;
-      case 'cat':
-        g([[16, 12 + HY, 7, 9, c.body], [35, 12 + HY, 7, 9, c.body]], [[18, 14 + HY, 3, 5, '#f6b8b8'], [37, 14 + HY, 3, 5, '#f6b8b8']], [], [[17, 10 + HY, 4, 2, c.body], [36, 10 + HY, 4, 2, c.body]]);
-        g(headRects(c.body), [...faceShade, ...eyes('#3a3020'), [28, 30 + HY, 10, 4, c.belly], [32, 30 + HY, 2, 1, '#e07a7a'], [31, 32 + HY, 1, 1, '#b07050'], [34, 32 + HY, 1, 1, '#b07050'],
-          [26, 18 + HY, 1, 3, c.bodyShade], [29, 18 + HY, 1, 4, c.bodyShade], [32, 18 + HY, 1, 3, c.bodyShade], [22, 30 + HY, 3, 2, PAL.blush],
-          [42, 29 + HY, 4, 1, '#8a6a50'], [42, 32 + HY, 4, 1, '#8a6a50']]);
-        break;
-      case 'robot':
-        g([[28, 12 + HY, 2, 6, c.bodyShade]], [], [], [[27, 9 + HY, 4, 4, col.main]]);
-        groups[groups.length - 1].details.push([28, 10 + HY, 2, 2, glow(col.main)]);
-        g([[14, 18 + HY, 30, 17, c.head]], [[17, 21 + HY, 24, 11, '#1b2b3a'], ...(sleeping
-          ? [[27, 27 + HY, 4, 1, glow('#5ef0ff')], [35, 27 + HY, 4, 1, glow('#5ef0ff')]]
-          : [[28, 24 + HY, 2, 3, glow('#5ef0ff')], [36, 24 + HY, 2, 3, glow('#5ef0ff')]]),
-        [31, 29 + HY, 4, 1, 'rgba(94,240,255,0.5)'], [16, 19 + HY, 8, 1, HL], [42, 20 + HY, 1, 14, SH], [14, 25 + HY, 2, 4, c.bodyShade], [17, 21 + HY, 24, 1, 'rgba(94,240,255,0.12)']]);
-        break;
-      case 'ninja':
-        g(headRects(c.head), [...faceShade, [20, 24 + HY, 24, 9, c.skin], ...eyes(), [22, 30 + HY, 3, 1, PAL.blush], [14, 20 + HY, 30, 3, col.main], [14, 20 + HY, 30, 1, HL]]);
-        g([[8, 21 + HY, 8, 2, col.main], [6 + frame, 24 + HY, 6, 2, col.main]], [[8, 22 + HY, 8, 1, col.dark]]);
-        break;
       case 'helmet': {
-        // The closed knight's helm with a T visor; bean eyes glint in the slit, the plume trails behind.
-        const px = -sway;
-        g([[27, 9 + HY, 6, 8, c.plume], [20 + px, 6 + HY, 11, 5, c.plume], [13 + px * 2, 7 + HY, 9, 4, c.plume], [8 + px * 2, 9 + HY, 6, 3, c.plume], [5 + px * 3, 11 + HY, 4, 2, c.plume]],
-          [[21 + px, 6 + HY, 9, 1, HL], [27, 11 + HY, 1, 6, c.plumeDark], [13 + px * 2, 10 + HY, 9, 1, c.plumeDark], [8 + px * 2, 11 + HY, 6, 1, c.plumeDark], [17 + px, 8 + HY, 1, 2, c.plumeDark]]);
-        g([[16, 15 + HY, 26, 21, c.helmet], [14, 18 + HY, 30, 16, c.helmet], [15, 16 + HY, 28, 19, c.helmet]], [
-          [14, 20 + HY, 2, 12, c.helmetShade], [15, 33 + HY, 28, 3, c.helmetShade], [19, 17 + HY, 10, 1, HL2], [16, 19 + HY, 1, 4, HL2],
-          [20, 24 + HY, 24, 5, PAL.line], [33, 29 + HY, 3, 5, PAL.line],
-          ...(sleeping ? [] : [[25, 26 + HY, 2, 2, PAL.shine], [39, 26 + HY, 2, 2, PAL.shine]]),
-          [39, 31 + HY, 1, 1, c.helmetShade], [41, 31 + HY, 1, 1, c.helmetShade], [39, 33 + HY, 1, 1, c.helmetShade], [41, 33 + HY, 1, 1, c.helmetShade],
-          [18, 27 + HY, 1, 1, c.helmetShade], [18, 31 + HY, 1, 1, c.helmetShade], [28, 16 + HY, 1, 7, c.helmetShade],
-        ]);
+        L(PLUME, { p: c.plume, P: c.plumeDark }, 6 - sway, -8 + H);
+        L(HELM, { W: c.helmet, S: c.helmetShade, H: PAL.shine, V: PAL.line }, 2, H);
         break;
       }
-      case 'droid': {
-        // A scary robot: horn antennae, angry slanted eyes, a grille of teeth.
-        const E = glow(c.glow);
-        g([[17, 12 + HY, 3, 7, c.plate], [18, 8 + HY, 2, 4, c.plate], [38, 12 + HY, 3, 7, c.plate], [38, 8 + HY, 2, 4, c.plate]], [[18, 8 + HY, 2, 1, E], [38, 8 + HY, 2, 1, E], [17, 12 + HY, 1, 7, HL]]);
-        g([[14, 17 + HY, 30, 16, c.head], [16, 15 + HY, 26, 2, c.head], [18, 33 + HY, 22, 4, c.head]], [
-          [17, 20 + HY, 26, 10, c.face],
-          ...(sleeping ? [[22, 26 + HY, 6, 1, '#5a6070'], [35, 26 + HY, 6, 1, '#5a6070']]
-            : [[21, 22 + HY, 3, 2, E], [23, 23 + HY, 3, 2, E], [25, 24 + HY, 3, 2, E], [34, 24 + HY, 3, 2, E], [36, 23 + HY, 3, 2, E], [38, 22 + HY, 3, 2, E]]),
-          [16, 16 + HY, 10, 1, HL], [14, 29 + HY, 2, 4, c.headShade], [18, 35 + HY, 22, 2, c.headShade],
-          [21, 32 + HY, 16, 4, c.face], [22, 32 + HY, 2, 2, '#c9ced8'], [26, 33 + HY, 2, 2, '#c9ced8'], [30, 32 + HY, 2, 2, '#c9ced8'], [34, 33 + HY, 2, 2, '#c9ced8'],
-          [15, 22 + HY, 1, 1, '#7a808e'], [15, 26 + HY, 1, 1, '#7a808e'], [39, 16 + HY, 1, 3, c.headShade], [40, 18 + HY, 1, 2, c.headShade],
+      case 'face':
+        face(c.skin);
+        break;
+      case 'cat': {
+        const ear = { a: c.body, p: '#f6b8b8' };
+        L(EAR_L, ear, 4, -3 + H);
+        L(EAR_R, ear, 17, -3 + H);
+        L(FACE, { k: c.body, K: c.bodyShade }, 2, 1 + H);
+        g([], [
+          [12, 2 + H, 1, 3, c.bodyShade], [14, 2 + H, 1, 4, c.bodyShade], [16, 2 + H, 1, 3, c.bodyShade],
+          ...eyeDots('#3a3020'), [13, 12 + H, 7, 3, c.belly], [15, 12 + H, 2, 1, '#e07a7a'], [14, 14 + H, 1, 1, '#b07050'], [17, 14 + H, 1, 1, '#b07050'],
+          [7, 12 + H, 3, 2, PAL.blush], [25, 11 + H, 3, 1, '#a08a78'], [25, 13 + H, 3, 1, '#a08a78'],
         ]);
         break;
       }
       case 'platypus':
-        g(headRects(c.body), [...faceShade, ...(sleeping ? [[23, 27 + HY, 4, 1, PAL.eye], [34, 27 + HY, 4, 1, PAL.eye]] : [[24, 25 + HY, 2, 2, PAL.eye], [35, 25 + HY, 2, 2, PAL.eye]]),
-          [20, 28 + HY, 3, 2, PAL.blush], [18, 19 + HY, 8, 1, HL], [26, 19 + HY, 1, 3, c.bodyShade], [30, 19 + HY, 1, 3, c.bodyShade]]);
-        g([[37, 28 + HY, 15, 5, c.bill], [39, 27 + HY, 11, 1, c.bill]], [[39, 28 + HY, 11, 1, HL], [37, 32 + HY, 15, 1, c.billDark], [46, 29 + HY, 1, 1, c.billDark], [49, 29 + HY, 1, 1, c.billDark]]);
+        L(FACE, { k: c.body, K: c.bodyShade }, 2, 1 + H);
+        g([], [...eyeDots(PAL.eye, [[10, 9], [18, 9]]), [6, 11 + H, 3, 2, PAL.blush], [9, 3 + H, 1, 2, c.bodyShade], [12, 2 + H, 1, 3, c.bodyShade], [5, 3 + H, 6, 1, lite(c.body)]]);
+        L(BILL, { b: c.bill, B: c.billDark }, 19, 10 + H);
+        g([], [[21, 10 + H, 5, 1, lite(c.bill)], [24, 11 + H, 1, 1, c.billDark], [26, 11 + H, 1, 1, c.billDark]]);
         break;
+      case 'robot':
+        g([[14, -4 + H, 2, 4, c.bodyShade]], []);
+        g([[13, -7 + H, 4, 3, col.main]], [[14, -6 + H, 2, 1, glow(col.main)]]);
+        L(ROBOT_HEAD, { a: c.head, A: c.bodyShade, s: '#1b2b3a', '+': lite(c.head) }, 2, H);
+        g([[0, 7 + H, 2, 4, c.bodyShade]], [...eyeDots(glow('#5ef0ff'), [[11, 8], [20, 8]]), [15, 12 + H, 3, 1, 'rgba(94,240,255,0.55)']]);
+        break;
+      case 'droid': {
+        const E = glow(c.glow);
+        L(HORN, { a: c.plate }, 4, -5 + H);
+        L(HORN.map((r) => [...r].reverse().join('')), { a: c.plate }, 21, -5 + H);
+        L(DROID_HEAD, { a: c.head, A: c.headShade, f: c.face, t: '#c9ced8', '+': lite(c.head) }, 2, -1 + H);
+        g([], sleeping
+          ? [[7, 7 + H, 5, 1, '#5a6070'], [17, 7 + H, 5, 1, '#5a6070']]
+          : [[6, 4 + H, 3, 1, E], [8, 5 + H, 3, 1, E], [10, 6 + H, 2, 1, E], [17, 6 + H, 2, 1, E], [18, 5 + H, 3, 1, E], [20, 4 + H, 3, 1, E], [4, -5 + H, 1, 1, E], [23, -5 + H, 1, 1, E]]);
+        break;
+      }
+      case 'ninja': {
+        const tail = frame ? [[-3, 6 + H, 6, 2], [-5, 9 + H, 5, 2]] : [[-3, 5 + H, 6, 2], [-4, 8 + H, 5, 2]];
+        g(tail.map((r) => [...r, col.main]), []);
+        L(FACE, { k: c.head, K: c.bodyShade }, 2, 1 + H);
+        g([[6, 7 + H, 19, 6, c.skin]], [...eyeDots(), [22, 11 + H, 2, 1, PAL.blush], [2, 4 + H, 24, 2, col.main], [2, 4 + H, 24, 1, lite(col.main)]]);
+        break;
+      }
       case 'astronaut':
-        g([[16, 15 + HY, 26, 22, c.head], [13, 18 + HY, 32, 16, c.head], [14, 16 + HY, 30, 20, c.head]], [
-          [18, 21 + HY, 24, 12, '#2a3b66'], [20, 22 + HY, 6, 1, '#6a84c0'], [19, 23 + HY, 1, 3, '#6a84c0'], ...eyes('#dfe8ff'), [22, 30 + HY, 3, 1, 'rgba(245,163,163,0.6)'],
-          [14, 34 + HY, 30, 2, '#c3c9d6'], [13, 24 + HY, 2, 4, glow('#ff5f5f')], [43, 20 + HY, 1, 12, SH]]);
+        L(ASTRO_HELMET, { w: c.head, W: c.bodyShade, v: '#2a3b66', '+': PAL.shine }, 1, -1 + H);
+        g([], [...eyeDots('#dfe8ff'), [6, 4 + H, 4, 1, '#6a84c0'], [5, 5 + H, 1, 3, '#6a84c0'], [0, 7 + H, 1, 3, glow('#3dffb0')], [8, 12 + H, 3, 1, 'rgba(245,163,163,0.6)']]);
         break;
     }
-
-    // --- Hats and hair.
-    switch (sk.hat) {
-      case 'hair':
-        g([[15, 14 + HY, 28, 7, c.hair], [13, 18 + HY, 6, 12, c.hair]], [[20, 15 + HY, 8, 1, HL], [24, 20 + HY, 1, 1, SH2], [32, 19 + HY, 1, 2, SH2]], [], [[18, 13 + HY, 22, 1, c.hair], [22, 21 + HY, 8, 2, c.hair], [36, 21 + HY, 5, 1, c.hair]]);
-        break;
-      case 'messy':
-        g([[15, 14 + HY, 28, 6, c.hair], [13, 17 + HY, 6, 11, c.hair]], [[20, 15 + HY, 10, 1, HL2], [26, 18 + HY, 1, 2, SH], [34, 17 + HY, 1, 2, SH]], [],
-          [[16, 11 + HY, 4, 3, c.hair], [24, 10 + HY, 5, 4, c.hair], [33, 11 + HY, 4, 3, c.hair], [41, 15 + HY, 4, 4, c.hair], [11, 20 + HY, 3, 4, c.hair], [22, 20 + HY, 6, 2, c.hair]]);
-        break;
-      case 'chef':
-        g([[13, 19 + HY, 5, 9, c.hair]], [[13, 20 + HY, 1, 6, HL]]);
-        g([[18, 6 + HY, 22, 13, '#ffffff'], [15, 3 + HY, 28, 7, '#ffffff']], [[24, 8 + HY, 1, 8, '#e3e6ec'], [30, 6 + HY, 1, 10, '#e3e6ec'], [36, 8 + HY, 1, 8, '#e3e6ec'], [18, 16 + HY, 22, 3, '#e8eaf0'], [17, 4 + HY, 10, 1, PAL.shine]], [], [[18, 1 + HY, 22, 2, '#ffffff']]);
-        break;
-    }
-    if (sk.specs) {
-      const ring = (x) => [[x - 2, 24 + HY, 6, 1, '#5a4a3a'], [x - 2, 29 + HY, 6, 1, '#5a4a3a'], [x - 2, 24 + HY, 1, 6, '#5a4a3a'], [x + 3, 24 + HY, 1, 6, '#5a4a3a'], [x - 1, 25 + HY, 1, 1, HL2]];
-      g([], [...ring(25), ...ring(39), [29, 26 + HY, 8, 1, '#5a4a3a'], [17, 26 + HY, 6, 1, '#5a4a3a']]);
-    }
+    // Hair and hats over the face.
+    const hairPal = (color) => ({ h: color, H: dark(color), '+': lite(color) });
+    if (sk.hat === 'hair' || sk.hat === 'chef') L(HAIR.hair, hairPal(c.hair), 1, -1 + H);
+    if (sk.hat === 'messy') L(HAIR.messy, hairPal(c.hair), 1, -1 + H);
+    if (sk.hat === 'chef') L(CHEF_HAT, { w: '#ffffff', W: '#d9dde6' }, 3, -10 + H);
+    if (sk.specs) g([], glassesAt(H, '#6a5040'));
 
     // --- Front arm and whatever it holds.
-    const arm = (rects, hand) => g([...rects.map((r) => [...r, c.body]), [...hand, c.hand]], rects.flatMap(([x, y, w, h]) => [[x + w - 1, y, 1, h, SH], [x, y, 1, h, HL]]));
+    const arm = (sleeve, hand) => g([[...sleeve, c.body], [...hand, c.hand]], [[sleeve[0], sleeve[1], 1, sleeve[3], lite(c.body)]]);
     const sparks = (pts) => g([], pts.flatMap(([x, y, color]) => twinkle(x, y, color)));
     const note = (x, y, color) => g([], [[x, y, 1, 6, color], [x + 1, y, 2, 1, color], [x + 2, y + 1, 1, 1, color], [x - 3, y + 5, 3, 2, color]]);
-
     switch (pose) {
       case 'done':
-        arm([[38, 22, 4, 14]], [38, 18, 4, 4]);
-        sparks(frame
-          ? [[34, 4, PAL.shine], [48, 8, PAL.spark], [10, 10, PAL.spark], [50, 2, PAL.spark]]
-          : [[36, 8, PAL.spark], [48, 3, PAL.shine], [12, 4, PAL.spark], [8, 12, PAL.shine]]);
-        break;
-      case 'command':
-        arm([[38, 37, 6, 4]], frame ? [43, 38, 4, 4] : [43, 33, 4, 4]);
-        if (prop && frame) sparks([[47, 37, PAL.spark], [51, 36, PAL.shine]]);
-        break;
-      case 'game':
-        arm([[38, 38, 4, 4]], [38, 42, 4, 3]);
-        g([[34, 41, 16, 6, '#3a3f4c']], [[36, 43, 3, 1, '#c9ced8'], [37, 42, 1, 3, '#c9ced8'], [45, 42, 2, 2, '#e0405a'], [47, 44, 2, 2, '#5aa7ff'], [34, 41, 16, 1, HL], [40, 44 - frame, 3, 2, c.hand]], [], [[34, 45, 4, 4, '#3a3f4c'], [46, 45, 4, 4, '#3a3f4c']]);
-        break;
-      case 'type':
-        arm([[38, 37, 7, 4]], [44, 37 + frame, 4, 4]);
-        break;
-      case 'paint':
-        arm([[38, 32, 6, 4]], [42, 32, 4, 4]);
-        g([[46, 28 + frame * 2, 6, 2, PAL.wood]], [[50, 28 + frame * 2, 2, 2, col.main], [48, 28 + frame * 2, 1, 2, PAL.steel]]);
-        break;
-      case 'read': {
-        arm([[38, 37 + F, 4, 6]], [38, 42 + F, 4, 3]);
-        const lines = [];
-        for (let i = 0; i < 4; i++) {
-          lines.push([37, 35 + i * 2 + F, i === 3 ? 3 : 5, 1, PAL.ink]);
-          if (i !== (frame ? 1 : 3)) lines.push([45, 35 + i * 2 + F, i === 3 ? 3 : 5, 1, PAL.ink]);
-        }
-        g([[34, 32 + F, 18, 12, PAL.cover]], [[36, 34 + F, 6, 8, PAL.page], [44, 34 + F, 6, 8, PAL.page], [42, 33 + F, 2, 10, SH2], ...lines, [34, 32 + F, 18, 1, HL], [48, 42 + F, 1, 4, '#e0405a']]);
-        break;
-      }
-      case 'wait':
-        arm([[38, 24, 4, 14]], [38 + frame * 2, 19, 5, 5]);
-        g([], frame ? [[47, 16, 2, 1, HL2], [48, 20, 2, 1, HL2]] : [[34, 16, 2, 1, HL2], [33, 20, 2, 1, HL2]]);
-        break;
-      case 'dance':
-        if (frame) arm([[38, 22, 4, 14]], [38, 18, 4, 4]);
-        else arm([[38, 38 + F, 4, 6]], [38, 43 + F, 4, 3]);
-        note(frame ? 50 : 8, frame ? 10 : 6, col.main);
+        arm([25, 9, 3, 11], [25, 6, 3, 3]);
+        sparks(frame ? [[16, -10, PAL.shine], [26, -6, PAL.spark], [-2, -2, PAL.spark], [28, -12, PAL.spark]]
+          : [[18, -6, PAL.spark], [27, -11, PAL.shine], [0, -9, PAL.spark], [-3, 0, PAL.shine]]);
         break;
       case 'dangle':
-        arm([[38, 22, 4, 14]], [38, 18, 4, 4]);
+        arm([25, 9, 3, 11], [25, 6, 3, 3]);
+        break;
+      case 'wait':
+        arm([25, 11, 3, 9], [25 + frame, 8, 3, 3]);
+        g([], frame ? [[30, 7, 2, 1, HL2], [30, 11, 2, 1, HL2]] : [[22, 7, 2, 1, HL2], [22, 11, 2, 1, HL2]]);
+        break;
+      case 'type': case 'command': case 'paint':
+        arm([19, 21 + B, 6, 3], [25, 21 + B + (pose === 'type' ? frame : pose === 'command' ? -frame * 2 : 0), 3, 3]);
+        break;
+      case 'game':
+        arm([19, 22 + B, 3, 3], [19, 25 + B, 3, 2]);
+        g([[13, 24 + B, 13, 5, '#3a3f4c'], [13, 28 + B, 3, 3, '#3a3f4c'], [23, 28 + B, 3, 3, '#3a3f4c']], [[15, 26 + B, 3, 1, '#c9ced8'], [16, 25 + B, 1, 3, '#c9ced8'], [21, 25 + B, 2, 2, '#5aa7ff'], [23, 27 + B, 2, 2, '#ffd65a'], [13, 24 + B, 13, 1, HL], [18, 26 + B - frame, 3, 2, c.hand]]);
+        break;
+      case 'read': {
+        arm([19, 22 + B, 3, 4], [19, 26 + B, 3, 2]);
+        const lines = [];
+        for (let i = 0; i < 4; i++) {
+          lines.push([15, 23 + i * 2 + B, i === 3 ? 2 : 4, 1, PAL.ink]);
+          if (i !== (frame ? 1 : 3)) lines.push([21, 23 + i * 2 + B, i === 3 ? 2 : 4, 1, PAL.ink]);
+        }
+        g([[13, 21 + B, 14, 10, PAL.cover]], [[14, 22 + B, 5, 8, PAL.page], [21, 22 + B, 5, 8, PAL.page], [19, 22 + B, 2, 8, SH2], ...lines, [13, 21 + B, 14, 1, HL]]);
+        break;
+      }
+      case 'dance':
+        if (frame) arm([25, 9, 3, 11], [25, 6, 3, 3]); else arm([19, 20 + B, 3, 5], [19, 25 + B, 3, 3]);
+        note(frame ? 27 : -2, frame ? -8 : -10, col.main);
         break;
       case 'sleep':
-        arm([[38, 40 + F, 4, 5]], [38, 44 + F, 4, 3]);
+        arm([19, 21 + B, 3, 4], [19, 25 + B, 3, 2]);
         break;
-      default: { // rest / walk: holding the signature item
+      default: { // rest / walk, holding the signature item
+        const sw = pose === 'walk' ? WALK_ARM[step % 4] : 0;
+        const hx = 19 + (sk.item === 'none' ? sw : 0);
+        const y = B;
         switch (sk.item) {
           case 'mug':
-            g([[44, 36 + F, 8, 8, '#ffffff'], [52, 38 + F, 2, 4, '#ffffff']], [[44, 36 + F, 8, 2, '#8a5a30'], [44, 41 + F, 8, 1, col.main], [50, 38 + F, 1, 6, SH]]);
-            if (frame) g([], [[46, 31 + F, 1, 2, '#e6e9f0'], [47, 29 + F, 1, 2, '#e6e9f0'], [49, 30 + F, 1, 2, '#e6e9f0']]);
+            g([[21, 22 + y, 5, 5, '#ffffff'], [26, 23 + y, 1, 3, '#ffffff']], [[21, 22 + y, 5, 1, '#8a5a30'], [21, 25 + y, 5, 1, col.main], [25, 23 + y, 1, 4, '#d9dde6']]);
+            if (frame) g([], [[22, 18 + y, 1, 2, '#e6e9f0'], [24, 17 + y, 1, 2, '#e6e9f0']]);
             break;
           case 'flask':
-            g([[45, 28 + F, 4, 5, '#dceff8'], [43, 33 + F, 8, 3, '#dceff8'], [41, 36 + F, 12, 6, '#dceff8']], [[42, 37 + F, 10, 5, '#3dffb0'], [44, 35 + F, 6, 2, '#3dffb0'], [44, 38 + F, 2, 2, HL2], [48, 33 + F - frame, 1, 1, PAL.shine], [45, 28 + F, 4, 1, '#a8b8c4']]);
+            g([[22, 17 + y, 2, 3, '#dceff8'], [21, 20 + y, 4, 2, '#dceff8'], [20, 22 + y, 6, 4, '#dceff8']], [[21, 22 + y, 4, 4, '#3dffb0'], [21, 22 + y, 1, 1, HL2], [23, 15 + y - frame, 1, 1, PAL.shine]]);
             break;
           case 'wrench':
-            g([[42, 24 + F, 4, 18, PAL.steel], [40, 20 + F, 8, 4, PAL.steel]], [[42, 20 + F, 4, 2, '#5a6270'], [42, 26 + F, 1, 14, HL2]]);
+            g([[22, 14 + y, 2, 11, PAL.steel], [21, 12 + y, 4, 3, PAL.steel]], [[22, 12 + y, 2, 1, '#5a6270'], [22, 15 + y, 1, 9, HL2]]);
             break;
           case 'kunai':
-            g([[42, 28 + F, 2, 12, '#c9d1dc'], [42, 40 + F, 2, 4, PAL.grip]], [[42, 29 + F, 1, 9, HL2]], [], [[41, 44 + F, 4, 2, PAL.steel]]);
+            g([[22, 17 + y, 1, 7, '#c9d1dc'], [22, 24 + y, 1, 3, PAL.grip]], [[22, 18 + y, 1, 4, HL2]]);
             break;
           case 'ladle':
-            g([[42, 20 + F, 2, 22, PAL.steel], [40, 16 + F, 6, 4, PAL.steel]], [[41, 16 + F, 2, 1, HL2]]);
+            g([[22, 12 + y, 1, 13, PAL.steel], [21, 10 + y, 3, 3, PAL.steel]], [[21, 10 + y, 1, 1, HL2]]);
             break;
         }
-        const swing = sk.item === 'none' && pose === 'walk' ? WALK_ARM[step % 4] : 0;
-        arm([[38 + swing, 37 + F, 4, 6]], [40 + swing, 41 + F, 4, 4]);
+        arm([hx, 20 + B, 3, 5], [hx, 25 + B, 3, 3]);
       }
     }
-    if (sk.body === 'armor') g([[36, 37 + F, 7, 4, c.plate]], [[36, 37 + F, 7, 1, HL], [36, 40 + F, 7, 1, c.trim], [41, 38 + F, 1, 1, c.trim]]);
-    if (sk.spikes) g([[36, 37 + F, 7, 4, c.plate], [37, 33 + F, 2, 4, c.plate], [40, 34 + F, 2, 3, c.plate]], [[36, 37 + F, 7, 1, HL], [36, 40 + F, 7, 1, c.face]]);
+    if (sk.body === 'armor') g([[18, 19 + B, 6, 3, c.plate]], [[18, 19 + B, 6, 1, lite(c.plate)], [18, 21 + B, 6, 1, c.trim]]);
+    if (sk.spikes) g([[18, 19 + B, 6, 3, c.plate], [20, 16 + B, 2, 3, c.plate]], [[18, 21 + B, 6, 1, c.face]]);
 
     // --- Accessory on top of everything.
-    const A = F;
+    const A = H;
     switch (opts.accessory) {
       case 'partyhat':
-        g([[27, 6 + A, 2, 2, col.main], [25, 8 + A, 6, 4, col.main], [23, 12 + A, 10, 6, col.main]], [[24, 14 + A, 8, 1, '#ffffff'], [26, 10 + A, 4, 1, '#ffffff'], [27, 4 + A, 2, 2, '#ffffff'], [28, 13 + A, 1, 1, '#ffe066']]);
+        g([[13, -9 + A, 2, 2, col.main], [12, -7 + A, 4, 3, col.main], [11, -4 + A, 6, 3, col.main], [10, -1 + A, 8, 2, col.main]], [[11, -3 + A, 6, 1, '#ffffff'], [12, -6 + A, 4, 1, '#ffffff'], [13, -11 + A, 2, 2, '#ffe066']]);
         break;
       case 'flower':
-        g([[39, 15 + A, 6, 6, '#ff8fb1']], [[41, 17 + A, 2, 2, '#ffe066'], [40, 16 + A, 1, 1, HL2]], [], [[37, 19 + A, 3, 2, '#5aa85a']]);
+        g([[21, 0 + A, 5, 5, '#ff8fb1']], [[22, 1 + A, 3, 3, '#ffe066'], [21, 0 + A, 1, 1, HL2]], []);
+        g([[19, 3 + A, 3, 2, '#5aa85a']]);
         break;
-      case 'glasses': {
-        const ring = (x) => [[x - 2, 24 + A, 6, 1, PAL.line], [x - 2, 29 + A, 6, 1, PAL.line], [x - 2, 24 + A, 1, 6, PAL.line], [x + 3, 24 + A, 1, 6, PAL.line], [x - 1, 25 + A, 4, 4, 'rgba(191,227,255,0.4)'], [x - 1, 25 + A, 1, 1, PAL.shine]];
-        g([], [...ring(25), ...ring(39), [29, 26 + A, 8, 1, PAL.line], [17, 26 + A, 6, 1, PAL.line]]);
+      case 'glasses':
+        g([], glassesAt(A, PAL.line, true));
         break;
-      }
       case 'sunglasses':
-        g([], [[22, 25 + A, 7, 4, '#1c1c26'], [36, 25 + A, 7, 4, '#1c1c26'], [29, 26 + A, 7, 1, '#1c1c26'], [17, 26 + A, 5, 1, '#1c1c26'], [23, 26 + A, 2, 1, '#6a6a7a'], [37, 26 + A, 1, 1, '#6a6a7a']]);
+        g([], [[9, 9 + A, 6, 4, '#1c1c26'], [18, 9 + A, 6, 4, '#1c1c26'], [15, 10 + A, 3, 1, '#1c1c26'], [3, 10 + A, 6, 1, '#1c1c26'], [10, 10 + A, 2, 1, '#6a6a7a'], [19, 10 + A, 1, 1, '#6a6a7a']]);
         break;
       case 'headphones':
-        g([[17, 13 + A, 24, 2, '#3a3a46'], [15, 15 + A, 3, 8, '#3a3a46']], [[19, 13 + A, 18, 1, HL]]);
-        g([[12, 23 + A, 7, 10, col.main]], [[12, 23 + A, 2, 10, col.dark], [16, 25 + A, 1, 5, HL2], [17, 27 + A, 1, 2, glow('#3dffb0')]]);
+        g([[4, -2 + A, 18, 2, '#3a3a46']], [[6, -2 + A, 14, 1, HL]]);
+        g([[1, 6 + A, 5, 8, col.main]], [[1, 6 + A, 1, 8, col.dark], [4, 8 + A, 1, 4, HL2]]);
         break;
       case 'halo':
-        g([], [[22, 7 + A, 18, 1, glow('#ffe066')], [20, 8 + A, 2, 1, glow('#ffe066')], [40, 8 + A, 2, 1, glow('#ffe066')], [22, 9 + A, 18, 1, glow('#ffe066')]]);
+        g([], [[8, -6 + A, 12, 1, glow('#ffe066')], [6, -5 + A, 2, 1, glow('#ffe066')], [20, -5 + A, 2, 1, glow('#ffe066')], [8, -4 + A, 12, 1, glow('#ffe066')]]);
         break;
       case 'bow':
-        g([[34, 14 + A, 5, 5, '#ff6fa8'], [41, 14 + A, 5, 5, '#ff6fa8'], [39, 15 + A, 2, 3, '#e0508a']], [[35, 15 + A, 2, 1, HL2]]);
+        g([[17, -2 + A, 4, 4, '#ff6fa8'], [23, -2 + A, 4, 4, '#ff6fa8'], [21, -1 + A, 2, 2, '#e0508a']], [[18, -1 + A, 1, 1, HL2]]);
         break;
       case 'vr':
-        g([[14, 25 + A, 13, 3, '#3a3d4c']], []);
-        g([[26, 22 + A, 19, 9, '#2b2d3a']], [[28, 25 + A, 16, 2, glow('#36f9ff')], [26, 22 + A, 19, 1, HL], [26, 30 + A, 19, 1, SH2], [43, 23 + A, 1, 1, glow('#ff3ea5')]]);
+        g([[2, 9 + A, 8, 3, '#3a3d4c']]);
+        g([[9, 7 + A, 17, 6, '#2b2d3a']], [[10, 9 + A, 15, 2, glow('#36f9ff')], [9, 7 + A, 17, 1, HL], [24, 8 + A, 1, 1, glow('#ff3ea5')]]);
         break;
     }
     return groups;
   }
 
-  // ---- Mini characters (room mode) -------------------------------------------
-  // 12x16 people on a 14x18 grid (28x36 fine), same chibi rules: wide flat head, bean eyes.
-  const MINI = { W: 14, H: 18, anchor: 6.5, feet: 16 };
+  // Round frames around the bean eyes at (11, 10) and (20, 10).
+  function glassesAt(A, color, tint) {
+    const ring = (x) => [[x - 2, 8 + A, 6, 1, color], [x - 2, 13 + A, 6, 1, color], [x - 2, 8 + A, 1, 6, color], [x + 3, 8 + A, 1, 6, color],
+      ...(tint ? [[x - 1, 9 + A, 4, 4, 'rgba(191,227,255,0.35)'], [x - 1, 9 + A, 1, 1, PAL.shine]] : [[x - 1, 9 + A, 1, 1, HL2]])];
+    return [...ring(11), ...ring(20), [15, 10 + A, 3, 1, color], [3, 10 + A, 6, 1, color]];
+  }
 
-  function buildMini(skinId, pose, frame, col, opts = {}) {
-    const sk = SKINS[skinId] || SKINS.commander;
-    const c = sk.c;
+  // Full-size character: the body box sits at the bottom-left of a 64x56 canvas with room for props.
+  const OX = 15;
+  const OY = 18;
+  function buildCharacter(skinId, pose, frame, col, opts = {}) {
+    const prop = opts.prop !== false;
     const groups = [];
     const g = fineGrouper(groups);
-    const sleeping = pose === 'sleep';
-    const step = frame;
-    frame %= 2;
-    let dy = 0;
-    if (pose === 'read') dy = frame;
-    if (pose === 'dance') dy = frame ? -1 : 0;
-    if (sleeping) dy = 2;
-    let bob = 0;
-    if (pose === 'rest') bob = BREATH[step % 8];
-    if (pose === 'walk') bob = step % 2 ? -1 : 0;
-    const F = dy * RES + bob;
-    const HY = F;
-    const TY = 18 + F;
-
-    if (sk.cape) {
-      const flap = pose === 'walk' ? WALK_FLAP[step % 4] / 2 : 0;
-      g([[4 - flap, 19 + F, 5 + flap, 6, c.cape], [3 - flap, 25 + F, 2, 3 + (step % 2), c.cape], [6 - flap, 25 + F, 2, 4 - (step % 2), c.cape], [8 - flap, 25 + F, 1, 2, c.cape]],
-        [[4 - flap, 19 + F, 1, 6, c.capeDark], [6 - flap, 21 + F, 1, 3, c.capeDark]]);
+    const f = frame % 2;
+    // Props behind the body, in canvas fine pixels.
+    if (pose === 'type' && prop) {
+      g([[37, 42, 20, 4, PAL.wood], [39, 46, 2, 8, PAL.woodDark], [53, 46, 2, 8, PAL.woodDark]], [[37, 42, 20, 1, HL], [37, 45, 20, 1, SH], [43, 43, 6, 1, 'rgba(60,30,10,0.18)']]);
+      const keys = [];
+      for (let i = 0; i < 6; i++) keys.push([42 + i * 2, 40, 1, 1, (i + f) % 4 ? '#8a91a3' : PAL.shine]);
+      g([[41, 40, 14, 2, '#c9ced8'], [51, 28, 4, 12, '#3a3f4c']], [...keys, [52, 30, 2, 8, glow(PAL.screen)], [52, 31 + f * 3, 2, 1, PAL.shine]]);
     }
-    if (sk.tail === 'flat') g([[1, 23 + F, 8, 3, c.bodyShade]], [[2, 23 + F, 6, 1, HL]]);
-    else if (sk.tail) g([[3, 18 + F, 2, 7, c.body]], [[3, 20 + F, 2, 1, c.bodyShade]]);
-    if (sk.backpack) g([[4, 18 + F, 4, 8, c.body]], [[5, 21 + F, 2, 2, '#8a93a6']]);
-
-    const armsUp = pose === 'dangle' || pose === 'done' || (pose === 'dance' && !frame);
-    g(armsUp ? [[6, 9, 2, 9, c.bodyShade], [6, 7, 2, 2, c.hand]] : [[6, 19 + F, 2, 5, c.bodyShade], [6, 24 + F, 2, 2, c.hand]]);
-    const legs = pose === 'walk' ? [[[6, 26, 4, 6], [16, 26, 4, 6]], [[9, 26, 4, 4], [14, 26, 4, 6]], [[6, 26, 4, 6], [16, 26, 4, 6]], [[9, 26, 4, 6], [14, 26, 4, 4]]][step % 4]
-      : sleeping ? [[12, 28, 10, 4]]
-      : [[8, 26, 4, 6], [14, 26, 4, 6]];
-    g(legs.map((r) => [...r, c.leg]), sleeping ? [[19, 28, 3, 4, c.boot]] : legs.map(([x, y, w, h]) => [x, y + h - 2, w, 2, c.boot]));
-
-    const torso = sk.body === 'labcoat' ? [[8, TY, 10, 10, c.body]] : [[8, TY, 10, 8, c.body]];
-    const torsoDetail = {
-      armor: [[10, TY + 1, 6, 4, c.plate], [12, TY + 1, 2, 4, c.bodyShade], [8, TY + 5, 10, 1, c.boot], [12, TY + 5, 2, 1, c.trim]],
-      mech: [[10, TY + 1, 6, 5, c.plate], [12, TY + 2, 2, 2, glow(c.glow)], [8, TY + 7, 10, 1, c.face]],
-      shirt: [[12, TY, 2, 5, col.main], [10, TY, 2, 1, '#ffffff'], [14, TY, 2, 1, '#ffffff'], [8, TY + 6, 10, 1, '#3b3b45']],
-      labcoat: [[11, TY, 4, 4, col.main], [10, TY, 1, 9, c.bodyShade], [15, TY, 1, 9, c.bodyShade], [16, TY + 3, 1, 2, '#e0405a']],
-      fur: [[10, TY + 2, 6, 5, c.belly], [8, TY, 10, 1, col.main], [12, TY + 1, 2, 2, PAL.gold]],
-      metal: [[10, TY + 2, 6, 3, '#2c3442'], [11, TY + 3, 1, 1, glow(col.main)], [14, TY + 3, 1, 1, glow('#5ef0ff')]],
-      gi: [[11, TY, 1, 4, '#4a5175'], [14, TY, 1, 4, '#4a5175'], [8, TY + 4, 10, 1, col.main]],
-      apron: [[10, TY + 1, 6, 7, '#ffffff'], [9, TY, 8, 1, col.main], [11, TY, 4, 1, '#e0405a']],
-      suit: [[10, TY + 2, 2, 2, col.main], [13, TY + 2, 3, 2, '#c3c9d6'], [8, TY + 6, 10, 1, '#8a93a6']],
-    }[sk.body] || [];
-    g(torso, [...torsoDetail, [8, TY, 1, 8, c.bodyShade], [17, TY + 1, 1, 6, HL], [8, TY + 7, 10, 1, SH]]);
-
-    const head = (color) => [[6, 6 + HY, 16, 12, color], [4, 8 + HY, 20, 8, color], [5, 7 + HY, 18, 10, color]];
-    const eyes = (color = PAL.eye) => (sleeping ? [[10, 12 + HY, 3, 1, color], [18, 12 + HY, 3, 1, color]] : [[11, 11 + HY, 2, 2, color], [19, 11 + HY, 2, 2, color]]);
-    const cheeks = [[8, 14 + HY, 2, 1, PAL.blush], [21, 14 + HY, 2, 1, PAL.blush]];
-    switch (sk.head) {
-      case 'face':
-        g(head(c.skin), [...eyes(), ...cheeks, [5, 16 + HY, 18, 1, SH]]);
-        break;
-      case 'cat':
-        g([[6, 2 + HY, 4, 6, c.body], [17, 2 + HY, 4, 6, c.body]], [[7, 4 + HY, 2, 3, '#f6b8b8'], [18, 4 + HY, 2, 3, '#f6b8b8']]);
-        g(head(c.body), [...eyes('#3a3020'), [13, 14 + HY, 6, 3, c.belly], [15, 14 + HY, 2, 1, '#e07a7a'], [8, 14 + HY, 2, 1, PAL.blush], [12, 7 + HY, 1, 2, c.bodyShade], [15, 7 + HY, 1, 2, c.bodyShade]]);
-        break;
-      case 'robot':
-        g([[13, 2 + HY, 2, 4, c.bodyShade]], [[13, 1 + HY, 2, 2, glow(col.main)]], [], [[12, 0 + HY, 4, 3, col.main]]);
-        g([[4, 6 + HY, 20, 12, c.head]], [[6, 8 + HY, 16, 8, '#1b2b3a'], ...(sleeping ? [[12, 12 + HY, 3, 1, glow('#5ef0ff')], [17, 12 + HY, 3, 1, glow('#5ef0ff')]] : [[13, 10 + HY, 2, 3, glow('#5ef0ff')], [18, 10 + HY, 2, 3, glow('#5ef0ff')]]), [5, 7 + HY, 6, 1, HL]]);
-        break;
-      case 'ninja':
-        g(head(c.head), [[7, 10 + HY, 16, 6, c.skin], ...eyes(), [8, 14 + HY, 2, 1, PAL.blush], [4, 8 + HY, 20, 2, col.main]]);
-        g([[0 + frame, 9 + HY, 4, 2, col.main]]);
-        break;
-      case 'helmet': {
-        const px = pose === 'walk' ? -WALK_SWAY[step % 4] : 0;
-        g([[12, 2 + HY, 3, 4, c.plume], [7 + px, 1 + HY, 7, 2, c.plume], [3 + px, 2 + HY, 5, 2, c.plume]], [[3 + px, 3 + HY, 5, 1, c.plumeDark]]);
-        g(head(c.helmet).concat([[6, 5 + HY, 16, 2, c.helmet]]), [[4, 8 + HY, 2, 7, c.helmetShade], [5, 16 + HY, 18, 2, c.helmetShade], [7, 6 + HY, 5, 1, HL2],
-          [7, 10 + HY, 16, 3, PAL.line], [15, 13 + HY, 2, 3, PAL.line], ...(sleeping ? [] : [[11, 11 + HY, 1, 1, PAL.shine], [19, 11 + HY, 1, 1, PAL.shine]]), [20, 14 + HY, 1, 1, c.helmetShade]]);
-        break;
-      }
-      case 'droid': {
-        const E = glow(c.glow);
-        g([[6, 2 + HY, 2, 4, c.plate], [20, 2 + HY, 2, 4, c.plate]], [[6, 2 + HY, 2, 1, E], [20, 2 + HY, 2, 1, E]]);
-        g([[4, 6 + HY, 20, 10, c.head], [5, 5 + HY, 18, 1, c.head], [7, 16 + HY, 14, 2, c.head]], [[6, 8 + HY, 16, 6, c.face],
-          ...(sleeping ? [[9, 11 + HY, 4, 1, '#5a6070'], [16, 11 + HY, 4, 1, '#5a6070']] : [[8, 9 + HY, 2, 1, E], [10, 10 + HY, 2, 1, E], [18, 9 + HY, 2, 1, E], [16, 10 + HY, 2, 1, E]]),
-          [9, 15 + HY, 10, 2, c.face], [10, 15 + HY, 1, 1, '#c9ced8'], [13, 16 + HY, 1, 1, '#c9ced8'], [16, 15 + HY, 1, 1, '#c9ced8'], [5, 6 + HY, 5, 1, HL], [7, 17 + HY, 14, 1, c.headShade]]);
-        break;
-      }
-      case 'platypus':
-        g(head(c.body), [...(sleeping ? [[9, 12 + HY, 3, 1, PAL.eye], [15, 12 + HY, 3, 1, PAL.eye]] : [[10, 10 + HY, 2, 2, PAL.eye], [16, 10 + HY, 2, 2, PAL.eye]]),
-          [7, 13 + HY, 2, 1, PAL.blush], [5, 16 + HY, 18, 1, SH]]);
-        g([[18, 12 + HY, 8, 3, c.bill]], [[18, 12 + HY, 8, 1, HL], [23, 13 + HY, 1, 1, c.billDark]]);
-        break;
-      case 'astronaut':
-        g([[6, 4 + HY, 16, 15, c.head], [4, 6 + HY, 20, 11, c.head], [5, 5 + HY, 18, 13, c.head]], [[7, 8 + HY, 14, 8, '#2a3b66'], ...eyes('#dfe8ff'), [8, 9 + HY, 3, 1, '#6a84c0']]);
-        break;
+    if (pose === 'command' && prop) {
+      // A retro terminal on a little cart.
+      g([[47, 42, 4, 12, '#4a4f5e'], [42, 52, 14, 2, '#4a4f5e']], [[47, 42, 1, 12, HL]]);
+      const blink = f ? glow('#3dffb0') : '#0d2a1a';
+      g([[42, 26, 16, 14, '#d6cfb8'], [40, 40, 16, 2, '#bdb59c']], [
+        [44, 28, 12, 9, '#0d2a1a'], [45, 29, 6, 1, glow('#3dffb0')], [45, 31, 4, 1, glow('#3dffb0')], [45, 33, 8, 1, glow('#3dffb0')], [45, 35, 2, 1, glow('#3dffb0')], [48, 35, 1, 1, blink],
+        [42, 26, 16, 1, HL], [56, 28, 2, 12, SH], [42, 40, 14, 1, SH],
+      ]);
     }
-    switch (sk.hat) {
-      case 'hair': g([[5, 4 + HY, 18, 5, c.hair], [4, 7 + HY, 4, 7, c.hair]], [[8, 5 + HY, 6, 1, HL]], [], [[10, 9 + HY, 6, 1, c.hair]]); break;
-      case 'messy': g([[5, 4 + HY, 18, 4, c.hair], [4, 7 + HY, 4, 6, c.hair]], [[8, 5 + HY, 6, 1, HL2]], [], [[7, 2 + HY, 3, 2, c.hair], [13, 1 + HY, 4, 3, c.hair], [21, 5 + HY, 3, 3, c.hair]]); break;
-      case 'chef': g([[7, 0 + HY, 14, 7, '#ffffff'], [5, 6 + HY, 18, 2, '#ffffff']], [[11, 1 + HY, 1, 5, '#e3e6ec'], [16, 1 + HY, 1, 5, '#e3e6ec']]); break;
+    if (pose === 'paint' && prop) {
+      g([[46, 24, 2, 30, PAL.wood], [56, 24, 2, 30, PAL.wood]], [[47, 24, 1, 30, SH]]);
+      g([[42, 18, 18, 18, PAL.page]], [
+        [46, 22, 6, 2, col.main], [48, 26, 8, 2, '#5aa7ff'], [44, 30, 4, 2, '#7cc47f'], [50, 30, 2, 1, '#ffd65a'],
+        ...(f ? [[52, 22, 4, 4, PAL.spark]] : [[44, 24, 2, 4, '#e0405a']]), [42, 34, 18, 2, SH],
+      ]);
     }
-    if (sk.specs) g([], [[10, 10 + HY, 4, 1, '#5a4a3a'], [18, 10 + HY, 4, 1, '#5a4a3a'], [14, 11 + HY, 4, 1, '#5a4a3a'], [6, 11 + HY, 4, 1, '#5a4a3a']]);
-
-    const arm = (rects, hand) => g([...rects.map((r) => [...r, c.body]), [...hand, c.hand]]);
-    const spark = (pts) => g([], pts.flatMap(([x, y, color]) => twinkle(x, y, color)));
-    switch (pose) {
-      case 'type': case 'command': case 'paint':
-        arm([[18, 19 + F, 4, 2]], [21, 18 + frame * 2, 2, 2]);
-        if (pose === 'paint') g([], [[23, 18 + frame * 2, 1, 1, col.main]]);
-        break;
-      case 'game':
-        arm([[18, 20 + F, 2, 3]], [18, 22 + F, 2, 2]);
-        g([[15, 22 + F, 9, 3, '#3a3f4c']], [[21, 22 + F, 1, 1, '#e0405a'], [17, 23 + F, 2, 1, '#c9ced8']]);
-        break;
-      case 'read':
-        g([[16, 18 + F, 8, 6, PAL.cover]], [[17, 19 + F, 3, 4, PAL.page], [21, 19 + F, 2, 4, PAL.page], [17, 20 + F, 2, 1, PAL.ink], [21, 20 + F, 2, 1, PAL.ink]]);
-        break;
-      case 'wait':
-        arm([[18, 10, 2, 9]], [18 + frame, 7, 3, 3]);
-        break;
-      case 'done':
-        arm([[18, 9, 2, 9]], [18, 7, 2, 2]);
-        spark(frame ? [[24, 3, PAL.spark], [3, 2, PAL.shine]] : [[25, 6, PAL.shine], [2, 5, PAL.spark]]);
-        break;
-      case 'dangle':
-        arm([[18, 9, 2, 9]], [18, 7, 2, 2]);
-        break;
-      case 'dance':
-        if (frame) arm([[18, 9, 2, 9]], [18, 7, 2, 2]); else arm([[18, 19 + F, 2, 5]], [18, 24 + F, 2, 2]);
-        g([], frame ? [[25, 3, 1, 4, col.main], [26, 3, 1, 1, col.main], [23, 6, 2, 2, col.main]] : [[3, 1, 1, 4, col.main], [4, 1, 1, 1, col.main], [1, 4, 2, 2, col.main]]);
-        break;
-      case 'sleep':
-        arm([[18, 21 + F, 2, 3]], [18, 24 + F, 2, 1]);
-        break;
-      default:
-        if (sk.item === 'mug') g([[20, 19 + F, 4, 4, '#ffffff']], [[20, 19 + F, 4, 1, '#8a5a30']]);
-        if (sk.item === 'flask') g([[21, 16 + F, 2, 3, '#dceff8'], [19, 19 + F, 6, 4, '#dceff8']], [[20, 20 + F, 4, 3, '#3dffb0']]);
-        if (sk.item === 'wrench') g([[21, 14 + F, 2, 10, PAL.steel], [20, 12 + F, 4, 2, PAL.steel]]);
-        arm([[18, 19 + F, 2, 4]], [18, 23 + F, 3, 2]);
-    }
-    if (sk.body === 'armor') g([[16, 18 + F, 5, 3, c.plate]], [[16, 20 + F, 5, 1, c.trim]]);
-    if (sk.spikes) g([[16, 18 + F, 5, 3, c.plate], [18, 16 + F, 2, 2, c.plate]], [[16, 20 + F, 5, 1, c.face]]);
-
-    const A = F;
-    switch (opts.accessory) {
-      case 'partyhat': g([[13, 0 + A, 2, 2, col.main], [11, 2 + A, 6, 5, col.main]], [[12, 4 + A, 4, 1, '#ffffff']]); break;
-      case 'flower': g([[19, 4 + A, 3, 3, '#ff8fb1']], [[20, 5 + A, 1, 1, '#ffe066']]); break;
-      case 'glasses': g([], [[10, 10 + A, 4, 1, PAL.line], [18, 10 + A, 4, 1, PAL.line], [10, 13 + A, 4, 1, PAL.line], [18, 13 + A, 4, 1, PAL.line], [14, 11 + A, 4, 1, PAL.line], [6, 11 + A, 4, 1, PAL.line]]); break;
-      case 'sunglasses': g([], [[10, 10 + A, 4, 3, '#1c1c26'], [18, 10 + A, 4, 3, '#1c1c26'], [14, 11 + A, 4, 1, '#1c1c26'], [6, 11 + A, 4, 1, '#1c1c26'], [11, 11 + A, 1, 1, '#6a6a7a']]); break;
-      case 'headphones': g([[6, 4 + A, 16, 1, '#3a3a46']]); g([[3, 9 + A, 4, 6, col.main]], [[3, 9 + A, 1, 6, col.dark]]); break;
-      case 'halo': g([], [[8, 1 + A, 12, 1, glow('#ffe066')], [7, 2 + A, 1, 1, glow('#ffe066')], [20, 2 + A, 1, 1, glow('#ffe066')]]); break;
-      case 'bow': g([[17, 4 + A, 3, 3, '#ff6fa8'], [21, 4 + A, 3, 3, '#ff6fa8']], [[20, 5 + A, 1, 2, '#e0508a']]); break;
-      case 'vr': g([[12, 10 + A, 11, 5, '#2b2d3a']], [[13, 12 + A, 9, 1, glow('#36f9ff')]]); break;
-    }
+    groups.push(...buildBody(skinId, pose, frame, col, opts, OX, OY));
+    if (pose === 'paint') g([[43, 37, 6, 2, PAL.wood]], [[47, 37 - f * 2, 2, 2, col.main]]);
+    if (pose === 'command' && prop && f) g([], [...twinkle(44, 38, PAL.spark), ...twinkle(48, 36, PAL.shine)]);
     return groups;
+  }
+
+  // ---- Mini characters (room mode) -------------------------------------------
+  // The same art without props; the grid has headroom for plumes and hats.
+  const MINI = { W: 14, H: 23, anchor: 7, feet: 23 };
+  const MINI_OY = MINI.H * RES - BOX.H;
+
+  function buildMini(skinId, pose, frame, col, opts = {}) {
+    return buildBody(skinId, pose, frame, col, opts, 0, MINI_OY);
   }
 
   function drawMiniAt(ctx, unit, x, y, skin, pose, frame, col, facing, opts) {
@@ -661,6 +758,37 @@
     shadeCache.set(key, out);
     return out;
   }
+
+  // Softer steps for shading inside a part: a cooler mid shadow and a warmer light.
+  function tone(color, toward, maxShift, sF, lF) {
+    const key = `${color}|${toward}|${sF}|${lF}`;
+    if (shadeCache.has(key)) return shadeCache.get(key);
+    const [r, g, b] = parseColor(color).map((v) => v / 255);
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0;
+    const l = (max + min) / 2;
+    const d = max - min;
+    const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+    if (d) {
+      if (max === r) h = 60 * (((g - b) / d) % 6);
+      else if (max === g) h = 60 * ((b - r) / d + 2);
+      else h = 60 * ((r - g) / d + 4);
+    }
+    if (h < 0) h += 360;
+    const diff = ((toward - h + 540) % 360) - 180;
+    const nh = (h + Math.sign(diff) * Math.min(Math.abs(diff), maxShift) + 360) % 360;
+    const [R, G, B] = hslToRgb(nh, Math.min(1, sF(s)), Math.min(1, lF(l))).map((v) => Math.round(v));
+    const out = `rgb(${R}, ${G}, ${B})`;
+    shadeCache.set(key, out);
+    return out;
+  }
+  const darkS = (s) => s * 0.9 + 0.05;
+  const darkL = (l) => l * 0.76;
+  const liteS = (s) => s * 0.95;
+  const liteL = (l) => l + (1 - l) * 0.3;
+  const dark = (color) => tone(color, 255, 8, darkS, darkL);
+  const lite = (color) => tone(color, 55, 8, liteS, liteL);
 
   // ---- Drawing ---------------------------------------------------------------
 

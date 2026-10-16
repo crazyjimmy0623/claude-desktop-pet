@@ -52,6 +52,17 @@ if (mode === 'chars') {
       Sprites.drawMiniAt(ctx, 6, 70 + i * (SW + 6) + 20, y + SH + 8, sk, p, f, col, 1, {});
     }
   });
+} else if (mode === 'lineup') {
+  // Every skin in a few poses at the room grid, no accessories or props: the art itself.
+  const skins = Object.keys(Sprites.SKINS);
+  const seq = [['rest', 0], ['walk', 0], ['walk', 1], ['walk', 2], ['walk', 3], ['type', 0], ['read', 0], ['done', 0], ['wait', 1], ['sleep', 0]];
+  const MU = 6, MW = Sprites.MINI.W * MU, MH = Sprites.MINI.H * MU;
+  c.width = seq.length * (MW + 6) + 80; c.height = skins.length * (MH + 6) + 6;
+  ctx.fillStyle = '#3b4a5a'; ctx.fillRect(0,0,c.width,c.height);
+  skins.forEach((sk, r) => {
+    ctx.fillStyle = '#fff'; ctx.fillText(sk, 2, r * (MH + 6) + 60);
+    seq.forEach(([p, f], i) => Sprites.drawMiniAt(ctx, MU, 80 + i * (MW + 6), r * (MH + 6) + 3, sk, p, f, Sprites.colorsFor(200), 1, {}));
+  });
 } else if (mode === 'fx') {
   c.width = 700; c.height = 140; ctx.fillStyle = '#3b4a5a'; ctx.fillRect(0,0,c.width,c.height);
   let x = 10; for (const k of Object.keys(Sprites.FX)) for (let f = 0; f < 2; f++) { Sprites.drawFxAt(ctx, 4, x, 20, k, f); x += Sprites.FX[k].w * 4 + 16; }

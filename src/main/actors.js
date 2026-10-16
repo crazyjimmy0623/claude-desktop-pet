@@ -41,7 +41,7 @@ class Actors extends EventEmitter {
     const { characters } = this.store.settings;
     const owned = new Set(this.store.progress.owned);
     const pick = a.kind === 'user' ? characters.user : (characters.projects[a.name] || characters.ai);
-    const fallback = a.kind === 'user' ? 'commander' : 'droid';
+    const fallback = a.kind === 'user' ? 'office' : 'droid';
     let skin = pick?.skin || fallback;
     if (skin === 'auto') {
       // Rotate through owned characters, skipping the one the user wears.
