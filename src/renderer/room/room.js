@@ -1,6 +1,6 @@
 /* global desk, Sprites, Iso, Catalog, Common */
-// Room mode: an isometric diorama floating above the taskbar. Every character walks (and climbs the
-// stairs) to the furniture that matches what it is doing.
+// Room mode: a little isometric tower floating above the taskbar. Every character walks (and climbs
+// the fire escape) to the furniture that matches what it is doing.
 const DPR = window.devicePixelRatio || 1;
 const TU = Iso.TU;
 const SPEED = 2.5; // tiles per second
@@ -28,28 +28,30 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 const state = {
-  room: Iso.generateRoom(),
+  room: Iso.generateRoom('cyber'),
   zoom: 2,
   settings: null,
   progress: null,
   editing: false,
-  grid: [],
+  open: new Set(), // walkable cell ids
   spots: [],
-  claims: new Map(), // spot key -> actor id
+  claims: new Map(), // spot cell id -> actor id
   views: new Map(),
   fx: [],
   drag: null,
   onDrawTop: null, // editor ghost
-  onDecor: null,
+  orbs: [],
 };
 // Device pixels per fine pixel; characters take device pixels per logical pixel (2 fine).
 const Z = () => clamp(Math.round(state.zoom) || 2, 1, 4);
-const spotKey = (s) => `${s.x},${s.y}`;
+const spotKey = (s) => s.cell;
+const cellOf = (id) => Iso.cells(state.room).list[id];
 
 // ---- Layout ----------------------------------------------------------------------
 
 function rebuildNav() {
-  state.grid = Iso.walkGrid(state.room);
+  Iso.resetCells(state.room);
+  state.open = Iso.walkable(state.room);
   state.spots = Iso.stationSpots(state.room);
   const valid = new Set(state.spots.map(spotKey));
   for (const [key, id] of [...state.claims]) {
@@ -60,16 +62,16 @@ function rebuildNav() {
     }
   }
   for (const v of state.views.values()) {
-    if (!walkable(Math.round(v.x), Math.round(v.y))) {
-      const t = nearestWalkable(Math.round(v.x), Math.round(v.y));
-      if (t) { v.x = t.x; v.y = t.y; }
-      v.path = [];
+    if (!cellOf(v.cell) || !walkable(v.cell)) {
+      const c = nearestWalkable(v.x, v.y, v.z);
+      if (c) place(v, c);
     }
+    v.path = [];
   }
 }
 
 function layout() {
-  const S = Iso.size(state.room.n);
+  const S = Iso.size(state.room);
   const z = Z();
   canvas.width = S.w * z;
   canvas.height = S.h * z;
@@ -95,69 +97,66 @@ function setRoom(room, { save = false, relayout = true } = {}) {
 
 // ---- Navigation -------------------------------------------------------------------
 
-function walkable(x, y) {
-  return !!state.grid[y]?.[x];
+function walkable(id) {
+  return state.open.has(id);
 }
 
-function nearestWalkable(x, y) {
+function place(v, c) {
+  v.cell = c.id;
+  v.x = c.x;
+  v.y = c.y;
+  v.z = c.z;
+}
+
+function nearestWalkable(x, y, z = 0) {
   let best = null;
   let bestD = Infinity;
-  for (let ty = 0; ty < state.room.n; ty++) {
-    for (let tx = 0; tx < state.room.n; tx++) {
-      if (!walkable(tx, ty)) continue;
-      const d = Math.abs(tx - x) + Math.abs(ty - y);
-      if (d < bestD) { bestD = d; best = { x: tx, y: ty }; }
-    }
+  for (const c of Iso.cells(state.room).list) {
+    if (!walkable(c.id) || c.kind === 'stair') continue;
+    const d = Math.abs(c.x - x) + Math.abs(c.y - y) + Math.abs(c.z - z) / 20;
+    if (d < bestD) { bestD = d; best = c; }
   }
   return best;
 }
 
-// Breadth-first over tiles; neighbours connect when their surfaces are a stair step apart at most.
-function findPath(sx, sy, tx, ty) {
-  if (!walkable(tx, ty)) return null;
-  const n = state.room.n;
-  const key = (x, y) => y * n + x;
-  const prev = new Map([[key(sx, sy), null]]);
-  const queue = [[sx, sy]];
+// Breadth-first over cells; neighbours connect when they are at most a stair step apart.
+function findPath(from, to) {
+  if (!walkable(to)) return null;
+  const prev = new Map([[from, null]]);
+  const queue = [cellOf(from)];
   while (queue.length) {
-    const [x, y] = queue.shift();
-    if (x === tx && y === ty) {
+    const c = queue.shift();
+    if (c.id === to) {
       const path = [];
-      let k = key(x, y);
-      while (k !== key(sx, sy)) {
-        path.unshift({ x: k % n, y: Math.floor(k / n) });
-        k = prev.get(k);
-      }
+      for (let k = to; k !== from; k = prev.get(k)) path.unshift(cellOf(k));
       return path;
     }
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const nx = x + dx;
-      const ny = y + dy;
-      if (!walkable(nx, ny) || prev.has(key(nx, ny)) || !Iso.linked(state.room, x, y, nx, ny)) continue;
-      prev.set(key(nx, ny), key(x, y));
-      queue.push([nx, ny]);
+    for (const o of Iso.neighbours(state.room, c)) {
+      if (!walkable(o.id) || prev.has(o.id)) continue;
+      prev.set(o.id, c.id);
+      queue.push(o);
     }
   }
   return null;
 }
 
-function route(v, x, y) {
-  let sx = Math.round(v.x);
-  let sy = Math.round(v.y);
-  if (!walkable(sx, sy)) ({ x: sx, y: sy } = nearestWalkable(sx, sy) || { x: sx, y: sy });
-  const path = findPath(sx, sy, x, y);
+function route(v, to) {
+  let from = v.cell;
+  if (!cellOf(from) || !walkable(from)) from = nearestWalkable(v.x, v.y, v.z)?.id ?? from;
+  const path = cellOf(from) ? findPath(from, to) : null;
   v.path = path || [];
   return !!path;
 }
 
+// Characters arrive at, and leave from, the front of the ground floor.
 function door() {
-  const n = state.room.n;
-  const x = Math.floor(n / 2);
-  return walkable(x, n - 1) ? { x, y: n - 1 } : nearestWalkable(x, n - 1);
+  const n = Iso.sideOf(state.room, 0);
+  const c = Iso.cellAt(state.room, Math.floor(n / 2), n - 1, 0);
+  return c && walkable(c.id) ? c : nearestWalkable(n / 2, n, 0);
 }
 
 function releaseSpot(v) {
-  if (v.spot && state.claims.get(v.spot) === v.id) state.claims.delete(v.spot);
+  if (v.spot != null && state.claims.get(v.spot) === v.id) state.claims.delete(v.spot);
   v.spot = null;
   v.atStation = false;
 }
@@ -175,11 +174,10 @@ function decide(v, now) {
   const talkTo = now < (v.talkUntil || 0) ? state.views.get(v.talkTarget) : null;
   if (talkTo) {
     releaseSpot(v);
-    const tx = Math.round(talkTo.x);
-    const ty = Math.round(talkTo.y);
-    const d = Math.abs(Math.round(v.x) - tx) + Math.abs(Math.round(v.y) - ty);
-    if (d !== 1 && !v.path.length) {
-      for (const [x, y] of [[tx - 1, ty], [tx, ty + 1], [tx + 1, ty], [tx, ty - 1]]) if (walkable(x, y) && route(v, x, y)) break;
+    const tc = cellOf(talkTo.cell);
+    const here = tc && Iso.neighbours(state.room, tc).some((o) => o.id === v.cell);
+    if (!here && !v.path.length && tc) {
+      for (const o of Iso.neighbours(state.room, tc)) if (walkable(o.id) && route(v, o.id)) break;
     }
     v.talking = !v.path.length;
     return;
@@ -189,24 +187,24 @@ function decide(v, now) {
   if (want === 'exit') {
     releaseSpot(v);
     const d = door();
-    if (d && !v.path.length && (Math.round(v.x) !== d.x || Math.round(v.y) !== d.y)) route(v, d.x, d.y);
+    if (d && !v.path.length && v.cell !== d.id) route(v, d.id);
     return;
   }
   if (want) {
     const prefs = FALLBACK[want] || [want];
-    const current = v.spot && state.spots.find((s) => spotKey(s) === v.spot);
+    const current = v.spot != null && state.spots.find((s) => spotKey(s) === v.spot);
     if (current && prefs.includes(current.type)) {
-      const there = Math.round(v.x) === current.x && Math.round(v.y) === current.y;
-      if (!there && !v.path.length) route(v, current.x, current.y);
+      if (v.cell !== current.cell && !v.path.length) route(v, current.cell);
       return;
     }
     releaseSpot(v);
     for (const type of prefs) {
       const free = state.spots.filter((s) => s.type === type && !state.claims.has(spotKey(s)));
       if (!free.length) continue;
-      free.sort((a, b) => (Math.abs(a.x - v.x) + Math.abs(a.y - v.y)) - (Math.abs(b.x - v.x) + Math.abs(b.y - v.y)));
+      const cost = (s) => Math.abs(s.x - v.x) + Math.abs(s.y - v.y) + Math.abs(Iso.floorZ(s.f) - v.z) / 10;
+      free.sort((a, b) => cost(a) - cost(b));
       for (const s of free) {
-        if (route(v, s.x, s.y)) {
+        if (route(v, s.cell)) {
           v.spot = spotKey(s);
           state.claims.set(v.spot, v.id);
           return;
@@ -216,15 +214,16 @@ function decide(v, now) {
   } else {
     releaseSpot(v);
   }
-  // Idle: amble around, sometimes up the stairs.
+  // Idle: amble around, now and then up or down a floor.
   if (!v.path.length && now > v.nextWander && ['idle', 'done', 'think'].includes(v.actor.state)) {
     v.nextWander = now + 5000 + Math.random() * 9000;
-    const n = state.room.n;
-    for (let i = 0; i < 10; i++) {
-      const tx = Math.floor(Math.random() * n);
-      const ty = Math.floor(Math.random() * n);
-      const crowded = [...state.views.values()].some((o) => o !== v && Math.abs(Math.round(o.path.at(-1)?.x ?? o.x) - tx) + Math.abs(Math.round(o.path.at(-1)?.y ?? o.y) - ty) < 2);
-      if (walkable(tx, ty) && !Iso.isStair(state.room, tx, ty) && !crowded && !state.claims.has(`${tx},${ty}`) && route(v, tx, ty)) break;
+    const here = cellOf(v.cell);
+    const options = Iso.cells(state.room).list.filter((c) => c.kind === 'floor' && walkable(c.id) && !state.claims.has(c.id)
+      && (Math.random() < 0.2 || c.f === here?.f));
+    for (let i = 0; i < 10 && options.length; i++) {
+      const c = options[Math.floor(Math.random() * options.length)];
+      const crowded = [...state.views.values()].some((o) => o !== v && (o.path.at(-1)?.id ?? o.cell) === c.id);
+      if (!crowded && route(v, c.id)) break;
     }
   }
 }
@@ -232,14 +231,14 @@ function decide(v, now) {
 // ---- Actors ------------------------------------------------------------------------
 
 function createView(actor) {
-  const start = door() || { x: 1, y: state.room.n - 1 };
+  const start = door() || Iso.cells(state.room).list[0];
   const plate = document.createElement('div');
   plate.className = 'tag nameplate';
   const bubble = document.createElement('div');
   bubble.className = 'tag bubble hidden';
   overlay.append(plate, bubble);
   const v = {
-    id: actor.id, actor, x: start.x, y: start.y, path: [], spot: null, atStation: false, facing: 1,
+    id: actor.id, actor, cell: start.id, x: start.x, y: start.y, z: start.z, path: [], spot: null, atStation: false, facing: 1,
     drop: 30, vy: 0, nextWander: Date.now() + 2000, plate, bubble, card: null, fightUntil: 0,
   };
   plate.style.setProperty('--c', Common.colorOf(actor).main);
@@ -272,8 +271,7 @@ function syncActors(list) {
 function feetOf(v) {
   const spot = v.atStation && state.spots.find((s) => spotKey(s) === v.spot);
   const sit = spot?.sit || [0, 0, 0];
-  const z = Iso.standZ(state.room, v.x, v.y);
-  return Iso.project(state.room.n, (v.x + 0.5) * TU + sit[0], (v.y + 0.5) * TU + sit[1], z + sit[2]);
+  return Iso.project(state.room, (v.x + 0.5) * TU + sit[0], (v.y + 0.5) * TU + sit[1], v.z + sit[2]);
 }
 
 function updateView(v, dt, now) {
@@ -291,23 +289,24 @@ function updateView(v, dt, now) {
     const next = v.path[0];
     const dx = next.x - v.x;
     const dy = next.y - v.y;
-    const dist = Math.hypot(dx, dy);
-    const step = SPEED * dt;
+    const dz = (next.z - v.z) / TU;
+    const dist = Math.hypot(dx, dy, dz);
+    const step = SPEED * dt * (Math.abs(dz) > 0.01 ? 0.8 : 1);
     if (dist <= step) {
-      v.x = next.x;
-      v.y = next.y;
+      place(v, next);
       v.path.shift();
     } else {
       v.x += (dx / dist) * step;
       v.y += (dy / dist) * step;
+      v.z += ((next.z - v.z) / dist) * step;
     }
     // Screen direction: +x walks down-right, +y walks down-left.
     const sx = dx - dy;
     if (Math.abs(sx) > 0.01) v.facing = Math.sign(sx);
     moving = true;
   }
-  const spot = v.spot && state.spots.find((s) => spotKey(s) === v.spot);
-  v.atStation = !!spot && !v.path.length && Math.round(v.x) === spot.x && Math.round(v.y) === spot.y;
+  const spot = v.spot != null && state.spots.find((s) => spotKey(s) === v.spot);
+  v.atStation = !!spot && !v.path.length && v.cell === spot.cell;
   if (v.atStation) v.facing = spot.facing;
   if (v.talking) {
     const t = state.views.get(v.talkTarget);
@@ -315,7 +314,7 @@ function updateView(v, dt, now) {
   }
   if (v.actor.state === 'leaving' && !v.path.length) {
     const d = door();
-    if (d && Math.round(v.x) === d.x && Math.round(v.y) === d.y) v.gone = true;
+    if (d && v.cell === d.id) v.gone = true;
   }
   v.moving = moving;
 }
@@ -443,9 +442,8 @@ function showToast(text) {
   showToast.timer = setTimeout(() => toastEl.classList.add('hidden'), 4500);
 }
 
-function tileScreen(t) {
-  const z = Iso.heightAt(state.room, t.x, t.y) ?? 0;
-  return Iso.project(state.room.n, (t.x + 0.5) * TU, (t.y + 0.5) * TU, z);
+function tileScreen(c) {
+  return Iso.project(state.room, (c.x + 0.5) * TU, (c.y + 0.5) * TU, c.z);
 }
 
 function onFx(f) {
@@ -464,14 +462,15 @@ function onFx(f) {
     case 'bug': if (v) v.fightUntil = Date.now() + f.duration; break;
     case 'chest': {
       if (!v) break;
-      const around = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1]].map(([dx, dy]) => ({ x: Math.round(v.x) + dx, y: Math.round(v.y) + dy }));
-      const tile = around.find((t) => walkable(t.x, t.y) && Iso.linked(state.room, Math.round(v.x), Math.round(v.y), t.x, t.y)) || { x: Math.round(v.x), y: Math.round(v.y) };
+      const here = cellOf(v.cell);
+      const tile = (here && Iso.neighbours(state.room, here).find((o) => walkable(o.id) && o.kind !== 'stair')) || here;
+      if (!tile) break;
       const hit = document.createElement('div');
       hit.className = 'chest-hit';
       hit.title = '打開包裹';
       hit.addEventListener('click', () => desk.invoke('chest:open', f.id));
       overlay.append(hit);
-      state.fx.push({ type: 'chest', id: f.id, x: tile.x, y: tile.y, open: false, hit });
+      state.fx.push({ type: 'chest', id: f.id, x: tile.x, y: tile.y, z: tile.z, open: false, hit });
       break;
     }
     case 'chest-open': {
@@ -520,17 +519,18 @@ function draw(now) {
   for (const v of state.views.values()) {
     if (v.dragging) continue;
     // Sitting characters keep the box of the tile in front, so the sofa or bed stays behind them.
-    extra.push({ x0: v.x + 0.15, y0: v.y + 0.15, x1: v.x + 0.85, y1: v.y + 0.85, draw: () => placeTags(v, drawView(v, now), now) });
+    extra.push({ x0: v.x + 0.15, y0: v.y + 0.15, x1: v.x + 0.85, y1: v.y + 0.85, z0: v.z + 0.02, z1: v.z + 40, draw: () => placeTags(v, drawView(v, now), now) });
   }
   for (const c of state.fx) {
     if (c.type !== 'chest') continue;
-    extra.push({ x0: c.x + 0.2, y0: c.y + 0.2, x1: c.x + 0.8, y1: c.y + 0.8, draw: () => {
+    extra.push({ x0: c.x + 0.2, y0: c.y + 0.2, x1: c.x + 0.8, y1: c.y + 0.8, z0: c.z + 0.02, z1: c.z + 20, draw: () => {
       const p = tileScreen(c);
       Sprites.drawFxAt(ctx, 2 * z, Math.round(p.x - 16) * z, Math.round(p.y - 26) * z, 'chest', c.open ? 1 : 0);
       Object.assign(c.hit.style, { left: `${((p.x - 16) * z) / DPR}px`, top: `${((p.y - 26) * z) / DPR}px`, width: `${(32 * z) / DPR}px`, height: `${(28 * z) / DPR}px` });
     } });
   }
-  Iso.drawRoom(ctx, room, z, objState, extra, (c) => state.onDecor?.(c, z));
+  Iso.drawRoom(ctx, room, z, objState, extra);
+  drawOrbs(now, z);
   for (const v of state.views.values()) if (v.dragging) placeTags(v, drawView(v, now), now);
 
   state.fx = state.fx.filter((f) => {
@@ -543,6 +543,33 @@ function draw(now) {
   });
 
   state.onDrawTop?.(ctx, z, now);
+}
+
+// Glowing orbs drifting around the tower, like dust in neon light.
+function drawOrbs(now, z) {
+  const S = Iso.size(state.room);
+  if (!state.orbs.length) {
+    const cols = ['54,249,255', '194,123,255', '255,62,165', '255,200,120'];
+    for (let i = 0; i < 9; i++) {
+      state.orbs.push({ x: Math.random() * S.w, y: 20 + Math.random() * (S.h - 60), r: 1.5 + Math.random() * 2.5, c: cols[i % cols.length], p: Math.random() * 6.28, sp: 0.3 + Math.random() * 0.5 });
+    }
+  }
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const o of state.orbs) {
+    const t = now / 1000 * o.sp + o.p;
+    const x = (o.x + Math.sin(t) * 10) * z;
+    const y = (o.y + Math.cos(t * 0.7) * 8) * z;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, o.r * 4 * z);
+    g.addColorStop(0, `rgba(${o.c},0.55)`);
+    g.addColorStop(0.35, `rgba(${o.c},0.18)`);
+    g.addColorStop(1, `rgba(${o.c},0)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(x - o.r * 4 * z, y - o.r * 4 * z, o.r * 8 * z, o.r * 8 * z);
+    ctx.fillStyle = `rgba(${o.c},0.9)`;
+    ctx.fillRect(Math.round(x - z), Math.round(y - z), 2 * z, 2 * z);
+  }
+  ctx.restore();
 }
 
 // ---- Mouse --------------------------------------------------------------------------
@@ -624,8 +651,10 @@ window.addEventListener('mouseup', (e) => {
   state.drag = null;
   if (d.moved) {
     const t = tileAt(e);
-    const spot = t && walkable(t.x, t.y) ? t : nearestWalkable(t?.x ?? 0, t?.y ?? 0);
-    if (spot) { d.v.x = spot.x; d.v.y = spot.y; }
+    const c = t && Iso.cellAt(state.room, t.x, t.y, t.f);
+    const spot = c && walkable(c.id) ? c : nearestWalkable(t?.x ?? 0, t?.y ?? 0, t ? Iso.floorZ(t.f) : 0);
+    if (spot) place(d.v, spot);
+    d.v.path = [];
     d.v.dragging = false;
     d.v.drop = 16;
     d.v.nextWander = Date.now() + 6000;
@@ -698,7 +727,7 @@ desk.on('settings', applySettings);
 desk.on('progress', applyProgress);
 desk.on('fx', onFx);
 desk.on('room', (room) => {
-  if (room?.iso && JSON.stringify(room) !== JSON.stringify(state.room)) setRoom(room);
+  if (room?.iso === 2 && JSON.stringify(room) !== JSON.stringify(state.room)) setRoom(room);
 });
 desk.on('assets', (assets) => {
   Common.loadSheets(assets);
@@ -713,7 +742,7 @@ desk.invoke('init').then((init) => {
   state.assets = init.assets;
   Common.loadSheets(init.assets);
   applyProgress(init.progress);
-  if (init.room?.iso) state.room = clone(init.room);
+  if (init.room?.iso === 2) state.room = clone(init.room);
   else desk.invoke('room:set', state.room);
   layout();
   syncActors(init.actors);

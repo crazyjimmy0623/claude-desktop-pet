@@ -1,4 +1,4 @@
-// Isometric room: a cut-away diorama with two back walls, a loft reached by stairs, and furniture
+// Isometric room: a little tower of cut-away floors joined by a fire escape, with furniture
 // drawn pixel by pixel in 2:1 isometric. Loaded by renderers (<script>, exposes window.Iso) and Node.
 //
 // World units: a floor tile is 16x16 units, z is height in the same units. Screen (fine pixels):
@@ -10,12 +10,13 @@
   else root.Iso = factory(root.Sprites);
 })(typeof self !== 'undefined' ? self : this, (Sprites) => {
   const TU = 16; // world units per tile
-  const WALL_H = 76;
-  const LOFT_Z = 32;
-  const LOFT_D = 3; // loft depth in tiles, along the back-right wall
-  const STAIR_W = 2; // stairs: the last two columns, three rows down from the loft
+  // Each floor is one tile smaller than the one below and sits in its back corner, so every floor
+  // shows in full: a floor's depth on screen never exceeds the floor-to-floor height.
+  const N = 6;
+  const WALL_H = 72;
   const SLAB = 8;
-  const N = 10;
+  const LEVEL = WALL_H + SLAB;
+  const STEP = 20; // the steepest stair step
   const { shade } = Sprites;
 
   // ---- Colour steps -------------------------------------------------------------
@@ -224,6 +225,11 @@
 
   // Walls: base colour plus a pattern painter on the inner face (u along the wall, v up).
   const WALLS = {
+    synth: { base: '#2a1d3f', trim: '#140e22', paint: (F, len) => {
+      for (let u = 0; u < len; u += 12) F(u, 6, 1, WALL_H - 8, '#34254d');
+      F(0, WALL_H - 9, len, 1, '*#ff3ea5');
+      F(0, 10, len, 1, '*#c27bff');
+    } },
     plum: { base: '#7a3442', trim: '#4e1f2b', paint: (F, len) => {
       for (let u = 6; u < len; u += 10) F(u, 20, 1, WALL_H - 26, '#70303d');
       F(0, 18, len, 2, '#5e2633');
@@ -258,7 +264,7 @@
   const front = (w, d) => Array.from({ length: w }, (_, i) => ({ dx: i, dy: d }));
 
   const OBJECTS = {
-    desk: { w: 2, d: 1, h: 40, station: 'code', stations: front(2, 1), draw: (P, s) => {
+    desk: { anim: true, w: 2, d: 1, h: 40, station: 'code', stations: front(2, 1), draw: (P, s) => {
       P.box(0, 2, 0, 32, 12, 12, WOOD);
       P.box(2, 4, 0, 2, 2, 10, WOOD_D);
       P.left(4, 1, 10, 8, dk(WOOD, 0.35), 14);
@@ -279,7 +285,7 @@
       P.box(26, 6, 12, 3, 3, 4, '#f4f4f6');
       P.top(26, 6, 3, 3, '#7a4a2a', 16);
     } },
-    server: { w: 1, d: 1, h: 46, station: 'terminal', stations: front(1, 1), draw: (P, s) => {
+    server: { anim: true, w: 1, d: 1, h: 46, station: 'terminal', stations: front(1, 1), draw: (P, s) => {
       P.box(1, 2, 0, 14, 12, 40, '#2b2f3a');
       for (let i = 0; i < 6; i++) {
         const z = 4 + i * 6;
@@ -309,7 +315,7 @@
         }
       }
     } },
-    globe: { w: 1, d: 1, h: 30, station: 'web', stations: front(1, 1), draw: (P, s) => {
+    globe: { anim: true, w: 1, d: 1, h: 30, station: 'web', stations: front(1, 1), draw: (P, s) => {
       P.box(3, 4, 0, 10, 8, 12, WOOD);
       P.box(7, 7, 12, 2, 2, 4, '#c9a24a');
       P.disc(8, 8, 23, 6.5, '#3f7fc4');
@@ -325,7 +331,7 @@
       P.top(18, 16, 5, 6, '#fbf6e6', 15);
       P.box(22, 8, 15, 3, 3, 3, '#f4f4f6');
     } },
-    bell: { w: 2, d: 1, h: 26, station: 'wait', stations: front(2, 1), draw: (P, s) => {
+    bell: { anim: true, w: 2, d: 1, h: 26, station: 'wait', stations: front(2, 1), draw: (P, s) => {
       P.box(0, 3, 0, 32, 11, 16, '#c9a27a');
       P.left(2, 2, 28, 11, '#b08a64', 14);
       P.box(0, 2, 16, 32, 13, 2, WOOD_D);
@@ -352,7 +358,7 @@
       P.box(4, 4, 14, 9, 10, 3, '#f4f4f6');
       P.box(4, 16, 14, 9, 10, 3, '#f4f4f6');
     } },
-    coffee: { w: 1, d: 1, h: 34, station: 'coffee', stations: front(1, 1), draw: (P, s) => {
+    coffee: { anim: true, w: 1, d: 1, h: 34, station: 'coffee', stations: front(1, 1), draw: (P, s) => {
       P.box(0, 2, 0, 16, 12, 14, WOOD);
       P.left(2, 2, 12, 9, dk(WOOD, 0.3), 14);
       P.box(3, 3, 14, 10, 8, 14, '#2f3340');
@@ -361,7 +367,7 @@
       P.left(4, 24, 2, 2, s.active ? '#ff6b5a' : '#5a2a2a', 11);
       if (s.active && s.frame % 2) P.dot(7, 9, 21, '#e6e9f0', 1, 3);
     } },
-    vending: { w: 1, d: 1, h: 48, station: 'coffee', stations: front(1, 1), draw: (P, s) => {
+    vending: { anim: true, w: 1, d: 1, h: 48, station: 'coffee', stations: front(1, 1), draw: (P, s) => {
       P.box(0, 2, 0, 16, 12, 42, '#b8323e');
       P.left(2, 12, 9, 26, '#1d2a3a', 14);
       for (let r = 0; r < 4; r++) for (let i = 0; i < 3; i++) P.left(3 + i * 3, 14 + r * 6, 2, 3, ['#ffd65a', '#7cc47f', '#5aa7ff', '#ff8fb1'][(r + i) % 4], 14);
@@ -392,7 +398,7 @@
       P.top(7, 7, 18, 18, '#e8b13a', 0.5);
       P.top(9, 9, 14, 14, '#c25b4f', 0.5);
     } },
-    easel: { w: 1, d: 1, h: 40, station: 'art', stations: front(1, 1), draw: (P, s) => {
+    easel: { anim: true, w: 1, d: 1, h: 40, station: 'art', stations: front(1, 1), draw: (P, s) => {
       P.box(3, 6, 0, 2, 2, 30, WOOD);
       P.box(11, 6, 0, 2, 2, 30, WOOD);
       P.box(7, 2, 0, 2, 2, 28, WOOD_D);
@@ -401,7 +407,7 @@
       P.left(8, 16, 5, 4, '#e07a9a', 7);
       P.left(4, 15, 3, 3, s.active && s.frame % 2 ? '#ffd65a' : '#7cc47f', 7);
     } },
-    arcade: { w: 1, d: 1, h: 44, station: 'game', stations: front(1, 1), draw: (P, s) => {
+    arcade: { anim: true, w: 1, d: 1, h: 44, station: 'game', stations: front(1, 1), draw: (P, s) => {
       P.box(1, 2, 0, 14, 12, 38, '#5b3fa3');
       P.box(1, 8, 14, 14, 6, 4, '#3a2a70');
       P.left(3, 22, 10, 10, '#141826', 14);
@@ -411,7 +417,7 @@
       P.left(2, 34, 12, 3, '#ffd65a', 14);
       if (s.active) P.glow(8, 14, 27, 12, 'rgba(255,62,165,0.35)');
     } },
-    tv: { w: 2, d: 1, h: 34, station: 'game', stations: front(2, 1), draw: (P, s) => {
+    tv: { anim: true, w: 2, d: 1, h: 34, station: 'game', stations: front(2, 1), draw: (P, s) => {
       P.box(2, 4, 0, 28, 10, 10, WOOD_D);
       P.left(4, 2, 10, 6, dk(WOOD_D, 0.3), 14);
       P.left(18, 2, 10, 6, dk(WOOD_D, 0.3), 14);
@@ -426,7 +432,7 @@
       for (let i = 0; i < 10; i++) if (i % 7 !== 2 && i % 7 !== 6) P.top(3 + i * 3, 9, 1, 2, '#1c1a20', 15.2);
       P.left(8, 18, 16, 6, '#fbf6e6', 8);
     } },
-    aquarium: { w: 2, d: 1, h: 38, draw: (P, s) => {
+    aquarium: { anim: true, w: 2, d: 1, h: 38, draw: (P, s) => {
       P.box(0, 3, 0, 32, 10, 14, WOOD_D);
       P.box(1, 4, 14, 30, 8, 18, '#5ec4e8');
       P.top(1, 4, 30, 8, '#8fd8ef', 32);
@@ -447,7 +453,7 @@
       P.left(9, 18, 3, 6, '#c27b4a', 14);
       P.left(5, 26, 6, 4, '#e8b13a', 14);
     } },
-    fireplace: { w: 2, d: 1, h: 40, draw: (P, s) => {
+    fireplace: { anim: true, w: 2, d: 1, h: 40, draw: (P, s) => {
       P.box(0, 2, 0, 32, 12, 32, '#8a4a3a');
       P.box(-1, 1, 32, 34, 14, 3, '#5c3328');
       P.left(8, 2, 16, 16, '#1c1414', 14);
@@ -458,7 +464,7 @@
       for (let v = 22; v < 31; v += 4) P.left(0, v, 32, 1, '#6e3a2c', 14);
       P.glow(16, 14, 8, 22, 'rgba(255,140,60,0.45)');
     } },
-    catbed: { w: 1, d: 1, h: 14, draw: (P, s) => {
+    catbed: { anim: true, w: 1, d: 1, h: 14, draw: (P, s) => {
       P.box(2, 3, 0, 12, 11, 5, '#c25b4f');
       P.top(4, 5, 8, 7, '#e8c9a0', 5);
       P.disc(8, 8, 8, 3.5, '#f0a35e');
@@ -471,7 +477,58 @@
       P.box(3, 4, 10, 9, 8, 8, '#c99a62');
       P.top(7, 4, 1, 8, '#e0c08c', 18);
     } },
+    workstation: { anim: true, w: 2, d: 1, h: 46, station: 'code', stations: front(2, 1), draw: (P, s) => {
+      P.box(0, 3, 0, 32, 11, 12, '#2b2f3a');
+      P.left(2, 2, 28, 7, '#22262f', 14);
+      P.left(4, 9, 24, 1, '*#36f9ff', 14);
+      const scr = (x, z, w, h, on) => {
+        P.box(x, 3, z, w, 2, h, '#1c1f28');
+        P.left(x + 1, z + 1, w - 2, h - 2, on ? '#0f2a3a' : '#141826', 5);
+      };
+      scr(2, 22, 13, 10, s.active);
+      scr(17, 22, 13, 10, s.active);
+      scr(9, 33, 14, 9, s.active);
+      if (s.active) {
+        for (let i = 0; i < 4; i++) {
+          P.left(4, 24 + i * 2, 3 + ((i * 3 + s.frame) % 7), 1, '*#36f9ff', 5);
+          P.left(19, 24 + i * 2, 2 + ((i * 5 + s.frame) % 8), 1, i % 2 ? '*#7cff8c' : '*#ff3ea5', 5);
+        }
+        P.left(11, 35 + (s.frame % 4), 10, 1, '*#c27bff', 5);
+        P.glow(16, 6, 30, 22, 'rgba(54,249,255,0.35)');
+      }
+      P.box(8, 9, 12, 16, 4, 1, '#3a3f50', false);
+      for (let i = 0; i < 7; i++) P.top(9 + i * 2, 10, 1, 1, i % 3 ? '#5a6075' : '*#ff3ea5', 13);
+    } },
+    holo: { anim: true, w: 1, d: 1, h: 40, station: 'web', stations: front(1, 1), draw: (P, s) => {
+      P.box(3, 3, 0, 10, 10, 4, '#2b2f3a');
+      P.top(5, 5, 6, 6, '*#36f9ff', 4);
+      const r = 5 + (s.frame % 2);
+      P.disc(8, 8, 22, r, 'rgba(54,249,255,0.35)');
+      P.disc(8, 8, 22, r - 2, 'rgba(120,255,255,0.45)');
+      P.dot(8, 8, 26, '#e0ffff', 2, 1);
+      P.dot(6, 8, 20 + (s.frame % 3), '#e0ffff', 1, 1);
+      P.glow(8, 8, 18, 18, 'rgba(54,249,255,0.4)');
+    } },
     // Wall-mounted: mount height z, drawn on the plane y = 0.
+    screens: { w: 2, d: 0, h: 60, wall: true, z: 40, draw: (P, s) => {
+      const cols = ['*#36f9ff', '*#7cff8c', '*#ff3ea5'];
+      [[2, 44, 12, 9], [16, 46, 13, 8], [6, 55, 10, 6]].forEach(([u, v, w, h], i) => {
+        P.left(u, v, w, h, '#1c1f28', 1);
+        P.left(u + 1, v + 1, w - 2, h - 2, '#0f2a3a', 1);
+        for (let k = 0; k < h - 3; k += 2) P.left(u + 2, v + 2 + k, 2 + ((k * 3 + i + s.frame) % (w - 4)), 1, cols[(i + k) % 3], 1.5);
+      });
+      P.glow(16, 2, 50, 20, 'rgba(54,249,255,0.3)');
+    } },
+    pipes: { w: 2, d: 0, h: 64, wall: true, z: 6, draw: (P, s) => {
+      P.box(2, 0, 8, 3, 3, 52, '#5a6075', false);
+      P.box(8, 0, 30, 22, 3, 3, '#4a5063', false);
+      P.box(2, 0, 56, 28, 3, 3, '#5a6075', false);
+      P.box(24, 0, 8, 3, 3, 22, '#6a5040', false);
+      P.left(5, 31, 3, 1, '#3a3f50', 3);
+      P.left(26, 20, 2, 2, s.frame % 4 ? '*#7cff8c' : '#2a3a2a', 3);
+      P.left(12, 36, 1, 20, '#1c1f28', 1);
+      P.left(16, 30, 1, 26, '#1c1f28', 1);
+    } },
     window: { w: 2, d: 0, h: 70, wall: true, z: 22, draw: (P, s) => {
       const night = s.hour < 6 || s.hour >= 19;
       P.left(2, 22, 28, 34, '#d9c9a8', 0.5);
@@ -525,87 +582,117 @@
   };
 
   // ---- Room model -----------------------------------------------------------------
+  // A stepped tower: floor f is (n - f) tiles square, stacked LEVEL apart in the back corner.
+  // The flights zig-zag up the right side like a fire escape: toward the front, then back.
 
   const THEMES = {
-    cozy: { name: '溫馨小屋', wall: 'plum', floor: 'wood' },
-    cream: { name: '午後咖啡', wall: 'cream', floor: 'tile' },
-    cyber: { name: '賽博龐克', wall: 'cyber', floor: 'cyber' },
+    cyber: { name: '賽博塔樓', floors: [['cyber', 'cyber'], ['synth', 'neon'], ['navy', 'carpet']] },
+    cozy: { name: '溫馨小屋', floors: [['brick', 'stone'], ['plum', 'wood'], ['cream', 'tile']] },
+    cafe: { name: '午後咖啡', floors: [['cream', 'tile'], ['mint', 'wood'], ['plum', 'carpet']] },
   };
+  const FLOOR_NAMES = ['一樓', '二樓', '三樓'];
 
-  // Height of the walkable surface on a tile, or null if solid.
-  function heightAt(room, x, y) {
+  const floorZ = (f) => f * LEVEL;
+  const levels = (room) => room.floors.length;
+  const sideOf = (room, f) => room.n - f;
+  // The stair cells of flight f (from floor f to f + 1), bottom step first.
+  function flight(room, f) {
+    const len = sideOf(room, f + 1);
+    const rise = LEVEL / len;
+    return Array.from({ length: len }, (_, k) => ({
+      x: len, y: f % 2 ? len - 1 - k : k, z: floorZ(f) + rise * (k + 1), rise, dir: 0,
+    }));
+  }
+
+  // Every place a character can stand: floors, the porch and each step of the fire escape.
+  function cells(room) {
+    if (room._cells) return room._cells;
     const n = room.n;
-    if (x < 0 || y < 0 || x >= n || y >= n) return null;
-    if (y < LOFT_D) return LOFT_Z;
-    if (x >= n - STAIR_W && y < LOFT_D + 3) return LOFT_Z - (y - LOFT_D + 1) * 8;
-    return 0;
+    const list = [];
+    const add = (x, y, z, f, kind) => list.push({ id: list.length, x, y, z, f, kind });
+    void n;
+    const under = new Set();
+    for (let f = 0; f + 1 < levels(room); f++) {
+      for (const st of flight(room, f)) {
+        under.add(`${f}:${st.x},${st.y}`);
+        list.push({ id: list.length, x: st.x, y: st.y, z: st.z, f, kind: 'stair', rise: st.rise, dir: st.dir });
+      }
+    }
+    for (let f = 0; f < levels(room); f++) {
+      const side = sideOf(room, f);
+      for (let y = 0; y < side; y++) for (let x = 0; x < side; x++) if (!under.has(`${f}:${x},${y}`)) add(x, y, floorZ(f), f, 'floor');
+    }
+    const at = new Map();
+    for (const c of list) {
+      const key = `${c.x},${c.y}`;
+      if (!at.has(key)) at.set(key, []);
+      at.get(key).push(c);
+    }
+    Object.defineProperty(room, '_cells', { value: { list, at }, enumerable: false, configurable: true });
+    return room._cells;
   }
-  const isStair = (room, x, y) => x >= room.n - STAIR_W && y >= LOFT_D && y < LOFT_D + 3;
-  // Continuous standing height for a character at tile coordinates (x, y), smooth on the stairs.
-  function standZ(room, x, y) {
-    const tx = Math.round(x);
-    if (tx >= room.n - STAIR_W && y > LOFT_D - 1 && y < LOFT_D + 3) return Math.max(0, Math.min(LOFT_Z, LOFT_Z - (y - LOFT_D + 1) * 8));
-    return heightAt(room, tx, Math.round(y)) ?? 0;
-  }
+  const resetCells = (room) => { delete room._cells; };
+  const cellAt = (room, x, y, f) => (cells(room).at.get(`${x},${y}`) || []).find((c) => c.kind === 'floor' && c.f === f) || null;
 
-  // Footprint in room tiles, after flipping onto the left wall.
+  // Footprint in tiles, after flipping onto the left wall.
   function footprint(o) {
     const def = OBJECTS[o.type];
     if (!def) return null;
     return o.flip ? { x: o.x, y: o.y, w: def.d, d: def.w } : { x: o.x, y: o.y, w: def.w, d: def.d };
   }
 
-  function canPlace(room, type, x, y, flip, ignoreIndex = -1) {
+  function canPlace(room, type, x, y, flip, f, ignoreIndex = -1) {
     const def = OBJECTS[type];
     if (!def) return false;
-    const f = footprint({ type, x, y, flip });
+    const fp = footprint({ type, x, y, flip });
     if (def.wall) {
       const along = flip ? y : x;
       if (flip ? x !== 0 : y !== 0) return false;
-      if (along < 0 || along + def.w > room.n) return false;
+      if (along < 0 || along + def.w > sideOf(room, f)) return false;
       return room.objects.every((o, i) => {
         const od = OBJECTS[o.type];
-        if (i === ignoreIndex || !od?.wall || !!o.flip !== !!flip) return true;
+        if (i === ignoreIndex || !od?.wall || !!o.flip !== !!flip || (o.f || 0) !== f) return true;
         const oa = o.flip ? o.y : o.x;
         return along + def.w <= oa || oa + od.w <= along;
       });
     }
-    let z = null;
-    for (let ty = f.y; ty < f.y + f.d; ty++) {
-      for (let tx = f.x; tx < f.x + f.w; tx++) {
-        const h = heightAt(room, tx, ty);
-        if (h === null || isStair(room, tx, ty) || (z !== null && h !== z)) return false;
-        z = h;
-      }
-    }
+    for (let ty = fp.y; ty < fp.y + fp.d; ty++) for (let tx = fp.x; tx < fp.x + fp.w; tx++) if (!cellAt(room, tx, ty, f)) return false;
     return room.objects.every((o, i) => {
       const od = OBJECTS[o.type];
-      if (i === ignoreIndex || !od || od.wall || !!od.flat !== !!def.flat) return true;
+      if (i === ignoreIndex || !od || od.wall || !!od.flat !== !!def.flat || (o.f || 0) !== f) return true;
       const g = footprint(o);
-      return f.x + f.w <= g.x || g.x + g.w <= f.x || f.y + f.d <= g.y || g.y + g.d <= f.y;
+      return fp.x + fp.w <= g.x || g.x + g.w <= fp.x || fp.y + fp.d <= g.y || g.y + g.d <= fp.y;
     });
   }
 
-  function walkGrid(room) {
-    const grid = [];
-    for (let y = 0; y < room.n; y++) grid.push(Array.from({ length: room.n }, (_, x) => heightAt(room, x, y) !== null));
+  // Walkable cells (ids), with furniture taken out.
+  function walkable(room) {
+    const blocked = new Set();
     for (const o of room.objects) {
       const def = OBJECTS[o.type];
       if (!def || def.wall || def.flat) continue;
-      const f = footprint(o);
-      for (let y = f.y; y < f.y + f.d; y++) for (let x = f.x; x < f.x + f.w; x++) if (grid[y]?.[x] !== undefined) grid[y][x] = false;
+      const fp = footprint(o);
+      for (let y = fp.y; y < fp.y + fp.d; y++) for (let x = fp.x; x < fp.x + fp.w; x++) {
+        const c = cellAt(room, x, y, o.f || 0);
+        if (c) blocked.add(c.id);
+      }
     }
-    return grid;
+    return new Set(cells(room).list.filter((c) => !blocked.has(c.id)).map((c) => c.id));
   }
-  // Two neighbouring tiles connect when their surfaces are within one stair step.
-  const linked = (room, ax, ay, bx, by) => {
-    const a = heightAt(room, ax, ay);
-    const b = heightAt(room, bx, by);
-    return a !== null && b !== null && Math.abs(a - b) <= 8;
-  };
+
+  // Neighbouring cells connect when they are side by side and at most one step apart in height.
+  function neighbours(room, c) {
+    const out = [];
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      for (const o of cells(room).at.get(`${c.x + dx},${c.y + dy}`) || []) if (Math.abs(o.z - c.z) <= STEP) out.push(o);
+    }
+    // The landing between two flights sits on the same tile, one step up.
+    for (const o of cells(room).at.get(`${c.x},${c.y}`) || []) if (o !== c && o.kind === 'stair' && c.kind === 'stair' && Math.abs(o.z - c.z) <= STEP) out.push(o);
+    return out;
+  }
 
   function stationSpots(room) {
-    const grid = walkGrid(room);
+    const open = walkable(room);
     const spots = [];
     room.objects.forEach((o, index) => {
       const def = OBJECTS[o.type];
@@ -613,215 +700,205 @@
       for (const st of def.stations) {
         const x = o.x + (o.flip ? st.dy : st.dx);
         const y = o.y + (o.flip ? st.dx : st.dy);
-        if (!grid[y]?.[x]) continue;
-        // In front of an unflipped object a character looks up-right (+1); flipped, up-left.
+        const c = cellAt(room, x, y, o.f || 0);
+        if (!c || !open.has(c.id)) continue;
         let facing = o.flip ? -1 : 1;
-        if (st.dx < 0) facing = o.flip ? -1 : 1;
         if (st.dx >= def.w) facing = o.flip ? 1 : -1;
         const sit = def.sit ? (o.flip ? [def.sit[1], def.sit[0], def.sit[2]] : def.sit) : null;
-        spots.push({ type: def.station, x, y, facing, sit, objIndex: index });
+        spots.push({ type: def.station, cell: c.id, x, y, f: c.f, facing, sit, objIndex: index });
       }
     });
     return spots;
   }
 
-  function generateRoom(theme = 'cozy') {
-    const t = THEMES[theme] || THEMES.cozy;
-    const room = { iso: 1, n: N, theme, wall: t.wall, floor: t.floor, objects: [] };
-    const add = (type, x, y, flip = false) => { if (canPlace(room, type, x, y, flip)) room.objects.push({ type, x, y, flip }); };
-    // Loft: bed, shelf and a plant, with a window above.
-    add('bed', 2, 0);
-    add('bookshelf', 0, 0, true);
-    add('lamp', 5, 0);
-    add('plant', 7, 0);
-    add('boxes', 6, 1);
-    add('window', 5, 0);
-    add('shelf', 2, 0);
-    // Under the loft, against its front.
-    add('server', 0, 3);
-    add('server', 1, 3);
-    add('vending', 3, 3);
-    add('coffee', 4, 3);
-    add('arcade', 6, 3);
-    // Left wall: desks and a window.
-    add('desk', 0, 5, true);
-    add('desk', 0, 8, true);
-    add('window', 0, 5, true);
-    add('poster', 0, 8, true);
-    add('clock', 0, 4, true);
-    // Middle and front.
-    add('rug', 3, 6);
-    add('table', 3, 6);
-    add('bell', 7, 8);
-    add('globe', 9, 6);
-    add('plant', 9, 9);
-    add('catbed', 6, 9);
+  function generateRoom(theme = 'cyber') {
+    const t = THEMES[theme] || THEMES.cyber;
+    const room = { iso: 2, n: N, theme, floors: t.floors.map(([wall, floor]) => ({ wall, floor })), objects: [] };
+    const add = (f, type, x, y, flip = false) => { if (canPlace(room, type, x, y, flip, f)) room.objects.push({ type, x, y, flip, f }); };
+    // Ground: the workshop.
+    add(0, 'workstation', 0, 0, true);
+    add(0, 'desk', 0, 3, true);
+    add(0, 'server', 2, 0);
+    add(0, 'server', 3, 0);
+    add(0, 'holo', 3, 3);
+    add(0, 'bell', 2, 4);
+    add(0, 'plant', 0, 5);
+    add(0, 'vending', 5, 5);
+    add(0, 'boxes', 4, 5);
+    add(0, 'screens', 0, 0, true);
+    add(0, 'neon', 0, 3, true);
+    add(0, 'pipes', 1, 0);
+    // First floor: somewhere to sleep and play.
+    add(1, 'bed', 1, 0);
+    add(1, 'lamp', 0, 0);
+    add(1, 'tv', 0, 1, true);
+    add(1, 'rug', 1, 2);
+    add(1, 'catbed', 3, 3);
+    add(1, 'window', 1, 0);
+    add(1, 'poster', 0, 3, true);
+    add(1, 'neon', 0, 1, true);
+    // Top: an open-air study.
+    add(2, 'bookshelf', 0, 0);
+    add(2, 'bookshelf', 0, 1, true);
+    add(2, 'plant', 2, 0);
+    add(2, 'desk', 1, 2);
+    add(2, 'globe', 1, 1);
+    add(2, 'clock', 2, 0);
+    add(2, 'shelf', 0, 2, true);
     return room;
   }
 
   // ---- Rendering --------------------------------------------------------------------
 
-  // Room canvas in fine pixels: world (0, 0, 0) lands at ORIGIN.
-  const size = (n) => ({ w: n * 2 * TU + 24, h: WALL_H + 14 + n * TU + SLAB + 10 });
-  const origin = (n) => ({ x: n * TU + 12, y: WALL_H + 14 });
-  const project = (n, x, y, z) => { const o = origin(n); return { x: o.x + x - y, y: o.y + (x + y) / 2 - z }; };
+  // Room canvas in fine pixels: world (0, 0, 0) lands at origin().
+  const topZ = (room) => floorZ(levels(room) - 1) + WALL_H + 6;
+  const size = (room) => ({ w: 2 * room.n * TU + 40, h: topZ(room) + room.n * TU + SLAB + 24 });
+  const origin = (room) => ({ x: room.n * TU + 20, y: topZ(room) + 12 });
+  const project = (room, x, y, z) => { const o = origin(room); return { x: o.x + x - y, y: o.y + (x + y) / 2 - z }; };
 
-  // Back walls, floor slab, loft and floors: everything nothing can stand behind.
-  function renderBackground(room) {
-    const n = room.n;
-    const S = size(n);
-    const O = origin(n);
-    const P = new Pix(S.w, S.h, O.x, O.y);
-    const L = n * TU;
-    const wall = WALLS[room.wall] || WALLS.plum;
-    const floor = FLOORS[room.floor] || FLOORS.wood;
-    // Left wall (plane x = 0, seen from +x) and right wall (plane y = 0, seen from +y).
-    P.box(-5, -5, 0, 5, L + 5, WALL_H, { t: lt(wall.trim, 0.25), l: wall.trim, r: dk(wall.base, 0.08) }, false);
-    P.box(0, -5, 0, L, 5, WALL_H, { t: lt(wall.trim, 0.25), l: wall.base, r: wall.trim }, false);
-    const leftF = (u, v, w, h, c) => P.right(L - u, v, w, h, c, 0);
-    const rightF = (u, v, w, h, c) => P.left(u, v, w, h, c, 0);
-    wall.paint(leftF, L);
-    wall.paint(rightF, L);
-    leftF(0, 0, L, 6, wall.trim);
-    rightF(0, 0, L, 6, wall.trim);
-    // Corner shading where the walls meet.
-    P.left(0, 0, 3, WALL_H, dk(wall.base, 0.12), 0);
-    // Floor slab under everything, then the floor itself.
-    P.box(-5, -5, -SLAB, L + 5, L + 5, SLAB, { t: floor.base, l: dk(floor.base, 0.35), r: dk(floor.base, 0.5) }, false);
-    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (y >= LOFT_D) floor.draw(P, x, y, 0);
-    // Loft: front wall with beams, floor on top.
-    const LD = LOFT_D * TU;
-    P.box(0, 0, 0, L, LD, LOFT_Z, { t: floor.base, l: '#6e4428', r: '#55341f' }, false);
-    for (let u = 0; u < L; u += 24) P.left(u, 0, 3, LOFT_Z, '#5c3a22', LD);
-    P.left(0, LOFT_Z - 4, L, 4, '#5c3a22', LD);
-    for (let y = 0; y < LOFT_D; y++) for (let x = 0; x < n; x++) floor.draw(P, x, y, LOFT_Z);
-    P.edge();
-    return { canvas: P.canvas(), glows: P.glows };
+  // A cached sprite with its anchor = the world point it was painted relative to.
+  const spriteCache = new Map();
+  function cached(key, make) {
+    let sp = spriteCache.get(key);
+    if (!sp) {
+      sp = make();
+      if (spriteCache.size > 800) spriteCache.clear();
+      spriteCache.set(key, sp);
+    }
+    return sp;
   }
-
-  // A sprite for one object (or a stair tile, or a railing post) with its anchor = world origin.
-  function renderSprite(w, d, h, paint, flip) {
-    const ox = d * TU + 2;
-    const oy = h + 2;
-    const P = new Pix((w + d) * TU + 4, Math.ceil((w + d) * TU / 2) + h + 6, ox, oy);
+  // Paint into a Pix big enough for a w x d x h box (tiles, tiles, units) anchored at its origin.
+  function renderSprite(w, d, h, paint, flip, below = 0) {
+    const ox = d * TU + 8;
+    const oy = h + 8;
+    const P = new Pix(Math.ceil((w + d) * TU) + 16, Math.ceil(((w + d) * TU) / 2) + h + below + 16, ox, oy);
     paint(P);
     P.edge();
     const W = P.w;
-    return {
-      canvas: P.canvas(flip),
-      ax: flip ? W - ox : ox,
-      ay: oy,
-      glows: P.glows.map((g) => ({ ...g, x: flip ? W - g.x : g.x })),
-    };
+    return { canvas: P.canvas(flip), ax: flip ? W - ox : ox, ay: oy, glows: P.glows.map((g) => ({ ...g, x: flip ? W - g.x : g.x })) };
   }
 
-  const spriteCache = new Map();
   function objectSprite(type, flip, s) {
     const def = OBJECTS[type];
-    const anim = def.wall || ['desk', 'server', 'globe', 'bell', 'coffee', 'vending', 'easel', 'arcade', 'tv', 'aquarium', 'fireplace', 'catbed'].includes(type);
-    const key = `${type}|${flip ? 1 : 0}|${anim ? `${s.active ? 1 : 0}|${s.frame % 8}|${s.hour}|${s.meeting ? 1 : 0}` : ''}`;
-    let sp = spriteCache.get(key);
-    if (!sp) {
-      sp = renderSprite(def.w, Math.max(def.d, 1), def.h, (P) => def.draw(P, s), flip);
-      if (spriteCache.size > 600) spriteCache.clear();
-      spriteCache.set(key, sp);
-    }
-    return sp;
+    const key = `${type}|${flip ? 1 : 0}|${def.anim || def.wall ? `${s.active ? 1 : 0}|${s.frame % 8}|${s.hour}|${s.meeting ? 1 : 0}` : ''}`;
+    return cached(key, () => renderSprite(def.w, Math.max(def.d, 1), def.h, (P) => def.draw(P, s), flip));
   }
 
-  // Stair blocks: each of the 3 rows is two half-steps.
-  function stairSprite(row) {
-    const key = `stair|${row}`;
-    let sp = spriteCache.get(key);
-    if (!sp) {
-      sp = renderSprite(STAIR_W, 1, LOFT_Z, (P) => {
-        for (let k = 0; k < 2; k++) {
-          const h = LOFT_Z - (row * 2 + k + 1) * (LOFT_Z / 7);
-          P.box(0, k * 8, 0, STAIR_W * TU, 8, Math.round(h), { t: '#b07a4c', l: '#7a4c2c', r: '#5e3a22' });
-          P.top(0, k * 8, STAIR_W * TU, 1, '#8a5a38', Math.round(h));
-        }
-      }, false);
-      spriteCache.set(key, sp);
-    }
-    return sp;
+  // Structure pieces, each anchored at world (0, 0, floor z).
+  function slabSprite(room, f) {
+    const { floor } = room.floors[f];
+    const n = sideOf(room, f);
+    const fl = FLOORS[floor] || FLOORS.wood;
+    return cached(`slab|${n}|${f}|${floor}`, () => renderSprite(n, n, SLAB + 2, (P) => {
+      P.box(-5, -5, -SLAB, n * TU + 5, n * TU + 5, SLAB, { t: fl.base, l: dk(fl.base, 0.35), r: dk(fl.base, 0.5) }, false);
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) fl.draw(P, x, y, 0);
+      // A lit trim along the slab's front edges, so stacked floors read as separate.
+      P.left(0, -SLAB + 1, n * TU, 1, lt(fl.base, 0.25), n * TU);
+      P.right(n * TU, -SLAB + 1, n * TU, 1, lt(fl.base, 0.15), n * TU);
+    }, false, SLAB));
   }
 
-  function railSprite() {
-    let sp = spriteCache.get('rail');
-    if (!sp) {
-      sp = renderSprite(1, 1, 16, (P) => {
-        P.box(0, 14, 0, 2, 2, 13, '#5c3a22');
-        P.box(0, 14, 12, 16, 2, 2, '#8a5a38');
-        P.box(6, 15, 0, 1, 1, 12, '#6e4428', false);
-        P.box(11, 15, 0, 1, 1, 12, '#6e4428', false);
-      }, false);
-      spriteCache.set('rail', sp);
-    }
-    return sp;
+  function wallSprite(room, f, side) {
+    const { wall } = room.floors[f];
+    const n = sideOf(room, f);
+    const L = n * TU;
+    const w = WALLS[wall] || WALLS.plum;
+    return cached(`wall|${n}|${f}|${side}|${wall}`, () => renderSprite(side ? n : 1, side ? 1 : n + 1, WALL_H + 2, (P) => {
+      if (side) { // back-right wall, plane y = 0
+        P.box(0, -5, 0, L, 5, WALL_H, { t: lt(w.trim, 0.25), l: w.base, r: w.trim }, false);
+        w.paint((u, v, ww, hh, c) => P.left(u, v, ww, hh, c, 0), L);
+        P.left(0, 0, L, 5, w.trim, 0);
+        P.left(0, 0, 3, WALL_H, dk(w.base, 0.12), 0);
+      } else { // back-left wall, plane x = 0
+        P.box(-5, -5, 0, 5, L + 5, WALL_H, { t: lt(w.trim, 0.25), l: w.trim, r: dk(w.base, 0.08) }, false);
+        w.paint((u, v, ww, hh, c) => P.right(L - u, v, ww, hh, c, 0), L);
+        P.right(L, 0, L, 5, w.trim, 0);
+      }
+    }, false));
   }
 
-  // Everything that needs depth sorting, as boxes in tile space: {x0, y0, x1, y1, draw}.
+  // One step of the fire escape: a grated tread on a riser, the outer stringer and a handrail post.
+  // dir 0 climbs toward -y along the right side (rail on the +x edge); dir 1 climbs toward +x
+  // across the front (rail on the +y edge).
+  function stairSprite(dir, rise) {
+    return cached(`stair|${dir}|${rise}`, () => renderSprite(1, 1, 26, (P) => {
+      // Open treads on two stringers, so the floor behind shows through.
+      P.box(0, 0, -3, TU, TU, 3, { t: '#7a8399', l: '#555c72', r: '#41475a' }, false);
+      for (let i = 2; i < TU; i += 3) {
+        if (dir) P.top(1, i, TU - 2, 1, '#636b82', 0); else P.top(i, 1, 1, TU - 2, '#636b82', 0);
+      }
+      if (dir) {
+        P.box(0, TU - 2, -7, TU, 2, 4, '#3a3f50', false);
+        P.box(7, TU - 2, 0, 2, 2, 18, '#5a6075', false);
+        P.box(0, TU - 2, 17, TU, 2, 2, '#8a92aa', false);
+      } else {
+        P.box(TU - 2, 0, -7, 2, TU, 4, '#3a3f50', false);
+        P.box(1, 0, -7, 2, TU, 4, '#3a3f50', false);
+        P.box(TU - 2, 7, 0, 2, 2, 18, '#5a6075', false);
+        P.box(TU - 2, 0, 17, 2, TU, 2, '#8a92aa', false);
+      }
+    }, false, rise + 4));
+  }
+
+  // Everything that needs depth sorting, as boxes in tile space with z in world units.
   function sceneItems(room, s) {
     const items = [];
-    const n = room.n;
+    for (let f = 0; f < levels(room); f++) {
+      const z = floorZ(f);
+      const n = sideOf(room, f);
+      items.push({ x0: -0.3, y0: -0.3, x1: n, y1: n, z0: z - SLAB, z1: z, sprite: () => slabSprite(room, f), wx: 0, wy: 0, wz: z });
+      items.push({ x0: -0.3, y0: -0.3, x1: -0.02, y1: n, z0: z, z1: z + WALL_H, sprite: () => wallSprite(room, f, 0), wx: 0, wy: 0, wz: z });
+      items.push({ x0: 0, y0: -0.3, x1: n, y1: -0.02, z0: z, z1: z + WALL_H, sprite: () => wallSprite(room, f, 1), wx: 0, wy: 0, wz: z });
+    }
+    for (const c of cells(room).list) {
+      if (c.kind !== 'stair') continue;
+      items.push({ x0: c.x, y0: c.y, x1: c.x + 1, y1: c.y + 1, z0: c.z - c.rise, z1: c.z, sprite: () => stairSprite(c.dir, c.rise), wx: c.x * TU, wy: c.y * TU, wz: c.z });
+    }
     room.objects.forEach((o, i) => {
       const def = OBJECTS[o.type];
-      if (!def || def.wall || def.flat) return;
-      const f = footprint(o);
-      const z = heightAt(room, f.x, f.y) ?? 0;
-      items.push({ x0: f.x, y0: f.y, x1: f.x + f.w, y1: f.y + f.d, kind: 'object', index: i,
-        sprite: () => objectSprite(o.type, o.flip, s(i)), wx: o.x * TU, wy: o.y * TU, wz: z });
+      if (!def) return;
+      const z = floorZ(o.f || 0);
+      const sprite = () => objectSprite(o.type, o.flip, s(i));
+      if (def.wall) {
+        const along = o.flip ? o.y : o.x;
+        const box = o.flip ? { x0: -0.01, x1: 0, y0: along, y1: along + def.w } : { y0: -0.01, y1: 0, x0: along, x1: along + def.w };
+        items.push({ ...box, z0: z + 1, z1: z + WALL_H, sprite, wx: o.x * TU, wy: o.y * TU, wz: z });
+        return;
+      }
+      const fp = footprint(o);
+      items.push({ x0: fp.x, y0: fp.y, x1: fp.x + fp.w, y1: fp.y + fp.d, z0: z + (def.flat ? 0 : 0.02), z1: z + (def.flat ? 0.01 : def.h), sprite, wx: o.x * TU, wy: o.y * TU, wz: z });
     });
-    for (let r = 0; r < 3; r++) {
-      items.push({ x0: n - STAIR_W, y0: LOFT_D + r, x1: n, y1: LOFT_D + r + 1, kind: 'stair', sprite: () => stairSprite(r), wx: (n - STAIR_W) * TU, wy: (LOFT_D + r) * TU, wz: 0 });
-    }
-    for (let x = 0; x < n - STAIR_W; x++) {
-      items.push({ x0: x, y0: LOFT_D - 0.12, x1: x + 1, y1: LOFT_D, kind: 'rail', sprite: railSprite, wx: x * TU, wy: (LOFT_D - 1) * TU, wz: LOFT_Z });
-    }
     return items;
   }
 
-  // Wall decorations and flat rugs: drawn after the background, before anything that stands.
-  function decorItems(room, s) {
-    const out = [];
-    room.objects.forEach((o, i) => {
-      const def = OBJECTS[o.type];
-      if (!def || !(def.wall || def.flat)) return;
-      const z = def.flat ? (heightAt(room, o.x, o.y) ?? 0) : 0;
-      out.push({ sprite: objectSprite(o.type, o.flip, s(i)), wx: o.x * TU, wy: o.y * TU, wz: z });
-    });
-    return out;
-  }
-
-  // Order boxes back to front: A goes first when it lies entirely behind B on either axis.
+  // Back to front: A is drawn first when it lies wholly behind or below B and B is not behind A.
   function sortItems(items) {
-    const behind = (a, b) => (a.x1 <= b.x0 + 1e-6 && !(b.x1 <= a.x0 + 1e-6) && !(b.y1 <= a.y0 + 1e-6))
-      || (a.y1 <= b.y0 + 1e-6 && !(b.y1 <= a.y0 + 1e-6) && !(b.x1 <= a.x0 + 1e-6));
+    const e = 1e-6;
+    const sep = (a, b) => a.x1 <= b.x0 + e || a.y1 <= b.y0 + e || a.z1 <= b.z0 + e;
     const out = [];
-    const mark = new Map();
+    const mark = new Set();
     const visit = (a) => {
-      if (mark.get(a)) return;
-      mark.set(a, true);
-      for (const b of items) if (b !== a && behind(b, a)) visit(b);
+      if (mark.has(a)) return;
+      mark.add(a);
+      for (const b of items) if (b !== a && sep(b, a) && !sep(a, b)) visit(b);
       out.push(a);
     };
-    [...items].sort((a, b) => (a.x0 + a.y0) - (b.x0 + b.y0)).forEach(visit);
+    [...items].sort((a, b) => (a.z0 - b.z0) || ((a.x0 + a.y0) - (b.x0 + b.y0))).forEach(visit);
     return out;
   }
 
-  // Draw a sprite at world (wx, wy, wz) onto a canvas at `z` device pixels per fine pixel.
-  function blit(ctx, n, sp, wx, wy, wz, z) {
-    const p = project(n, wx, wy, wz);
+  function blit(ctx, room, sp, wx, wy, wz, z) {
+    const p = project(room, wx, wy, wz);
     ctx.drawImage(sp.canvas, Math.round((p.x - sp.ax) * z), Math.round((p.y - sp.ay) * z), sp.canvas.width * z, sp.canvas.height * z);
   }
-  function glows(ctx, n, list, wx, wy, wz, ax, ay, z) {
-    if (!list.length) return;
-    const p = project(n, wx, wy, wz);
+  function glows(ctx, room, sp, wx, wy, wz, z) {
+    if (!sp.glows.length) return;
+    const p = project(room, wx, wy, wz);
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    for (const g of list) {
-      const x = (p.x - ax + g.x) * z;
-      const y = (p.y - ay + g.y) * z;
+    for (const g of sp.glows) {
+      const x = (p.x - sp.ax + g.x) * z;
+      const y = (p.y - sp.ay + g.y) * z;
       const grad = ctx.createRadialGradient(x, y, 0, x, y, g.r * z);
       grad.addColorStop(0, g.c);
       grad.addColorStop(1, 'rgba(0,0,0,0)');
@@ -831,103 +908,91 @@
     ctx.restore();
   }
 
-  // Screen (fine px) to the tile under it, preferring the loft surface when it is hit.
+  // Draw the whole room. `extra` are more sortable boxes {x0..z1, draw(ctx)} (characters, parcels).
+  function drawRoom(ctx, room, z, objState, extra) {
+    const lights = [];
+    for (const it of sortItems([...sceneItems(room, objState), ...extra])) {
+      if (it.draw) { it.draw(ctx); continue; }
+      const sp = it.sprite();
+      blit(ctx, room, sp, it.wx, it.wy, it.wz, z);
+      if (sp.glows.length) lights.push([sp, it]);
+    }
+    for (const [sp, it] of lights) glows(ctx, room, sp, it.wx, it.wy, it.wz, z);
+  }
+
+  // Screen point (fine px) to the topmost floor or porch tile under it.
   function tileAt(room, fx, fy) {
-    const o = origin(room.n);
+    const o = origin(room);
     const sx = fx - o.x;
-    for (const z of [LOFT_Z, 0]) {
-      const s2 = (fy - o.y + z) * 2;
+    for (let f = levels(room) - 1; f >= 0; f--) {
+      const s2 = (fy - o.y + floorZ(f)) * 2;
       const x = Math.floor((s2 + sx) / 2 / TU);
       const y = Math.floor((s2 - sx) / 2 / TU);
-      if (x >= 0 && y >= 0 && x < room.n && y < room.n && heightAt(room, x, y) === z) return { x, y, z };
-      if (z === 0 && x >= 0 && y >= 0 && x < room.n && y < room.n) return { x, y, z: heightAt(room, x, y) };
+      if (cellAt(room, x, y, f)) return { x, y, f };
     }
     return null;
   }
 
-  // Screen point to a spot on a back wall: { flip, along } (flip = left wall).
+  // Screen point to a spot on a back wall of some floor: { f, flip, along }.
   function wallAt(room, fx, fy) {
-    const o = origin(room.n);
+    const o = origin(room);
     const sx = fx - o.x;
     const sy = fy - o.y;
-    if (sx >= 0) {
-      const x = sx;
-      const z = x / 2 - sy;
-      if (x < room.n * TU && z >= 0 && z <= WALL_H) return { flip: false, along: Math.floor(x / TU) };
-    } else {
-      const y = -sx;
-      const z = y / 2 - sy;
-      if (y < room.n * TU && z >= 0 && z <= WALL_H) return { flip: true, along: Math.floor(y / TU) };
+    for (let f = levels(room) - 1; f >= 0; f--) {
+      const base = floorZ(f);
+      const u = Math.abs(sx);
+      const z = u / 2 - sy;
+      if (u < sideOf(room, f) * TU && z >= base && z <= base + WALL_H) return { f, flip: sx < 0, along: Math.floor(u / TU) };
     }
     return null;
   }
 
-  // Dev preview: the default room in each theme plus every object on its own.
+  // Click-through mask: the tower's silhouette at 1 fine pixel per pixel.
+  let mask = { key: '', data: null, w: 0 };
+  function solidAt(room, fx, fy) {
+    const key = JSON.stringify([room.n, room.floors]);
+    if (mask.key !== key) {
+      const S = size(room);
+      const c = makeCanvas(S.w, S.h);
+      const g = c.getContext('2d');
+      for (const it of sceneItems(room, () => ({ frame: 0, active: false, hour: 12 }))) blit(g, room, it.sprite(), it.wx, it.wy, it.wz, 1);
+      mask = { key, data: g.getImageData(0, 0, S.w, S.h).data, w: S.w, h: S.h };
+    }
+    if (fx < 0 || fy < 0 || fx >= mask.w || fy >= mask.h) return false;
+    return mask.data[(Math.floor(fy) * mask.w + Math.floor(fx)) * 4 + 3] > 0;
+  }
+
+  // Dev preview: the default tower in each theme plus every object on its own.
   function preview(canvas, z = 2) {
     const themes = Object.keys(THEMES);
-    const S = size(N);
+    const rooms = themes.map((t) => generateRoom(t));
+    const S = size(rooms[0]);
     canvas.width = S.w * z * themes.length;
-    canvas.height = S.h * z + 360;
+    canvas.height = S.h * z + 300;
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = '#1b1826';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     const st = { frame: 1, active: true, now: Date.now(), hour: 20, meeting: true };
-    themes.forEach((theme, k) => {
-      const room = generateRoom(theme);
+    rooms.forEach((room, k) => {
       ctx.save();
       ctx.translate(k * S.w * z, 0);
       drawRoom(ctx, room, z, () => st, []);
       ctx.restore();
     });
     let x = 10;
-    let y = S.h * z + 20;
+    let y = S.h * z + 10;
     for (const type of Object.keys(OBJECTS)) {
-      const def = OBJECTS[type];
       const sp = objectSprite(type, false, st);
-      if (x + sp.canvas.width * 2 > canvas.width) { x = 10; y += 130; }
+      if (x + sp.canvas.width * 2 > canvas.width) { x = 10; y += 140; }
       ctx.drawImage(sp.canvas, x, y, sp.canvas.width * 2, sp.canvas.height * 2);
       x += sp.canvas.width * 2 + 8;
-      void def;
     }
-  }
-
-  // Draw the whole room. `extra` are extra sortable items {x0,y0,x1,y1,draw(ctx)} (characters).
-  let bg = { key: '', data: null };
-  function drawRoom(ctx, room, z, objState, extra, onDecor) {
-    const key = JSON.stringify([room.n, room.wall, room.floor]);
-    if (bg.key !== key) bg = { key, data: renderBackground(room) };
-    const S = size(room.n);
-    ctx.drawImage(bg.data.canvas, 0, 0, S.w * z, S.h * z);
-    for (const d of decorItems(room, objState)) blit(ctx, room.n, d.sprite, d.wx, d.wy, d.wz, z);
-    onDecor?.(ctx);
-    const items = [...sceneItems(room, objState), ...extra];
-    const lights = [];
-    for (const it of sortItems(items)) {
-      if (it.draw) { it.draw(ctx); continue; }
-      const sp = it.sprite();
-      blit(ctx, room.n, sp, it.wx, it.wy, it.wz, z);
-      if (sp.glows.length) lights.push([sp, it]);
-    }
-    for (const d of decorItems(room, objState)) glows(ctx, room.n, d.sprite.glows, d.wx, d.wy, d.wz, d.sprite.ax, d.sprite.ay, z);
-    for (const [sp, it] of lights) glows(ctx, room.n, sp.glows, it.wx, it.wy, it.wz, sp.ax, sp.ay, z);
-  }
-
-  // Alpha mask lookup for click-through: is there room under this fine pixel?
-  function solidAt(room, fx, fy) {
-    if (!bg.data) return false;
-    const c = bg.data.canvas;
-    if (fx < 0 || fy < 0 || fx >= c.width || fy >= c.height) return false;
-    if (!bg.mask) {
-      const g = c.getContext('2d');
-      bg.mask = g.getImageData(0, 0, c.width, c.height).data;
-    }
-    return bg.mask[(Math.floor(fy) * c.width + Math.floor(fx)) * 4 + 3] > 0;
   }
 
   return {
-    TU, N, WALL_H, LOFT_Z, LOFT_D, STAIR_W, FLOORS, WALLS, OBJECTS, THEMES,
-    size, origin, project, heightAt, standZ, isStair, linked, footprint, canPlace, walkGrid, stationSpots, generateRoom,
-    objectSprite, drawRoom, blit, tileAt, wallAt, solidAt, preview,
+    TU, N, WALL_H, LEVEL, STEP, FLOORS, sideOf, WALLS, OBJECTS, THEMES, FLOOR_NAMES,
+    size, origin, project, floorZ, levels, cells, resetCells, cellAt, neighbours, walkable, footprint, canPlace, stationSpots,
+    generateRoom, objectSprite, drawRoom, blit, tileAt, wallAt, solidAt, preview,
   };
 });

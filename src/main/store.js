@@ -10,7 +10,7 @@ const STARTER_ITEMS = ITEMS.filter((i) => i.rarity === 'starter').map((i) => i.i
 const DEFAULTS = {
   settings: {
     mode: 'strip', // strip | room
-    layoutVersion: 7,
+    layoutVersion: 8,
     alwaysOnTop: true,
     hideInFullscreen: true,
     scale: 3,
@@ -108,9 +108,9 @@ class Store extends EventEmitter {
       s.layoutVersion = 6;
       if (s.characters.ai?.skin === 'auto') s.characters.ai.skin = 'droid';
     }
-    // v7 replaces the long flat room with the isometric diorama.
-    if ((raw.settings?.layoutVersion || 0) < 7) {
-      s.layoutVersion = 7;
+    // v7 replaced the long flat room with the isometric diorama; v8 makes it a three-storey tower.
+    if ((raw.settings?.layoutVersion || 0) < 8) {
+      s.layoutVersion = 8;
       this.data.room = null;
       s.roomZoom = 2;
     }

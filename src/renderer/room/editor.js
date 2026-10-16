@@ -13,12 +13,13 @@
 
   let tab = 'furniture';
   let tool = null; // { type, flip, moving?, orig? }
-  let hover = null; // { x, y, flip } — a floor tile, or a wall spot for wall items
+  let hover = null; // { x, y, f, flip } — a floor tile, or a wall spot for wall items
+  let storey = 0; // which floor the floor/wall tabs paint
 
   const HINTS = {
     furniture: '點家具放進房間；R 或右下按鈕換方向；點房間裡的家具可搬動，右鍵刪除',
-    floor: '點一下換整間地板',
-    wall: '點一下換牆面',
+    floor: '選樓層，再點一下換那層的地板',
+    wall: '選樓層，再點一下換那層的牆面',
     room: '換整體風格，或重設成預設房間',
   };
 
@@ -77,22 +78,21 @@
         }));
       }
       if (tool) palette.append(button('↻ 換方向', null, false, () => { tool.flip = !tool.flip; }));
-    } else if (tab === 'floor') {
-      for (const id of owned('floor')) {
-        const f = Iso.FLOORS[id];
-        if (!f) continue;
-        palette.append(button(itemName(`floor:${id}`), tileSwatch((x) => { x.fillStyle = f.base; x.beginPath(); x.moveTo(17, 4); x.lineTo(33, 12); x.lineTo(17, 20); x.lineTo(1, 12); x.fill(); }), room().floor === id, () => {
-          room().floor = id;
-          save();
-          refresh();
-        }));
-      }
-    } else if (tab === 'wall') {
-      for (const id of owned('wall')) {
-        const w = Iso.WALLS[id];
-        if (!w) continue;
-        palette.append(button(itemName(`wall:${id}`), tileSwatch((x) => { x.fillStyle = w.base; x.fillRect(4, 2, 26, 22); x.fillStyle = w.trim; x.fillRect(4, 20, 26, 4); }), room().wall === id, () => {
-          room().wall = id;
+    } else if (tab === 'floor' || tab === 'wall') {
+      const key = tab;
+      const row = document.createElement('div');
+      row.className = 'row';
+      room().floors.forEach((_, i) => row.append(button(Iso.FLOOR_NAMES[i] || `${i + 1}F`, null, storey === i, () => { storey = i; refresh(); })));
+      palette.append(row);
+      const set = key === 'floor' ? Iso.FLOORS : Iso.WALLS;
+      for (const id of owned(key)) {
+        const d = set[id];
+        if (!d) continue;
+        const sw = key === 'floor'
+          ? tileSwatch((x) => { x.fillStyle = d.base; x.beginPath(); x.moveTo(17, 4); x.lineTo(33, 12); x.lineTo(17, 20); x.lineTo(1, 12); x.fill(); })
+          : tileSwatch((x) => { x.fillStyle = d.base; x.fillRect(4, 2, 26, 22); x.fillStyle = d.trim; x.fillRect(4, 20, 26, 4); });
+        palette.append(button(itemName(`${key}:${id}`), sw, room().floors[storey][key] === id, () => {
+          room().floors[storey][key] = id;
           save();
           refresh();
         }));
@@ -102,7 +102,7 @@
       row.className = 'row';
       for (const [id, t] of Object.entries(Iso.THEMES)) {
         row.append(button(t.name, null, room().theme === id, () => {
-          Object.assign(room(), { theme: id, wall: t.wall, floor: t.floor });
+          Object.assign(room(), { theme: id, floors: t.floors.map(([wall, floor]) => ({ wall, floor })) });
           save();
           refresh();
         }));
@@ -124,10 +124,10 @@
     if (def?.wall) {
       const w = Iso.wallAt(room(), p.x, p.y);
       if (!w) return null;
-      return w.flip ? { x: 0, y: w.along, flip: true } : { x: w.along, y: 0, flip: false };
+      return w.flip ? { x: 0, y: w.along, f: w.f, flip: true } : { x: w.along, y: 0, f: w.f, flip: false };
     }
     const t = Iso.tileAt(room(), p.x, p.y);
-    return t ? { x: t.x, y: t.y, flip: tool?.flip || false } : null;
+    return t ? { x: t.x, y: t.y, f: t.f, flip: tool?.flip || false } : null;
   }
 
   function objectAt(e) {
@@ -138,6 +138,7 @@
     room().objects.forEach((o, i) => {
       const def = Iso.OBJECTS[o.type];
       if (!def) return;
+      if ((o.f || 0) !== (def.wall ? w?.f : t?.f)) return;
       if (def.wall) {
         if (w && !!o.flip === w.flip) {
           const along = o.flip ? o.y : o.x;
@@ -182,8 +183,8 @@
     if (e.button !== 0) return;
     if (tool) {
       const t = target(e);
-      if (t && Iso.canPlace(r, tool.type, t.x, t.y, t.flip)) {
-        r.objects.push({ type: tool.type, x: t.x, y: t.y, flip: t.flip });
+      if (t && Iso.canPlace(r, tool.type, t.x, t.y, t.flip, t.f)) {
+        r.objects.push({ type: tool.type, x: t.x, y: t.y, flip: t.flip, f: t.f });
         if (tool.moving) tool = null;
         save();
         refresh();
@@ -193,7 +194,7 @@
     const i = objectAt(e);
     if (i >= 0) {
       const [o] = r.objects.splice(i, 1);
-      tool = { type: o.type, flip: !!o.flip, moving: true, orig: { x: o.x, y: o.y, flip: !!o.flip } };
+      tool = { type: o.type, flip: !!o.flip, moving: true, orig: { x: o.x, y: o.y, flip: !!o.flip, f: o.f || 0 } };
       tab = 'furniture';
       save();
       refresh();
@@ -213,8 +214,7 @@
 
   // Diamond outline of a footprint, in device pixels.
   function diamond(ctx, z, f, h, color) {
-    const n = room().n;
-    const pts = [[f.x, f.y], [f.x + f.w, f.y], [f.x + f.w, f.y + f.d], [f.x, f.y + f.d]].map(([x, y]) => Iso.project(n, x * TU, y * TU, h));
+    const pts = [[f.x, f.y], [f.x + f.w, f.y], [f.x + f.w, f.y + f.d], [f.x, f.y + f.d]].map(([x, y]) => Iso.project(room(), x * TU, y * TU, h));
     ctx.fillStyle = color;
     ctx.beginPath();
     pts.forEach((p, i) => (i ? ctx.lineTo(p.x * z, p.y * z) : ctx.moveTo(p.x * z, p.y * z)));
@@ -229,16 +229,16 @@
     if (tool && hover.x !== undefined) {
       const def = Iso.OBJECTS[tool.type];
       const o = { type: tool.type, x: hover.x, y: hover.y, flip: hover.flip };
-      const ok = Iso.canPlace(r, tool.type, o.x, o.y, o.flip);
-      const h = def.wall ? 0 : Iso.heightAt(r, o.x, o.y) ?? 0;
+      const ok = Iso.canPlace(r, tool.type, o.x, o.y, o.flip, hover.f);
+      const h = Iso.floorZ(hover.f);
       if (!def.wall) diamond(ctx, z, Iso.footprint(o), h, ok ? 'rgba(124,196,127,0.35)' : 'rgba(224,64,90,0.4)');
       ctx.globalAlpha = ok ? 0.75 : 0.4;
-      Iso.blit(ctx, r.n, Iso.objectSprite(tool.type, o.flip, still), o.x * TU, o.y * TU, h, z);
+      Iso.blit(ctx, r, Iso.objectSprite(tool.type, o.flip, still), o.x * TU, o.y * TU, h, z);
       ctx.globalAlpha = 1;
     } else if (hover.pick >= 0) {
       const o = r.objects[hover.pick];
       const def = o && Iso.OBJECTS[o.type];
-      if (def && !def.wall) diamond(ctx, z, Iso.footprint(o), Iso.heightAt(r, o.x, o.y) ?? 0, 'rgba(255,224,102,0.35)');
+      if (def && !def.wall) diamond(ctx, z, Iso.footprint(o), Iso.floorZ(o.f || 0), 'rgba(255,224,102,0.35)');
     }
   };
 
