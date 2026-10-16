@@ -633,6 +633,40 @@ function actorAt(e) {
   return hit;
 }
 
+// A friend's character card dropped (or pasted) onto the room: they join the friends' book and
+// move straight in. Any other picture goes to the photo corner to become a character.
+async function pictureArrived(bytes) {
+  const card = await Pixels.readCard(bytes);
+  if (!card) {
+    drawer.open('guild', 'studio');
+    const f = [...drawer.el.querySelectorAll('iframe')].find((x) => x.src.includes('/guild/'));
+    const send = () => f.contentWindow.postMessage({ photo: bytes }, '*');
+    if (f.contentDocument?.readyState === 'complete' && f.contentWindow.location.href.includes('/guild/')) send();
+    else f.addEventListener('load', send, { once: true });
+    return;
+  }
+  const name = card.name || '新朋友';
+  const saved = await desk.invoke('drawing:save', { name, art: card.art, recipe: card.recipe, friend: true });
+  if (saved?.error) { showToast(saved.error); return; }
+  const moved = await desk.invoke('resident:add', { name, skin: `draw:${saved.id}` });
+  showToast(moved?.error ? `💌 ${name} 進了朋友圖鑑（${moved.error}）` : `🏡 ${name} 搬進來了！`);
+}
+document.addEventListener('dragover', (e) => {
+  if (!e.dataTransfer?.types?.includes('Files')) return;
+  e.preventDefault();
+  setIgnore(false);
+});
+document.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  const file = [...(e.dataTransfer?.files || [])].find((x) => x.type.startsWith('image/'));
+  if (file) pictureArrived(new Uint8Array(await file.arrayBuffer()));
+});
+document.addEventListener('paste', async (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  const file = [...(e.clipboardData?.files || [])].find((x) => x.type.startsWith('image/'));
+  if (file) pictureArrived(new Uint8Array(await file.arrayBuffer()));
+});
+
 // Clicks fall through to the desktop wherever the window is empty.
 let ignoring = null;
 function setIgnore(ignore) {

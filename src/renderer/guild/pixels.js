@@ -260,7 +260,7 @@
     });
     x.font = font(13, 600);
     x.fillStyle = '#9a7a5a';
-    x.fillText('把這張圖拖進 Deskmates 的「💌 朋友」就能收下這個角色 · github.com/crazyjimmy0623/deskmates', 24, 602);
+    x.fillText('把這張圖拖進 Deskmates 的房間，這個角色就會搬進去 · github.com/crazyjimmy0623/deskmates', 24, 602);
     return c;
   }
 

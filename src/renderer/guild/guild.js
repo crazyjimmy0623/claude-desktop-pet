@@ -675,7 +675,11 @@ function openTab(t) {
 }
 desk.on('guild:tab', openTab);
 // The drawer asks for a tab by message once this page is loaded.
-window.addEventListener('message', (e) => openTab(e.data?.guildTab));
+window.addEventListener('message', (e) => {
+  openTab(e.data?.guildTab);
+  // A picture dropped on the room that isn't a character card: make a character of it.
+  if (e.data?.photo) Pixels.imageOf(e.data.photo).then((img) => img && takePhoto(img));
+});
 
 // After every script on the page has run (draw.js comes after this file).
 window.addEventListener('DOMContentLoaded', () => desk.invoke('init').then((init) => {
