@@ -10,6 +10,20 @@ const DONE_MS = 6000;
 const SLEEP_AFTER_MS = 3 * 60 * 1000;
 const STALE_MS = 2 * 60 * 60 * 1000;
 const LEAVE_MS = 6000;
+const MAX_RESIDENTS = 6;
+// What residents get up to, with how often (weights) and what they say when they start.
+const PASTIMES = [
+  { station: 'read', w: 3, says: ['📖 這本好看', '📚 再一章就好'] },
+  { station: 'coffee', w: 2, says: ['☕ 好香～', '☕ 續杯'] },
+  { station: 'rest', w: 2, says: ['🛋️ 躺一下', '😌 好舒服'] },
+  { station: 'music', w: 2, says: ['🎵 ♪～', '🎶 這首超讚'] },
+  { station: 'game', w: 2, says: ['🎮 再一場！', '🎮 破關了！'] },
+  { station: 'art', w: 2, says: ['🎨 畫點東西', '🖌️ 嗯…'] },
+  { station: 'write', w: 1, says: ['✏️ 寫日記', '📝 記一下'] },
+  { station: 'chat', w: 1, says: ['💬 哈囉～', '💬 今天好嗎？'] },
+  { station: 'code', w: 1, says: ['💻 偷用一下電腦', '💻 查個東西'] },
+  { station: 'web', w: 1, says: ['🌐 滑一下', '🌐 有新消息'] },
+];
 
 const TOOL_ICONS = {
   Read: '📖', Grep: '🔍', Glob: '🔍', ToolSearch: '🔍', LS: '📂',
@@ -40,8 +54,9 @@ class Actors extends EventEmitter {
   resolveLook(a) {
     const { characters } = this.store.settings;
     const owned = new Set(this.store.progress.owned);
-    const pick = a.kind === 'user' ? characters.user : (characters.projects[a.name] || characters.ai);
-    const fallback = a.kind === 'user' ? 'office' : 'droid';
+    const resident = a.kind === 'resident' ? (characters.residents || []).find((r) => `resident:${r.id}` === a.id) : null;
+    const pick = resident || (a.kind === 'user' ? characters.user : (characters.projects[a.name] || characters.ai));
+    const fallback = a.kind === 'ai' ? 'droid' : 'office';
     let skin = pick?.skin || fallback;
     if (skin === 'auto') {
       // Rotate through owned characters, skipping the one the user wears.
@@ -131,7 +146,7 @@ class Actors extends EventEmitter {
   }
 
   clearAll() {
-    for (const a of this.map.values()) if (a.kind !== 'user') this.leave(a);
+    for (const a of this.map.values()) if (a.kind === 'ai') this.leave(a);
   }
 
   // ---- Claude Code hooks ----------------------------------------------------
@@ -331,11 +346,72 @@ class Actors extends EventEmitter {
     }
   }
 
+  // ---- Residents -------------------------------------------------------------
+  // Characters invited to live in the room, for everyone and especially people without AI: they
+  // wander between the furniture there, read, nap, play and chat, and sleep at night.
+
+  syncResidents() {
+    const list = (this.store.settings.characters.residents || []).slice(0, MAX_RESIDENTS);
+    const ids = new Set(list.map((r) => `resident:${r.id}`));
+    for (const a of this.map.values()) if (a.kind === 'resident' && !ids.has(a.id)) this.leave(a);
+    for (const r of list) {
+      const id = `resident:${r.id}`;
+      const a = this.map.get(id) || this.ensure(id, { kind: 'resident', source: 'resident', name: r.name, nextAt: 0 });
+      if (a.state === 'leaving') continue;
+      if (a.name !== r.name) {
+        a.name = r.name;
+        this.changed();
+      }
+    }
+  }
+
+  // Stations the room has furniture for (any, in the strip).
+  stationsHere() {
+    const { OBJECTS } = require('../shared/iso');
+    const room = this.store.room;
+    if (this.store.settings.mode !== 'room' || !room?.objects) return null;
+    return new Set(room.objects.map((o) => OBJECTS[o.type]?.station).filter(Boolean));
+  }
+
+  live(a, now) {
+    if (now < (a.nextAt || 0)) return;
+    const hour = new Date(now).getHours();
+    if (hour >= 23 || hour < 7) {
+      a.label = '睡覺中';
+      a.icon = '💤';
+      this.setState(a, 'sleep', 'rest');
+      a.nextAt = now + 10 * 60 * 1000;
+      return;
+    }
+    if (a.state === 'sleep') this.say(a, '🌞 早安！', 3000);
+    // Now and then just stand about; otherwise take up something there is furniture for.
+    const here = this.stationsHere();
+    const options = PASTIMES.filter((p) => !here || here.has(p.station));
+    if (!options.length || Math.random() < 0.25) {
+      a.label = '晃晃';
+      a.icon = '';
+      this.setState(a, 'idle');
+      a.nextAt = now + (40 + Math.random() * 80) * 1000;
+      return;
+    }
+    let roll = Math.random() * options.reduce((s, p) => s + p.w, 0);
+    const p = options.find((o) => (roll -= o.w) < 0) || options[0];
+    a.label = STATIONS[p.station].name;
+    a.icon = STATIONS[p.station].icon;
+    this.setState(a, 'work', p.station);
+    if (Math.random() < 0.6) this.say(a, p.says[Math.floor(Math.random() * p.says.length)], 3000);
+    a.nextAt = now + (2 + Math.random() * 4) * 60 * 1000;
+  }
+
   // ---- Clock ---------------------------------------------------------------
 
   tick() {
     const now = Date.now();
     for (const a of this.map.values()) {
+      if (a.kind === 'resident') {
+        if (a.state !== 'leaving') this.live(a, now);
+        continue;
+      }
       if (a.kind === 'user') continue;
       if (a.state === 'done' && now - a.since > DONE_MS) this.setState(a, 'idle');
       if (a.state === 'idle' && now - a.since > SLEEP_AFTER_MS) this.setState(a, 'sleep', 'rest');
@@ -352,4 +428,4 @@ class Actors extends EventEmitter {
   }
 }
 
-module.exports = { Actors, TOOL_ICONS };
+module.exports = { Actors, TOOL_ICONS, MAX_RESIDENTS };

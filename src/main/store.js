@@ -26,6 +26,7 @@ const DEFAULTS = {
       user: { skin: 'office', accessory: null },
       ai: { skin: 'droid', accessory: null }, // 'auto' = a different owned character per session
       projects: {}, // project name -> { skin, accessory }
+      residents: [], // characters who simply live in the room: { id, name, skin, accessory }
     },
     pomodoro: { focus: 25, break: 5 },
     reminders: { water: 0, stretch: 0 }, // minutes between reminders, 0 = off

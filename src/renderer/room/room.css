@@ -135,12 +135,14 @@ html, body {
 
 #palette {
   flex: 1;
+  min-height: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-flow: column wrap;
   align-content: flex-start;
   gap: 8px;
   padding: 10px 12px;
-  overflow-y: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 /* One thing to pick: its picture, its name, its price in the corner. */
@@ -179,11 +181,11 @@ html, body {
 }
 
 #palette .row {
+  flex: none;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 6px;
-  width: 100%;
 }
 
 #palette .row > b {

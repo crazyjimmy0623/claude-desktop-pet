@@ -262,7 +262,7 @@ function fillCard(v, now) {
   v.cardSecond = Math.floor(now / 1000);
   v.card.replaceChildren();
   const h = document.createElement('h3');
-  h.textContent = `${v.actor.kind === 'user' ? '⭐' : '⚔️'} ${v.actor.name}`;
+  h.textContent = `${{ user: '⭐', resident: '🏡' }[v.actor.kind] || '⚔️'} ${v.actor.name}`;
   v.card.append(h);
   for (const [label, value] of Common.infoRows(v.actor, now)) {
     const row = document.createElement('div');

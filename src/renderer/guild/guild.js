@@ -117,7 +117,7 @@ function itemCard(id, { locked = false, tag = null } = {}) {
 
 function projectNames() {
   const names = new Set(Object.keys(settings.characters.projects));
-  for (const a of actors) if (a.kind !== 'user' && a.name) names.add(a.name);
+  for (const a of actors) if (a.kind === 'ai' && a.name) names.add(a.name);
   return [...names].sort();
 }
 
@@ -125,8 +125,10 @@ function slotFor(t) {
   const c = settings.characters;
   if (t === 'user') return c.user;
   if (t === 'ai') return c.ai;
+  if (t.startsWith('resident:')) return (c.residents || []).find((r) => r.id === t.slice(9)) || c.user;
   return c.projects[t.slice(8)] || c.ai;
 }
+const residents = () => settings.characters.residents || [];
 
 function renderEquip() {
   const targets = $('targets');
@@ -139,13 +141,27 @@ function renderEquip() {
     targets.append(b);
   };
   add('user', `⭐ ${settings.userName}`);
+  for (const r of residents()) add(`resident:${r.id}`, `🏡 ${r.name}`);
   add('ai', '🤖 AI 夥伴預設');
   for (const n of projectNames()) add(`project:${n}`, `📁 ${n}`);
+  // Residents: anyone can invite a few characters to live in the room, AI or not.
+  const invite = document.createElement('button');
+  invite.className = 'invite';
+  invite.textContent = '＋ 邀請居民';
+  invite.title = '邀請一位角色住進房間，他會自己生活：看書、喝咖啡、玩遊戲、晚上睡覺';
+  invite.addEventListener('click', async () => {
+    const res = await desk.invoke('resident:add', '');
+    if (res?.error) { $('equip-name').textContent = res.error; return; }
+    target = `resident:${res.id}`;
+    renderEquip();
+  });
+  targets.append(invite);
+  if (target.startsWith('resident:') && !residents().some((r) => r.id === target.slice(9))) target = 'user';
 
   const slot = slotFor(target);
   const skins = ITEMS.filter((i) => i.type === 'skin' && owns(i.id)).map((i) => ({ key: i.id.slice(5), name: i.name }));
   for (const c of assets.characters) skins.push({ key: c.id, name: `${c.name}（自訂）`, custom: true });
-  if (target !== 'user') skins.unshift({ key: 'auto', name: '🎲 每個 session 自動換', custom: true });
+  if (target === 'ai' || target.startsWith('project:')) skins.unshift({ key: 'auto', name: '🎲 每個 session 自動換', custom: true });
   const skinList = $('skin-list');
   skinList.replaceChildren();
   for (const s of skins) {
@@ -172,7 +188,19 @@ function renderEquip() {
     b.addEventListener('click', () => desk.invoke('project:forget', target.slice(8)));
     accList.append(b);
   }
-  $('equip-name').textContent = target === 'user' ? settings.userName : target === 'ai' ? 'AI 夥伴' : target.slice(8);
+  const res = target.startsWith('resident:') ? residents().find((r) => r.id === target.slice(9)) : null;
+  $('equip-name').textContent = target === 'user' ? settings.userName : target === 'ai' ? 'AI 夥伴' : res ? res.name : target.slice(8);
+  // A resident's name, and seeing them out.
+  const own = $('resident-tools');
+  own.classList.toggle('hidden', !res);
+  if (res) {
+    const input = $('resident-name');
+    if (document.activeElement !== input) input.value = res.name;
+    input.onchange = () => desk.invoke('resident:rename', { id: res.id, name: input.value });
+    $('resident-remove').onclick = () => {
+      if (window.confirm(`確定請「${res.name}」搬走嗎？`)) desk.invoke('resident:remove', res.id);
+    };
+  }
 }
 
 function animateEquip() {
@@ -278,7 +306,10 @@ function renderBook() {
     const grid = document.createElement('div');
     grid.className = 'grid';
     for (const i of items) grid.append(itemCard(i.id, { locked: !owns(i.id) }));
-    book.append(h, grid);
+    const group = document.createElement('div');
+    group.className = 'group';
+    group.append(h, grid);
+    book.append(group);
   }
   $('book-count').textContent = `${progress.owned.length}/${ITEMS.length}`;
 }

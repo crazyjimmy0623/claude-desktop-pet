@@ -43,7 +43,7 @@
       const left = Math.max(0, actor.focus.endsAt - now);
       return actor.focus.phase === 'focus' ? { text: `🍅 ${mmss(left)}`, cls: 'focus' } : { text: `☕ 休息 ${mmss(left)}`, cls: 'success' };
     }
-    if (actor.kind === 'user') return null;
+    if (actor.kind === 'user' || actor.kind === 'resident') return null;
     switch (actor.state) {
       case 'think': return { text: `💭 思考中${'.'.repeat(1 + (Math.floor(now / 400) % 3))}`, cls: '' };
       case 'work': return { text: `${actor.icon || '🛠️'} ${actor.label}`.trim(), cls: '' };
@@ -62,6 +62,9 @@
     if (actor.kind === 'user') {
       if (actor.focus) rows.push(['番茄鐘', `${actor.focus.phase === 'focus' ? '專注' : '休息'} ${mmss(Math.max(0, actor.focus.endsAt - now))}`]);
       rows.push(['陪伴', mins < 1 ? '剛剛' : `${mins} 分鐘`]);
+    } else if (actor.kind === 'resident') {
+      rows.push(['身分', '🏡 住在這裡的居民']);
+      rows.push(['今天', mins < 1 ? '剛起床' : `醒著 ${mins} 分鐘`]);
     } else {
       rows.push(['最後指令', actor.prompt || '—']);
       rows.push(['上工', mins < 1 ? '剛剛' : `${mins} 分鐘`]);

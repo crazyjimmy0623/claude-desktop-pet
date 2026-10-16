@@ -200,19 +200,49 @@ html.docked main > .tab { display: flex; gap: 10px; height: 100%; }
 html.docked main > .tab.hidden { display: none !important; }
 html.docked section.card {
   flex: none;
-  width: 340px;
   height: 100%;
   margin: 0;
-  padding: 10px 12px;
-  overflow-y: auto;
+  padding: 10px 14px;
+  overflow: hidden;
 }
 html.docked section.card h2 { font-size: 13px; margin-bottom: 6px; }
-html.docked .field { flex-wrap: wrap; gap: 4px 8px; padding: 4px 0; }
-html.docked .field label.name { width: 120px; }
-html.docked .segmented button { min-width: 0; padding: 4px 8px; }
-html.docked .equip-panel { width: 900px; }
-html.docked .equip-lists { min-width: 0; }
-html.docked .card.gacha { width: 620px; }
-html.docked #tab-book .card { width: 820px; }
-html.docked #tab-achievements .card { width: 640px; }
-html.docked #tab-stats .card { width: 560px; }
+
+/* Settings: each card's fields flow down and then into the next column, so a card grows
+   sideways instead of scrolling. */
+html.docked body.settings section.card {
+  width: auto;
+  display: flex;
+  flex-flow: column wrap;
+  align-content: flex-start;
+  column-gap: 22px;
+}
+html.docked body.settings section.card > * { flex: none; width: 330px; }
+html.docked body.settings section.card > table.map { width: 330px; }
+html.docked .field { flex-wrap: wrap; gap: 4px 8px; padding: 5px 0; }
+html.docked .field label.name { width: 112px; }
+html.docked .field:first-of-type { border-top: 1px solid var(--line); }
+html.docked .segmented button { min-width: 0; padding: 4px 10px; }
+
+/* Guild: who to dress, in columns of buttons; the looks in sideways strips. */
+html.docked body.guild #tab-equip section.card:first-child { width: auto; display: flex; flex-flow: column wrap; align-content: flex-start; column-gap: 16px; }
+html.docked body.guild #tab-equip section.card:first-child > * { flex: none; width: 260px; }
+html.docked #targets { display: contents; }
+html.docked #targets button { width: 260px; flex: none; }
+html.docked .equip-panel { width: auto; }
+html.docked .equip-preview { width: 180px; }
+html.docked .equip-lists { width: 620px; min-width: 0; }
+html.docked .equip-lists h2 { margin: 2px 0 4px; }
+html.docked .chips { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; padding-bottom: 6px; }
+html.docked .chips button { flex: none; white-space: nowrap; }
+html.docked .card.gacha { width: 640px; }
+html.docked .gacha-results { display: grid; grid-auto-flow: column; grid-auto-columns: 112px; grid-template-columns: none; overflow-x: auto; padding-bottom: 6px; }
+html.docked #tab-book .card { width: auto; }
+html.docked .book { display: flex; gap: 18px; height: calc(100% - 34px); }
+html.docked .book .group { flex: none; }
+html.docked .book h3 { margin: 0 0 6px; }
+html.docked .book .grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto); grid-auto-columns: 100px; grid-template-columns: none; }
+html.docked .book .item-card { padding: 5px 4px; gap: 2px; }
+html.docked #tab-achievements .card { width: auto; }
+html.docked .achievements { grid-auto-flow: column; grid-template-rows: repeat(3, auto); grid-auto-columns: 270px; grid-template-columns: none; }
+html.docked #tab-stats .card { width: auto; display: flex; gap: 14px; flex-flow: column wrap; align-content: flex-start; }
+html.docked canvas.share { height: calc(100% - 4px); width: auto; max-width: none; }

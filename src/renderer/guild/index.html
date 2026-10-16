@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../panel.css">
   <link rel="stylesheet" href="guild.css">
 </head>
-<body>
+<body class="guild">
   <header class="top">
     <h1>📖 夥伴手冊</h1>
     <span class="spacer"></span>
@@ -26,7 +26,7 @@
     <div id="tab-equip" class="tab">
       <section class="card">
         <h2>🧑‍🤝‍🧑 選擇夥伴</h2>
-        <p class="desc">「你」是代表自己的角色；AI 夥伴可以設定預設外觀，也能替每個專案指定不同角色。</p>
+        <p class="desc">「你」是代表自己的角色；🏡 居民住在房間裡自己生活（不用 AI 也能邀請）；AI 夥伴可以設定預設外觀，也能替每個專案指定不同角色。</p>
         <div id="targets" class="targets"></div>
       </section>
       <section class="card equip-panel">
@@ -36,6 +36,11 @@
           <div id="skin-list" class="chips"></div>
           <h2>配件</h2>
           <div id="acc-list" class="chips"></div>
+          <div id="resident-tools" class="resident-tools hidden">
+            <h2>居民</h2>
+            <input type="text" id="resident-name" maxlength="12" placeholder="名字">
+            <button class="btn danger" id="resident-remove">請他搬走</button>
+          </div>
         </div>
       </section>
     </div>

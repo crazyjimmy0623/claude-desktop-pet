@@ -7,7 +7,7 @@ if (process.platform === 'win32') app.setAppUserModelId('com.crazyjimmy0623.desk
 if (!app.requestSingleInstanceLock()) app.exit(0);
 
 const { Store } = require('./store');
-const { Actors } = require('./actors');
+const { Actors, MAX_RESIDENTS } = require('./actors');
 const { Progress, dayKey } = require('./progress');
 const { Fx } = require('./fx');
 const { Focus } = require('./focus');
@@ -72,6 +72,7 @@ function boot() {
     windows.refreshVisibility();
     if (s.sources.activity) activity.start(); else activity.stop();
     actors.updateUser();
+    actors.syncResidents();
     actors.changed();
   });
 
@@ -83,6 +84,7 @@ function boot() {
   activity.on('idle', (seconds) => actors.setIdle(seconds));
   if (store.settings.sources.activity) activity.start();
   actors.updateUser();
+  actors.syncResidents();
   // Opening the app counts as checking in for the day (once the windows are there to show it).
   setTimeout(() => progress.checkIn(), 4000);
 
@@ -108,6 +110,7 @@ function boot() {
     const chars = JSON.parse(JSON.stringify(store.settings.characters));
     let slot;
     if (target === 'user' || target === 'ai') slot = chars[target];
+    else if (target.startsWith('resident:')) slot = (chars.residents || []).find((r) => r.id === target.slice(9));
     else if (target.startsWith('project:')) {
       const name = target.slice(8);
       chars.projects[name] ??= { ...chars.ai };
@@ -116,6 +119,29 @@ function boot() {
     if (!slot) return;
     if (skin !== undefined) slot.skin = skin;
     if (accessory !== undefined) slot.accessory = accessory;
+    store.updateSettings({ characters: chars });
+  });
+  // Residents: invite one in (a starter look; change it like any other character), rename, see them out.
+  handle('resident:add', (name) => {
+    const chars = JSON.parse(JSON.stringify(store.settings.characters));
+    chars.residents ??= [];
+    if (chars.residents.length >= MAX_RESIDENTS) return { error: `房間最多住 ${MAX_RESIDENTS} 位居民` };
+    const id = Date.now().toString(36);
+    const n = String(name || '').trim().slice(0, 12) || `居民 ${chars.residents.length + 1}`;
+    chars.residents.push({ id, name: n, skin: 'office', accessory: null });
+    store.updateSettings({ characters: chars });
+    return { id };
+  });
+  handle('resident:rename', ({ id, name }) => {
+    const chars = JSON.parse(JSON.stringify(store.settings.characters));
+    const r = (chars.residents || []).find((x) => x.id === id);
+    if (!r) return;
+    r.name = String(name || '').trim().slice(0, 12) || r.name;
+    store.updateSettings({ characters: chars });
+  });
+  handle('resident:remove', (id) => {
+    const chars = JSON.parse(JSON.stringify(store.settings.characters));
+    chars.residents = (chars.residents || []).filter((x) => x.id !== id);
     store.updateSettings({ characters: chars });
   });
   handle('project:forget', (name) => {
@@ -176,9 +202,12 @@ function boot() {
     if (!a) return;
     const items = [{ label: a.name || 'Deskmate', enabled: false }, { type: 'separator' }];
     if (a.cwd) items.push({ label: '開啟專案資料夾', click: () => shell.openPath(a.cwd) });
-    items.push({ label: '換角色…', click: () => windows.openGuild(a.kind === 'user' ? 'equip:user' : `equip:project:${a.name}`) });
+    const equip = a.kind === 'user' ? 'equip:user' : a.kind === 'resident' ? `equip:${a.id}` : `equip:project:${a.name}`;
+    items.push({ label: '換角色…', click: () => windows.openGuild(equip) });
     if (a.kind === 'user') {
       items.push(focus.state ? { label: '🍅 停止番茄鐘', click: () => focus.stop() } : { label: '🍅 開始專注', click: () => focus.start() });
+    } else if (a.kind === 'resident') {
+      items.push({ label: '請他搬走', click: () => store.updateSettings({ characters: { ...store.settings.characters, residents: (store.settings.characters.residents || []).filter((r) => `resident:${r.id}` !== a.id) } }) });
     } else {
       items.push({ label: '叫他下班', click: () => actors.remove(id) });
     }
