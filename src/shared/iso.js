@@ -253,8 +253,26 @@
       if ((x + y * 3) % 3 === 0) P.top(x * TU + 6, y * TU + ((x * 5) % 10) + 2, 2, 1, '#6e4628', z);
     } },
     grass: { base: '#5f9a4e', draw: (P, x, y, z) => {
+      const n = (k) => { const v = Math.sin((x + 3) * 12.9898 + (y + 5) * 78.233 + k * 37.719) * 43758.5453; return v - Math.floor(v); };
       P.top(x * TU, y * TU, TU, TU, (x * 3 + y) % 4 ? '#5f9a4e' : '#6aa857', z);
-      P.top(x * TU + ((x * 7 + y) % 12) + 2, y * TU + ((y * 5) % 12) + 2, 1, 2, '#83c06c', z);
+      // Darker and lighter patches, then tufts of blades.
+      if (n(1) < 0.5) P.top(x * TU + Math.floor(n(2) * 8), y * TU + Math.floor(n(3) * 8), 6, 5, '#578f47', z);
+      for (let i = 0; i < 4; i++) {
+        const [sx, sy] = P.p(x * TU + 2 + Math.floor(n(10 + i) * 12), y * TU + 2 + Math.floor(n(20 + i) * 12), z);
+        P.set(sx, sy - 1, '#83c06c');
+        P.set(sx + 1, sy - 2, '#9bd27f');
+        P.set(sx + 2, sy - 1, '#4f8a42');
+      }
+      // A flower or two, sometimes a pebble.
+      const petals = ['#ffffff', '#ffd65a', '#ff9ec0', '#b9a6ff'];
+      for (let i = 0; i < 2; i++) {
+        if (n(30 + i) > 0.42) continue;
+        const [sx, sy] = P.p(x * TU + 3 + Math.floor(n(40 + i) * 10), y * TU + 3 + Math.floor(n(50 + i) * 10), z);
+        const c = petals[Math.floor(n(60 + i) * petals.length)];
+        P.set(sx - 1, sy - 2, c); P.set(sx + 1, sy - 2, c); P.set(sx, sy - 3, c); P.set(sx, sy - 1, c);
+        P.set(sx, sy - 2, '#f5b942');
+      }
+      if (n(70) < 0.18) P.top(x * TU + 4 + Math.floor(n(71) * 8), y * TU + 4 + Math.floor(n(72) * 8), 3, 2, '#9a958c', z);
     } },
   };
 
@@ -1772,7 +1790,14 @@
       P.dot(x, y, -depth / 2 - (i % 3) * 4, '#f0a35e', 3, 1);
       P.dot(x + 3, y, -depth / 2 - (i % 3) * 4, '#e07a3a', 1, 1);
     }
+    // Caustics: wavy threads of light across the sand.
+    for (let k = 0; k < w * d; k++) {
+      const y = ((k * 37 + r[1] * 11) % (D - 4)) + 2;
+      for (let x = 0; x < L; x++) if (Math.sin(x / 2.3 + k * 1.7) + Math.sin(x / 5.1 + k) > 1.3) P.top(x, y + Math.round(Math.sin(x / 3 + k) * 1.5), 1, 1, 'rgba(255,250,210,0.45)', -depth);
+    }
     P.left(0, -depth, L, depth, 'rgba(30,110,190,0.62)', D);
+    // Shafts of light slanting down through the water.
+    for (let u = 6; u < L; u += 19) for (let v = 0; v < depth; v++) P.left(u + Math.floor(v / 3), -v - 1, 3, 1, 'rgba(210,245,255,0.10)', D + 0.1);
     P.right(D, -depth, D, depth, 'rgba(20,85,160,0.68)', L);
     P.top(0, 0, L, D, 'rgba(50,150,215,0.62)', 0);
     for (let i = 0; i < w * d; i++) P.top((i * 31) % (L - 6), (i * 13) % (D - 2), 5, 1, 'rgba(235,250,255,0.55)', 0);
@@ -1834,6 +1859,30 @@
   };
   const hash = (a, b) => { const v = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return v - Math.floor(v); };
 
+  // Ground left to the weather grows a little: moss in the joints of stone, a weed by the edge.
+  function groundDetail(P, room, f, r) {
+    const [x0, y0, w, d] = r;
+    const { floor } = floorOf(room, f);
+    if (floor !== 'stone' && floor !== 'tile' && floor !== 'plank') return;
+    for (let y = y0; y < y0 + d; y++) {
+      for (let x = x0; x < x0 + w; x++) {
+        if (!exposed(room, f, x, y)) continue;
+        const lx = (x - x0) * TU;
+        const ly = (y - y0) * TU;
+        if (floor === 'plank') {
+          if (hash(x, y) < 0.25) P.top(lx + 2 + Math.floor(hash(y, x) * 10), ly + 3, 2, 6, 'rgba(70,110,60,0.35)', 0);
+          continue;
+        }
+        for (let i = 0; i < 3; i++) if (hash(x * 5 + i, y) < 0.45) P.top(lx + Math.floor(hash(x, y + i) * 14), ly, 2, 1, '#5e7a46', 0);
+        if (hash(y, x * 3) < 0.35) P.top(lx + (y % 2 ? 8 : 0), ly + Math.floor(hash(x + 7, y) * 12), 1, 3, '#5e7a46', 0);
+        if (hash(x * 9, y * 9) < 0.12) {
+          const [sx, sy] = P.p(lx + 3 + Math.floor(hash(x, y * 2) * 10), ly + 3 + Math.floor(hash(x * 2, y) * 10), 0);
+          P.set(sx, sy - 1, '#6fae5a'); P.set(sx - 1, sy - 2, '#83c06c'); P.set(sx + 1, sy - 3, '#83c06c');
+        }
+      }
+    }
+  }
+
   function weatherFloor(P, room, f, r, weather) {
     const [x0, y0, w, d] = r;
     const lay = layoutOf(room);
@@ -1890,6 +1939,20 @@
         P.box(0, 0, -SLAB, w * TU, d * TU, SLAB, { t: fl.base, l: '#5a3a2a', r: '#432a1e' }, false);
         P.left(0, -SLAB, w * TU, 2, '#3a2418', d * TU);
         P.right(d * TU, -SLAB, d * TU, 2, '#2e1c13', w * TU);
+        // Vines trailing off the front edges of a low outdoor deck (a high one would hang them over
+        // the rooms below).
+        if (a.kind !== 'room' && a.z <= 64) {
+          const vine = (u, len, onLeft) => {
+            for (let v = 0; v < len; v++) {
+              const sway = Math.round(Math.sin(v / 3 + u) * 1);
+              const c = v % 3 === 0 ? '#62a656' : '#4f8f45';
+              if (onLeft) P.left(u + sway, -SLAB - v, 1, 1, c, d * TU + 0.5); else P.right(d * TU - u - sway, -SLAB - v, 1, 1, c, w * TU + 0.5);
+              if (v % 3 === 1) { if (onLeft) P.left(u + sway + 1, -SLAB - v, 2, 1, '#7cbf6a', d * TU + 0.5); else P.right(d * TU - u - sway + 1, -SLAB - v, 2, 1, '#7cbf6a', w * TU + 0.5); }
+            }
+          };
+          for (let u = 3; u < w * TU - 3; u += 7) if (hash(r[0] * 31 + u, r[1]) < 0.4) vine(u, 6 + Math.floor(hash(u, r[1] + 3) * 14), true);
+          for (let u = 3; u < d * TU - 3; u += 7) if (hash(r[1] * 31 + u, r[0]) < 0.4) vine(u, 6 + Math.floor(hash(u, r[0] + 5) * 14), false);
+        }
       } else if (a.z > 0 && a.base === 'earth') earthFaces(P, w, d, h, floor === 'grass');
       else if (a.z > 0) {
         brickFaces(P, w, d, h, base);
@@ -1899,6 +1962,7 @@
       else P.box(0, 0, -SLAB, w * TU, d * TU, SLAB, { t: fl.base, l: dk(fl.base, 0.3), r: dk(fl.base, 0.45) }, false);
       for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) fl.draw(P, x, y, 0);
       shadeFloor(P, room, f, r);
+      if (a.kind !== 'room' && a.kind !== 'water') groundDetail(P, room, f, r);
       if (wet) weatherFloor(P, room, f, r, wet);
       // A lit lip along the front edges, so each layer reads as separate.
       P.left(0, -2, w * TU, 2, lt(fl.base, 0.2), d * TU);
@@ -1966,7 +2030,7 @@
   // One stair tile: four treads climbing the way the flight goes, from half a rise below the
   // tile's height to half a rise above, so neighbouring tiles and the floors at each end meet in an
   // even run of steps. Solid steps are stone built up from the ground; open ones are metal treads
-  // on a stringer, with a handrail.
+  // on a stringer.
   const TREADS = 4;
   function stairSprite(c, room) {
     const h = c.z - c.base;
@@ -1998,15 +2062,6 @@
         else P.box(TU - 2, u, z1 - 6, 2, D, 5, '#3a3f50', false);
       }
       for (const [u, z1] of treads) at(u, z1 - 2, 2, metal, true);
-      // Handrail: a post at the middle and a bar that follows the climb.
-      const mid = treads[TREADS / 2][1];
-      if (c.dir === 'y') {
-        P.box(TU - 2, 7, mid, 2, 2, 18, '#5a6075', false);
-        for (const [u, z1] of treads) P.box(TU - 2, u, z1 + 17, 2, D, 2, '#8a92aa', false);
-      } else {
-        P.box(7, TU - 2, mid, 2, 2, 18, '#5a6075', false);
-        for (const [u, z1] of treads) P.box(u, TU - 2, z1 + 17, D, 2, 2, '#8a92aa', false);
-      }
     }, false, h + 8));
   }
 
@@ -2146,17 +2201,83 @@
 
   // Light by the hour: night sinks the room into blue and lets every lamp and screen bloom;
   // dusk and dawn warm it; the day is plain and the lamps fade.
-  // Tints run top to bottom, so the ground sits a little deeper in the dark than the roofs.
+  // Light by the hour and the weather. After dark (and at dusk, and under rain) the room is lit with
+  // a light map: everything sinks to a cool ambient colour, and every lamp, screen and lit room
+  // gives back a warm circle of its own light, falling off with distance; the edges sink into a
+  // vignette. The day keeps its own colours, with a warm wash late in the afternoon.
   function lightFor(hour, weather) {
     let L;
-    if (hour >= 20 || hour < 5) L = { tint: ['rgba(26,32,84,0.36)', 'rgba(10,12,44,0.54)'], glow: 1.7, indoor: 1 };
-    else if (hour >= 18 || hour < 6) L = { tint: ['rgba(70,36,100,0.16)', 'rgba(50,24,80,0.3)'], warm: 'rgba(255,130,70,0.10)', glow: 1.3, indoor: 0.6 };
+    if (hour >= 20 || hour < 5) L = { ambient: [62, 70, 128], glow: 0.9, indoor: 1, vignette: 0.45, reach: 1 };
+    else if (hour >= 18 || hour < 6) L = { ambient: [205, 150, 170], glow: 0.8, indoor: 0.5, vignette: 0.25, reach: 0.7, warm: 'rgba(255,130,70,0.08)' };
     else if (hour >= 16) L = { warm: 'rgba(255,170,90,0.09)', glow: 0.9 };
     else L = { glow: 0.75 };
-    // Rain greys the sky and brings the lamps up; snow brightens and cools it.
-    if (weather === 'rain') L = { ...L, sky: ['rgba(60,72,100,0.24)', 'rgba(40,50,80,0.3)'], glow: L.glow + 0.4, indoor: Math.max(L.indoor || 0, 0.5) };
-    if (weather === 'snow') L = { ...L, sky: ['rgba(225,235,255,0.12)', 'rgba(200,215,245,0.06)'] };
+    if (weather === 'rain') {
+      const a = L.ambient || [196, 204, 222];
+      L = { ...L, ambient: [a[0] * 0.82, a[1] * 0.86, a[2] * 0.92], indoor: Math.max(L.indoor || 0, 0.45), vignette: Math.max(L.vignette || 0, 0.3), reach: L.reach || 0.6, glow: (L.glow || 0.75) + 0.2 };
+    }
+    if (weather === 'snow') {
+      if (L.ambient) L = { ...L, ambient: L.ambient.map((v) => Math.min(255, v + 18)) };
+      else L = { ...L, sky: ['rgba(225,235,255,0.12)', 'rgba(200,215,245,0.06)'] };
+    }
     return L;
+  }
+
+  const rgbaParts = (c) => (c.match(/[\d.]+/g) || []).map(Number);
+  const mix = (a, k) => `rgb(${a.map((v) => Math.round(Math.min(255, v * k))).join(',')})`;
+  let LIGHTMAP = null;
+  function applyLightmap(ctx, room, z, lights, light) {
+    const W = ctx.canvas.width;
+    const H = ctx.canvas.height;
+    if (!LIGHTMAP || LIGHTMAP.width !== W || LIGHTMAP.height !== H) LIGHTMAP = makeCanvas(W, H);
+    const g = LIGHTMAP.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 1;
+    // Ambient, a touch brighter up top where the sky reaches.
+    const amb = g.createLinearGradient(0, 0, 0, H);
+    amb.addColorStop(0, mix(light.ambient, 1.12));
+    amb.addColorStop(1, mix(light.ambient, 0.86));
+    g.fillStyle = amb;
+    g.fillRect(0, 0, W, H);
+    g.setTransform(ctx.getTransform());
+    g.globalCompositeOperation = 'lighter';
+    // Lit rooms: a broad warm light over every indoor floor.
+    if (light.indoor) {
+      layoutOf(room).areas.forEach((a) => {
+        if (a.kind !== 'room') return;
+        for (const [x, y, w, d] of a.rects) {
+          const p = project(room, (x + w / 2) * TU, (y + d / 2) * TU, a.z + 24);
+          bloom(g, p.x * z, p.y * z, Math.max(w, d) * TU * 1.05 * z, `rgba(255,196,128,${0.85 * light.indoor})`, false);
+        }
+      });
+    }
+    // Every glow in the scene is a light: wider and stronger than its bloom.
+    for (const [sp, it] of lights) {
+      const p = project(room, it.wx, it.wy, it.wz);
+      for (const gl of sp.glows) {
+        const [r, gg, b, a = 1] = rgbaParts(gl.c);
+        const x = (p.x - sp.ax + gl.x) * z;
+        const y = (p.y - sp.ay + gl.y) * z;
+        bloom(g, x, y, gl.r * z * (gl.pool ? 1.6 : 2.4), `rgba(${r},${gg},${b},${Math.min(1, a * 2 * light.reach)})`, gl.pool);
+      }
+    }
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    if (light.vignette) {
+      const v = g.createRadialGradient(W / 2, H * 0.55, Math.min(W, H) * 0.22, W / 2, H * 0.55, Math.max(W, H) * 0.72);
+      v.addColorStop(0, 'rgba(0,0,0,0)');
+      v.addColorStop(1, `rgba(0,0,0,${light.vignette})`);
+      g.globalCompositeOperation = 'source-over';
+      g.fillStyle = v;
+      g.fillRect(0, 0, W, H);
+    }
+    // Only over what is drawn, then multiplied in.
+    g.globalCompositeOperation = 'destination-in';
+    g.drawImage(ctx.canvas, 0, 0);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(LIGHTMAP, 0, 0);
+    ctx.restore();
   }
 
   // Falling weather, worked out from the clock alone: each particle loops from up high down to a
@@ -2289,23 +2410,12 @@
       blit(ctx, room, sp, it.wx, it.wy, it.wz, z);
       if (sp.glows.length) lights.push([sp, it]);
     }
-    // Tint only what is drawn, then add the light on top.
+    // The light map when it is dark enough to need one; washes of colour otherwise. The canvas must
+    // hold only this room: the light map is cut to what is drawn there.
+    if (light.ambient) applyLightmap(ctx, room, z, lights, light);
     ctx.save();
-    for (const c of [light.sky, light.tint, light.warm]) wash(ctx, c, 'source-atop');
+    for (const c of [light.sky, light.warm]) wash(ctx, c, 'source-atop');
     ctx.restore();
-    // After dark the rooms are lit from inside: a warm pool on every indoor floor.
-    if (light.indoor) {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      layoutOf(room).areas.forEach((a) => {
-        if (a.kind !== 'room') return;
-        for (const [x, y, w, d] of a.rects) {
-          const p = project(room, (x + w / 2) * TU, (y + d / 2) * TU, a.z);
-          bloom(ctx, p.x * z, p.y * z, Math.max(w, d) * TU * 0.9 * z, `rgba(255,190,120,${0.16 * light.indoor})`, true);
-        }
-      });
-      ctx.restore();
-    }
     for (let pass = light.glow; pass > 0; pass -= 1) {
       for (const [sp, it] of lights) glows(ctx, room, sp, it.wx, it.wy, it.wz, z, Math.min(1, pass));
     }
@@ -2389,10 +2499,11 @@
     ctx.imageSmoothingEnabled = false;
     const st = { frame: 1, active: true, now: Date.now(), hour: opts.hour ?? 20, weather: opts.weather, meeting: true };
     rooms.forEach((room, k) => {
-      ctx.save();
-      ctx.translate(k * S.w * z, (S.h - size(room).h) * z);
-      drawRoom(ctx, room, z, () => st, []);
-      ctx.restore();
+      const one = makeCanvas(size(room).w * z, size(room).h * z);
+      const oc = one.getContext('2d');
+      oc.imageSmoothingEnabled = false;
+      drawRoom(oc, room, z, () => st, []);
+      ctx.drawImage(one, k * S.w * z, (S.h - size(room).h) * z);
     });
     // The backdrop goes in last, so the light falls on the rooms only, as it does in the app.
     ctx.globalCompositeOperation = 'destination-over';
