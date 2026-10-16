@@ -15,6 +15,7 @@ public static class Fg {
   [DllImport("user32.dll")] public static extern IntPtr MonitorFromWindow(IntPtr h, uint flags);
   [DllImport("user32.dll")] public static extern bool GetMonitorInfo(IntPtr m, ref MONITORINFO mi);
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetClassName(IntPtr h, StringBuilder s, int n);
+  [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr h, int index);
 }
 "@
 $last = ''
@@ -33,7 +34,10 @@ while ($true) {
   $mi = New-Object Fg+MONITORINFO
   $mi.cbSize = [System.Runtime.InteropServices.Marshal]::SizeOf($mi)
   [void][Fg]::GetMonitorInfo([Fg]::MonitorFromWindow($h, 2), [ref]$mi)
-  $full = ($cls -ne 'Progman') -and ($cls -ne 'WorkerW') -and ($cls -ne 'Shell_TrayWnd') -and
+  # Layered/click-through overlays (desktop pets, widgets) can span the screen without being "full screen".
+  $ex = [Fg]::GetWindowLong($h, -20)
+  $overlay = (($ex -band 0x80000) -ne 0) -or (($ex -band 0x20) -ne 0)
+  $full = (-not $overlay) -and ($cls -ne 'Progman') -and ($cls -ne 'WorkerW') -and ($cls -ne 'Shell_TrayWnd') -and
     ($r.L -le $mi.rcMonitor.L) -and ($r.T -le $mi.rcMonitor.T) -and ($r.R -ge $mi.rcMonitor.R) -and ($r.B -ge $mi.rcMonitor.B)
   $line = "$name|$full"
   if ($line -ne $last) {

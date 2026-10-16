@@ -1,49 +1,63 @@
 # Deskmates
 
-陪你上班的桌上小夥伴。目前每個 Claude Code session 會變成一隻像素小騎士（Deskmates 的吉祥物），站在工作列上方，演出 Claude 正在做的事。
-用的是 Claude Code 的 http hooks，不需要改變你使用終端機的習慣。
+陪你上班的桌上小夥伴。像素角色住在工作列上方，演出你和 AI 正在做的事：你寫程式他打字、Claude 在讀檔他捧書、等你批准時他跳起來揮手。
 
-| Claude 在做什麼 | 騎士的樣子 |
+不用 AI 也能玩：開「電腦活動」來源，代表你的角色會跟著前景程式切換動作。
+
+## 兩種模式
+
+- **工作列**：角色直接站在工作列上，可以拖、可以甩，點一下看資訊、雙擊摸頭
+- **房間**：一間貼著工作列、橫跨整個螢幕的小辦公室（比例同 Pixel Crew：16px 地磚、12x16 的小人、預設 2 倍）。角色會走到對應的家具：寫程式去電腦桌、下指令去伺服器、讀檔去書櫃、開 subagent 去會議桌、等批准去按櫃台鈴、閒置去沙發
+
+兩邊都有按鈕可以互相切換（工作列右下角的小工具列、房間右上角的工具列）。
+
+## 角色在演什麼
+
+| 來源 | 會發生什麼 |
 |---|---|
-| 收到你的指令 | 💭 思考中…（先顯示一下你的指令） |
-| Read / Grep / WebSearch… | 📖 捧著書看 |
-| Edit / Write / Bash… | 🔨 在鐵砧上打鐵，氣泡顯示工具和檔名 |
-| 開 subagent | 旁邊多出小騎士幫忙打鐵 |
-| 等你批准權限 | ❗ 黃色氣泡、跳上跳下揮手 |
-| 回合結束 | ✨ 舉劍、閃閃發光 |
-| 閒置 | 在工作列上走來走去，3 分鐘後坐下睡覺 💤 |
-| session 結束 | 👋 走出畫面 |
+| Claude Code hooks | 每個 session 一位夥伴；你送出指令時，你的角色會走過去把話說出來 |
+| 電腦活動 | 依前景程式：VS Code／Unity → 寫程式、Photoshop／Aseprite → 畫畫、瀏覽器 → 上網、Spotify → 跳舞…（設定裡可以自訂對應表）；離開電腦就睡覺 |
+| 番茄鐘 | 專注倒數、休息時去喝咖啡 |
+| 通用 API | 任何程式 POST 到 `http://127.0.0.1:47321/api/event` 就能驅動一位夥伴 |
+| Codex CLI | `notify = ["curl", "-s", "-m", "1", "http://127.0.0.1:47321/codex", "-H", "Content-Type: application/json", "-d"]` |
 
-## 使用
+隱私：只讀前景程式的名稱和有沒有在活動，不記錄鍵盤輸入，也不讀視窗內容。所有資料都只在本機。
 
-- **啟動**：雙擊 `start-deskmates.vbs`（或 `npm start`）
-- **示範**：`npm run demo`，或從系統匣圖示選「播放示範」
-- **點騎士**：顯示詳細資訊（專案、狀態、最後指令、上工時間）
-- **拖曳騎士**：把他抓起來甩，放開會掉下去
-- **右鍵騎士**：開啟專案資料夾 / 叫他下班
-- **系統匣圖示**：顯示／隱藏、重新排隊、全部下班、開機自動啟動、結束
+## 收集
 
-## Hooks
+- **金幣只能靠工作賺**：AI 完成回合、完成番茄鐘、陪伴時間、打倒哥布林、開寶箱。沒有任何付費管道
+- **招募**：10 🪙 抽一次，抽角色、配件、家具、地板、牆面；重複退 3 🪙，十連保底稀有以上
+- **圖鑑、成就、每週戰績卡**（可存成圖片分享）
+- **隨機事件**：工具失敗時冒出哥布林、長任務完成掉寶箱、context 壓縮時巨龍飛過
 
-`npm run install-hooks` 會在 `~/.claude/settings.json` 為 12 個事件加上
-`{"type": "http", "url": "http://127.0.0.1:47321/event"}`。不會動到既有的 hooks，原檔會備份成
-`settings.json.bak-deskmates`。`npm run uninstall-hooks` 可以移除。
+## 自訂
 
-Deskmates 沒開時 hook 連不上會直接略過，不會擋到 Claude。伺服器只綁 127.0.0.1，回應永遠是空的 204，
-所以不會影響 Claude 的任何決定。
+- 8 種內建角色（騎士、上班族、法師、貓貓、機器人、忍者、廚師、太空人）和 8 種配件
+- 房間編輯器：擺家具、塗地板、換牆面、調高度
+- 自己的素材放進 `%APPDATA%\Deskmates\custom\`：
+  - `characters/<名稱>/`：Aseprite 匯出的 PNG + JSON，用 frame tag 命名動作（idle、walk、work、read、wait、done、sleep…）
+  - `tiles/`：16x16 PNG，房間編輯器的「自訂地板」可以直接塗
 
-想換 port 就設環境變數 `DESKMATES_PORT`，程式和安裝腳本都會讀這個變數。
-
-## 結構
+## 開發
 
 ```
-src/main.js            Electron 主程式：透明置頂視窗、系統匣、本機 HTTP 伺服器
-src/summarize.js       把 hook payload 濃縮成畫面需要的欄位
-src/demo.js            假事件腳本
-src/renderer/sprite.js 程式繪製的像素騎士（32x28 格）
-src/renderer/pet.js    每個 session 的狀態機、動畫、拖曳、資訊卡
-scripts/install-hooks.js
+npm install
+npm start              # 啟動
+npm run demo           # 播放示範
+npm run install-hooks  # 安裝 Claude Code hooks（設定視窗也有按鈕）
+npm run preview -- chars out.png   # 輸出角色/家具預覽圖（chars | fx | room）
 ```
+
+啟動參數：`--demo`、`--mode=room|strip`、`--open=settings|guild`；設 `DESKMATES_DEBUG=1` 會印出 hook 事件和視窗 console。
+
+```
+src/main/        主程式：actors（角色狀態）、progress（金幣/成就/招募）、fx（隨機事件）、
+                 focus（番茄鐘）、activity（前景程式偵測）、server（HTTP）、windows、tray、store
+src/shared/      主程式和畫面共用：catalog（物品/成就）、sprites（角色）、furniture（房間）
+src/renderer/    strip（工作列）、room（房間 + 編輯器）、settings、guild（公會手冊）
+```
+
+美術全部用程式畫，沒有外部素材。
 
 ## 授權
 
