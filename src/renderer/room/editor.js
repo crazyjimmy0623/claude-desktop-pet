@@ -134,6 +134,18 @@
         }));
       }
       palette.append(row);
+      // Time of day and weather, the same switches as in the settings.
+      const sky = document.createElement('div');
+      sky.className = 'row';
+      const S = RoomApp.state.settings || {};
+      const pickSetting = (patch) => desk.invoke('settings:set', patch).then(() => { Object.assign(RoomApp.state.settings, patch); refresh(); });
+      for (const [id, name] of [['clock', '🕒 跟著時鐘'], ['day', '☀️ 白天'], ['dusk', '🌇 傍晚'], ['night', '🌙 夜晚']]) {
+        sky.append(button(name, null, (S.timeOfDay || 'clock') === id, () => pickSetting({ timeOfDay: id })));
+      }
+      for (const [id, name] of Object.entries(Iso.WEATHERS)) {
+        sky.append(button(`天氣：${name}`, null, (S.weather || 'auto') === id, () => pickSetting({ weather: id })));
+      }
+      palette.append(sky);
     }
   }
 

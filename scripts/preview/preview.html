@@ -66,8 +66,10 @@ if (mode === 'chars') {
 } else if (mode === 'fx') {
   c.width = 700; c.height = 140; ctx.fillStyle = '#3b4a5a'; ctx.fillRect(0,0,c.width,c.height);
   let x = 10; for (const k of Object.keys(Sprites.FX)) for (let f = 0; f < 2; f++) { Sprites.drawFxAt(ctx, 4, x, 20, k, f); x += Sprites.FX[k].w * 4 + 16; }
-} else if (mode === 'iso') {
-  Iso.preview(c, 2);
+} else if (mode.startsWith('iso')) {
+  // iso, iso12, iso20-rain: the hour and the weather to light the rooms with.
+  const [, h, w] = mode.match(/^iso(\d+)?-?(\w+)?/);
+  Iso.preview(c, 2, { hour: h ? +h : 20, weather: w || null });
 }
 document.title = 'ready';
 </script></body></html>

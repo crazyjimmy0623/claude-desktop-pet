@@ -513,9 +513,11 @@ function draw(now) {
     if (s && (v.actor.state === 'work' || v.actor.state === 'wait')) active.add(s.objIndex);
     if (s?.type === 'meeting') meeting = true;
   }
-  const hour = new Date(now).getHours();
+  // The room's light and weather: the clock, or whatever the settings pin them to.
+  const hour = { day: 13, dusk: 18, night: 22 }[state.settings?.timeOfDay] ?? new Date(now).getHours();
+  const weather = Iso.weatherFor(state.settings?.weather, now);
   const frame = Math.floor(now / 250);
-  const objState = (i) => ({ frame, active: active.has(i), now, hour, meeting });
+  const objState = (i) => ({ frame, active: active.has(i), now, hour, meeting, weather });
 
   const extra = [];
   for (const v of state.views.values()) {

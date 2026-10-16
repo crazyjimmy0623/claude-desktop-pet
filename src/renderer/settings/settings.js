@@ -30,6 +30,8 @@ const renderers = [
   bindCheckbox('hideInFullscreen', () => settings.hideInFullscreen, (v) => ({ hideInFullscreen: v })),
   bindSelect('scale', () => settings.scale, (v) => ({ scale: v }), true),
   bindSelect('roomZoom', () => settings.roomZoom, (v) => ({ roomZoom: v }), true),
+  bindSelect('timeOfDay', () => settings.timeOfDay, (v) => ({ timeOfDay: v })),
+  bindSelect('weather', () => settings.weather, (v) => ({ weather: v })),
   bindCheckbox('ambient', () => settings.ambient, (v) => ({ ambient: v })),
   bindCheckbox('src-claude', () => settings.sources.claude, (v) => ({ sources: { ...settings.sources, claude: v } })),
   bindCheckbox('src-activity', () => settings.sources.activity, (v) => ({ sources: { ...settings.sources, activity: v } })),

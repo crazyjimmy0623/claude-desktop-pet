@@ -15,6 +15,8 @@ const DEFAULTS = {
     hideInFullscreen: true,
     scale: 3,
     roomZoom: 2,
+    timeOfDay: 'clock', // clock | day | dusk | night
+    weather: 'auto', // auto | clear | rain | snow | petals | leaves
     roomPos: null, // { right, bottom } of the floating room window
     sources: { claude: true, activity: true },
     userName: '你',

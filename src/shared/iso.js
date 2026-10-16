@@ -140,9 +140,10 @@
       for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) this.set(sx + i, sy + j, c);
     }
 
-    glow(x, y, z, r, c) {
+    // A light's bloom; a pool lies flat on the floor, twice as wide as it is deep.
+    glow(x, y, z, r, c, pool = false) {
       const [sx, sy] = this.p(x, y, z);
-      this.glows.push({ x: sx, y: sy, r, c });
+      this.glows.push({ x: sx, y: sy, r, c, pool });
     }
 
     // Outer pixels take a deeper shade of their own colour: no black outlines.
@@ -436,6 +437,7 @@
       P.box(3, 3, 30, 10, 10, 9, '#f1d9a8');
       P.top(4, 4, 8, 8, '#fff3d0', 39);
       P.glow(8, 8, 32, 26, 'rgba(255,200,120,0.45)');
+      P.glow(8, 8, 0, 26, 'rgba(255,200,120,0.22)', true);
     } },
     rug: { w: 2, d: 2, h: 1, flat: true, draw: (P) => {
       P.top(1, 1, 30, 30, '#a9483f', 0.5);
@@ -568,7 +570,7 @@
       const on = s.hour >= 17 || s.hour < 7;
       P.top(5, 5, 6, 6, on ? '*#fff4cc' : '#c9c1a0', 58);
       P.glow(8, 8, 56, on ? 34 : 16, on ? 'rgba(255,220,150,0.5)' : 'rgba(255,220,150,0.15)');
-      if (on) P.glow(8, 8, 2, 26, 'rgba(255,210,140,0.25)');
+      if (on) P.glow(8, 8, 0, 34, 'rgba(255,210,140,0.32)', true);
     } },
     telescope: { anim: true, w: 1, d: 1, h: 34, station: 'web', stations: [{ dx: 0, dy: 1 }], draw: (P, s) => {
       for (const [x, y] of [[5, 5], [11, 6], [8, 11]]) P.box(x, y, 0, 1, 1, 16, '#5a4a3a', false);
@@ -576,14 +578,16 @@
       for (let i = 0; i < 7; i++) P.box(4 + i, 9 - i * 0.6, 18 + i * 1.6, 3, 3, 3, i === 6 ? '#c9a24a' : '#3f6fb0', false);
       if (s.active && s.frame % 3 === 0) P.dot(14, 3, 32, '*#ffffff', 1, 1);
     } },
-    tree: { w: 1, d: 1, h: 84, draw: (P) => {
+    tree: { w: 1, d: 1, h: 84, draw: (P, s) => {
       P.box(6, 6, 0, 4, 4, 30, { t: '#6e4428', l: '#6e4428', r: '#55331d' }, false);
       for (const [x, y, z, r, c] of [[8, 8, 40, 11, '#3f7a3a'], [4, 9, 50, 8, '#4f8f45'], [12, 6, 54, 8, '#4f8f45'], [8, 8, 62, 8, '#62a656'], [7, 9, 70, 5, '#7cbf6a']]) P.disc(x, y, z, r, c);
       P.dot(3, 9, 54, '#9fd88a', 2, 1);
       P.dot(10, 7, 66, '#9fd88a', 2, 1);
+      if (s.weather === 'snow') for (const [x, y, z, r] of [[8, 8, 46, 7], [4, 9, 55, 5], [12, 6, 59, 5], [8, 8, 67, 5], [7, 9, 73, 3]]) P.disc(x, y, z, r, '#eef3fa');
     } },
-    bush: { w: 1, d: 1, h: 22, draw: (P) => {
+    bush: { w: 1, d: 1, h: 22, draw: (P, s) => {
       for (const [x, y, z, r, c] of [[8, 8, 7, 7, '#3f7a3a'], [5, 9, 10, 5, '#4f8f45'], [11, 7, 11, 5, '#4f8f45'], [8, 8, 14, 4, '#62a656']]) P.disc(x, y, z, r, c);
+      if (s.weather === 'snow') for (const [x, y, z, r] of [[8, 8, 17, 3.5], [5, 9, 13, 3], [11, 7, 14, 3]]) P.disc(x, y, z, r, '#eef3fa');
       P.dot(6, 9, 15, '#ff8fb1', 1, 1);
       P.dot(11, 7, 16, '#ffd65a', 1, 1);
     } },
@@ -674,6 +678,7 @@
       P.left(6, 29, 4, 6, s.hour >= 17 || s.hour < 7 ? '*#ffe7a8' : '#d9c9a0', 7.5);
       P.box(5, 3, 36, 6, 4, 2, '#2e3240', false);
       P.glow(8, 6, 32, 16, 'rgba(255,214,140,0.45)');
+      P.glow(8, 14, 0, 20, 'rgba(255,214,140,0.2)', true);
     } },
     meter: { w: 1, d: 0, h: 34, top: 30, wall: true, z: 10, draw: (P) => {
       P.box(3, 0, 12, 10, 3, 14, { t: '#9aa0aa', l: '#8a909c', r: '#6e7480' }, false);
@@ -1630,7 +1635,7 @@
 
   function objectSprite(type, flip, s) {
     const def = OBJECTS[type];
-    const key = `${type}|${flip ? 1 : 0}|${def.anim || def.wall ? `${s.active ? 1 : 0}|${s.frame % 8}|${s.hour}|${s.meeting ? 1 : 0}` : ''}`;
+    const key = `${type}|${flip ? 1 : 0}|${s.weather || ''}|${def.anim || def.wall ? `${s.active ? 1 : 0}|${s.frame % 8}|${s.hour}|${s.meeting ? 1 : 0}` : ''}`;
     return cached(key, () => renderSprite(def.w, Math.max(def.d, 1), def.h, (P) => {
       // A soft contact shadow on the floor under anything that stands on it.
       if (!def.wall && !def.flat && !def.onWater) {
@@ -1788,7 +1793,46 @@
   }
 
   // One rect of an area: its floor and, for raised areas, the brick base down to the ground.
-  function slabSprite(room, f, r) {
+  // Tiles open to the sky: outside, with nothing built above them.
+  const exposed = (room, f, x, y) => {
+    const a = layoutOf(room).areas[f];
+    return a.kind !== 'room' && !layoutOf(room).tilesAt(x, y).some((t) => t.z > a.z);
+  };
+  const hash = (a, b) => { const v = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return v - Math.floor(v); };
+
+  function weatherFloor(P, room, f, r, weather) {
+    const [x0, y0, w, d] = r;
+    const lay = layoutOf(room);
+    for (let y = y0; y < y0 + d; y++) {
+      for (let x = x0; x < x0 + w; x++) {
+        if (!exposed(room, f, x, y)) continue;
+        const lx = (x - x0) * TU;
+        const ly = (y - y0) * TU;
+        if (weather === 'snow') {
+          for (let v = 0; v < TU; v += 4) for (let u = 0; u < TU; u += 4) {
+            P.top(lx + u, ly + v, 4, 4, hash(x * 4 + u, y * 4 + v) < 0.93 ? 'rgba(238,243,252,0.94)' : 'rgba(225,233,248,0.6)', 0);
+          }
+          if (hash(x, y) < 0.5) P.top(lx + 3 + Math.floor(hash(y, x) * 8), ly + 4 + Math.floor(hash(x + 1, y) * 8), 3, 1, 'rgba(196,210,236,0.9)', 0);
+        } else if (weather === 'rain') {
+          P.top(lx, ly, TU, TU, (c) => dk(c, 0.12), 0);
+          if (hash(x, y) < 0.34) {
+            P.top(lx + 3, ly + 4, 9, 7, 'rgba(70,96,150,0.5)', 0);
+            P.top(lx + 4, ly + 5, 4, 1, 'rgba(220,235,255,0.55)', 0);
+          }
+        } else if (weather === 'petals' || weather === 'leaves') {
+          const cols = weather === 'petals' ? ['#ffb7c9', '#ffd1dc', '#f59ab5'] : ['#e0873a', '#c9602a', '#e8b04a'];
+          for (let i = 0; i < 4; i++) if (hash(x * 3 + i, y) < 0.7) P.top(lx + 2 + Math.floor(hash(x, y * 3 + i) * 11), ly + 2 + Math.floor(hash(y, x + i) * 11), 2, 1, cols[i % 3], 0);
+        }
+      }
+    }
+    // Snow on the front lip as well, so the cover reads from the side.
+    if (weather === 'snow' && lay.areas[f].kind !== 'room') {
+      for (let x = x0; x < x0 + w; x++) if (exposed(room, f, x, y0 + d - 1)) P.left((x - x0) * TU, -2, TU, 3, '#e6edf8', d * TU);
+      for (let y = y0; y < y0 + d; y++) if (exposed(room, f, x0 + w - 1, y)) P.right(d * TU - (y - y0) * TU, -2, TU, 3, '#cfd9ea', w * TU);
+    }
+  }
+
+  function slabSprite(room, f, r, weather) {
     const a = layoutOf(room).areas[f];
     const { floor } = floorOf(room, f);
     const base = (WALLS[floorOf(room, 0).wall] || WALLS.brick).base;
@@ -1798,7 +1842,8 @@
     const depth = a.depth || 40;
     const h = a.kind === 'water' ? depth + SLAB : stilts ? a.z + SLAB : a.thin ? SLAB : a.z + SLAB;
     const lay = layoutOf(room);
-    return cached(`slab|${lay.id}|${f}|${r}|${floor}|${base}`, () => renderSprite(w, d, 8, (P) => {
+    const wet = a.kind !== 'room' && a.kind !== 'water' ? weather || '' : '';
+    return cached(`slab|${lay.id}|${f}|${r}|${floor}|${base}|${wet}`, () => renderSprite(w, d, 8, (P) => {
       if (a.kind === 'water') { waterBox(P, w, d, depth, r); return; }
       if (a.thin) { // a floor on joists: a timber edge with a beam showing underneath
         if (stilts) stiltPosts(P, w, d, a.z);
@@ -1814,6 +1859,7 @@
       else P.box(0, 0, -SLAB, w * TU, d * TU, SLAB, { t: fl.base, l: dk(fl.base, 0.3), r: dk(fl.base, 0.45) }, false);
       for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) fl.draw(P, x, y, 0);
       shadeFloor(P, room, f, r);
+      if (wet) weatherFloor(P, room, f, r, wet);
       // A lit lip along the front edges, so each layer reads as separate.
       P.left(0, -2, w * TU, 2, lt(fl.base, 0.2), d * TU);
       P.right(d * TU, -2, d * TU, 2, lt(fl.base, 0.1), w * TU);
@@ -1939,7 +1985,7 @@
       for (const r of a.rects) {
         const [x, y, w, d] = r;
         const z0 = a.kind === 'water' ? a.z - (a.depth || 40) - SLAB : a.thin ? a.z - SLAB : -SLAB;
-        items.push({ x0: x, y0: y, x1: x + w - e, y1: y + d - e, z0, z1: a.z, sprite: () => slabSprite(room, f, r), wx: x * TU, wy: y * TU, wz: a.z });
+        items.push({ x0: x, y0: y, x1: x + w - e, y1: y + d - e, z0, z1: a.z, sprite: () => slabSprite(room, f, r, s(-1).weather), wx: x * TU, wy: y * TU, wz: a.z });
       }
       for (const wall of a.walls) {
         if (wall[5]) continue;
@@ -2022,26 +2068,123 @@
     for (const g of sp.glows) {
       const x = (p.x - sp.ax + g.x) * z;
       const y = (p.y - sp.ay + g.y) * z;
-      const grad = ctx.createRadialGradient(x, y, 0, x, y, g.r * z);
-      grad.addColorStop(0, g.c);
-      grad.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(x - g.r * z, y - g.r * z, g.r * 2 * z, g.r * 2 * z);
+      bloom(ctx, x, y, g.r * z, g.c, g.pool);
     }
+    ctx.restore();
+  }
+  function bloom(ctx, x, y, r, c, pool) {
+    ctx.save();
+    ctx.translate(x, y);
+    if (pool) ctx.scale(1, 0.5);
+    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+    grad.addColorStop(0, c);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(-r, -r, r * 2, r * 2);
     ctx.restore();
   }
 
   // Light by the hour: night sinks the room into blue and lets every lamp and screen bloom;
   // dusk and dawn warm it; the day is plain and the lamps fade.
-  function lightFor(hour) {
-    if (hour >= 20 || hour < 5) return { tint: 'rgba(14,18,56,0.46)', glow: 1.7 };
-    if (hour >= 18 || hour < 6) return { tint: 'rgba(60,30,90,0.24)', warm: 'rgba(255,130,70,0.10)', glow: 1.3 };
-    if (hour >= 16) return { warm: 'rgba(255,170,90,0.09)', glow: 0.9 };
-    return { glow: 0.75 };
+  // Tints run top to bottom, so the ground sits a little deeper in the dark than the roofs.
+  function lightFor(hour, weather) {
+    let L;
+    if (hour >= 20 || hour < 5) L = { tint: ['rgba(26,32,84,0.36)', 'rgba(10,12,44,0.54)'], glow: 1.7, indoor: 1 };
+    else if (hour >= 18 || hour < 6) L = { tint: ['rgba(70,36,100,0.16)', 'rgba(50,24,80,0.3)'], warm: 'rgba(255,130,70,0.10)', glow: 1.3, indoor: 0.6 };
+    else if (hour >= 16) L = { warm: 'rgba(255,170,90,0.09)', glow: 0.9 };
+    else L = { glow: 0.75 };
+    // Rain greys the sky and brings the lamps up; snow brightens and cools it.
+    if (weather === 'rain') L = { ...L, sky: ['rgba(60,72,100,0.24)', 'rgba(40,50,80,0.3)'], glow: L.glow + 0.4, indoor: Math.max(L.indoor || 0, 0.5) };
+    if (weather === 'snow') L = { ...L, sky: ['rgba(225,235,255,0.12)', 'rgba(200,215,245,0.06)'] };
+    return L;
+  }
+
+  // Falling weather, worked out from the clock alone: each particle loops from up high down to a
+  // random tile open to the sky, and rain splashes where it lands.
+  const SKY = new Map();
+  function skyTiles(room) {
+    const lay = layoutOf(room);
+    if (!SKY.has(lay.id)) {
+      const out = [];
+      lay.areas.forEach((a, f) => a.rects.forEach(([x0, y0, w, d]) => {
+        for (let y = y0; y < y0 + d; y++) for (let x = x0; x < x0 + w; x++) if (exposed(room, f, x, y)) out.push({ x, y, z: a.z });
+      }));
+      if (SKY.size > 20) SKY.clear();
+      SKY.set(lay.id, out);
+    }
+    return SKY.get(lay.id);
+  }
+  const FALL = {
+    rain: { n: 2.6, T: 0.5, H: 120, cols: ['rgba(190,210,255,0.55)'] },
+    snow: { n: 1.1, T: 7, H: 130, cols: ['rgba(255,255,255,0.95)', 'rgba(230,238,255,0.85)'] },
+    petals: { n: 0.9, T: 8, H: 140, cols: ['#ffb7c9', '#ffd1dc', '#f59ab5'] },
+    leaves: { n: 0.7, T: 8, H: 140, cols: ['#e0873a', '#c9602a', '#e8b04a'] },
+  };
+  function drawWeather(ctx, room, z, now, weather) {
+    const kind = FALL[weather];
+    const sky = kind && skyTiles(room);
+    if (!sky?.length) return;
+    const time = now / 1000;
+    const count = Math.min(140, Math.round(sky.length * kind.n));
+    ctx.save();
+    for (let i = 0; i < count; i++) {
+      const run = time / kind.T + hash(i, 7);
+      const n = Math.floor(run);
+      const t = run - n;
+      const cell = sky[Math.floor(hash(i * 31 + n, 1) * sky.length)];
+      let x = (cell.x + hash(i + n, 3)) * TU;
+      let y = (cell.y + hash(i + n, 4)) * TU;
+      const up = kind.H * (1 - t);
+      const col = kind.cols[i % kind.cols.length];
+      if (weather === 'rain') {
+        x += up * 0.12;
+        if (t > 0.9) {
+          const p = project(room, x, y, cell.z);
+          const k = (t - 0.9) / 0.1;
+          ctx.strokeStyle = `rgba(210,225,255,${0.6 * (1 - k)})`;
+          ctx.lineWidth = Math.max(1, z / 2);
+          ctx.beginPath();
+          ctx.ellipse(p.x * z, p.y * z, (1 + k * 4) * z, (0.5 + k * 2) * z, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          continue;
+        }
+        const p = project(room, x, y, cell.z + up);
+        ctx.fillStyle = col;
+        ctx.fillRect(Math.round(p.x) * z, Math.round(p.y) * z, Math.max(1, z / 2), 8 * z);
+        continue;
+      }
+      if (weather === 'snow') {
+        x += Math.sin(time * 1.3 + i) * 4;
+        y += Math.cos(time * 1.1 + i * 2) * 3;
+      } else {
+        x += (1 - t) * 36 - 18 + Math.sin(time * 2 + i) * 5;
+        y += Math.sin(time * 1.5 + i * 3) * 6;
+      }
+      const p = project(room, x, y, cell.z + up);
+      ctx.globalAlpha = t > 0.92 ? (1 - t) / 0.08 : 1;
+      ctx.fillStyle = col;
+      const big = weather !== 'snow' || hash(i, 9) < 0.35;
+      const spin = weather !== 'snow' && Math.floor(time * 4 + i) % 2;
+      ctx.fillRect(Math.round(p.x) * z, Math.round(p.y) * z, (spin ? 1 : big ? 2 : 1) * z, (big && !spin ? 2 : 1) * z);
+    }
+    ctx.restore();
+  }
+
+  function wash(ctx, cols, op) {
+    if (!cols) return;
+    const [a, b] = Array.isArray(cols) ? cols : [cols, cols];
+    const g = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+    g.addColorStop(0, a);
+    g.addColorStop(1, b);
+    ctx.globalCompositeOperation = op;
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   }
 
   // Draw the whole room. `extra` are more sortable boxes {x0..z1, draw(ctx)} (characters, parcels).
-  function drawRoom(ctx, room, z, objState, extra, light = lightFor(objState(0).hour ?? 12)) {
+  function drawRoom(ctx, room, z, objState, extra, light) {
+    const st = objState(-1);
+    light = light || lightFor(st.hour ?? 12, st.weather);
     const lights = [];
     for (const it of sortItems([...sceneItems(room, objState), ...extra])) {
       if (it.draw) { it.draw(ctx); continue; }
@@ -2051,16 +2194,25 @@
     }
     // Tint only what is drawn, then add the light on top.
     ctx.save();
-    ctx.globalCompositeOperation = 'source-atop';
-    for (const c of [light.tint, light.warm]) {
-      if (!c) continue;
-      ctx.fillStyle = c;
-      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    }
+    for (const c of [light.sky, light.tint, light.warm]) wash(ctx, c, 'source-atop');
     ctx.restore();
+    // After dark the rooms are lit from inside: a warm pool on every indoor floor.
+    if (light.indoor) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      layoutOf(room).areas.forEach((a) => {
+        if (a.kind !== 'room') return;
+        for (const [x, y, w, d] of a.rects) {
+          const p = project(room, (x + w / 2) * TU, (y + d / 2) * TU, a.z);
+          bloom(ctx, p.x * z, p.y * z, Math.max(w, d) * TU * 0.9 * z, `rgba(255,190,120,${0.16 * light.indoor})`, true);
+        }
+      });
+      ctx.restore();
+    }
     for (let pass = light.glow; pass > 0; pass -= 1) {
       for (const [sp, it] of lights) glows(ctx, room, sp, it.wx, it.wy, it.wz, z, Math.min(1, pass));
     }
+    drawWeather(ctx, room, z, st.now ?? Date.now(), st.weather);
   }
 
   // Screen point (fine px) to the topmost area tile under it.
@@ -2115,9 +2267,22 @@
     return mask.data[(Math.floor(fy) * mask.w + Math.floor(fx)) * 4 + 3] > 0;
   }
 
+  // Weather choices, and what 'auto' picks: mostly clear, sometimes rain, and in season snow,
+  // blossom or falling leaves; it changes every three hours.
+  const WEATHERS = { auto: '自動', clear: '晴天', rain: '下雨', snow: '下雪', petals: '櫻花', leaves: '落葉' };
+  function weatherFor(choice, now = Date.now()) {
+    if (choice && choice !== 'auto') return choice === 'clear' ? null : choice;
+    const r = hash(Math.floor(now / 10800000), 5);
+    const m = new Date(now).getMonth();
+    const season = m === 11 || m <= 1 ? 'snow' : m <= 3 ? 'petals' : m >= 8 && m <= 10 ? 'leaves' : null;
+    if (r < 0.6) return null;
+    if (r < 0.8) return 'rain';
+    return season;
+  }
+
   // Dev preview: the street corner unbuilt and built, the other blueprints fully built, plus every
   // object on its own.
-  function preview(canvas, z = 2) {
+  function preview(canvas, z = 2, opts = {}) {
     const rooms = Object.keys(BLUEPRINTS).map((id) => generateRoom(id));
     const S = rooms.map(size).reduce((m, q) => ({ w: Math.max(m.w, q.w), h: Math.max(m.h, q.h) }));
     const themes = rooms;
@@ -2125,15 +2290,18 @@
     canvas.height = S.h * z + 300;
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = '#1b1826';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const st = { frame: 1, active: true, now: Date.now(), hour: 20, meeting: true };
+    const st = { frame: 1, active: true, now: Date.now(), hour: opts.hour ?? 20, weather: opts.weather, meeting: true };
     rooms.forEach((room, k) => {
       ctx.save();
       ctx.translate(k * S.w * z, (S.h - size(room).h) * z);
       drawRoom(ctx, room, z, () => st, []);
       ctx.restore();
     });
+    // The backdrop goes in last, so the light falls on the rooms only, as it does in the app.
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.fillStyle = '#1b1826';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = 'source-over';
     let x = 10;
     let y = S.h * z + 10;
     for (const type of Object.keys(OBJECTS)) {
@@ -2145,7 +2313,7 @@
   }
 
   return {
-    TU, SLAB, STEP_Z, LAND, ZONE_KINDS, FLOORS, WALLS, OBJECTS, THEMES, BLUEPRINTS, applyTheme, migrate, derive,
+    TU, SLAB, STEP_Z, LAND, WEATHERS, weatherFor, ZONE_KINDS, FLOORS, WALLS, OBJECTS, THEMES, BLUEPRINTS, applyTheme, migrate, derive,
     pick, addZone, addTile, removeTile, addFlight, removeFlightAt, setZoneZ,
     BLOCKS, pickBlock, blockTarget, placeBlock, removeBlock, stairsFrom, blockSprite,
     size, origin, project, floorZ, levels, cells, resetCells, cellAt, neighbours, door, walkable, footprint, canPlace, stationSpots,
