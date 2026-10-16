@@ -17,12 +17,18 @@
   // ---- Colour steps -------------------------------------------------------------
   const cache = new Map();
   function rgb(c) {
+    if (c[0] === '*') c = c.slice(1);
     let m = /^#([0-9a-f]{6})$/i.exec(c);
     if (m) return [parseInt(m[1].slice(0, 2), 16), parseInt(m[1].slice(2, 4), 16), parseInt(m[1].slice(4, 6), 16)];
     m = /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/i.exec(c);
     if (m) return [+m[1], +m[2], +m[3]];
     return [128, 128, 128];
   }
+  // Translucent colours (glass, water) are 'rgba(...)'; everything else is opaque.
+  const alphaOf = (c) => {
+    const m = /^rgba\([^)]*,\s*([\d.]+)\s*\)$/i.exec(c);
+    return m ? +m[1] : 1;
+  };
   const hex = (r, g, b) => `#${[r, g, b].map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`;
   // Mix toward a tint: darker steps lean violet-blue, lighter steps lean warm.
   function step(c, k) {
@@ -63,6 +69,14 @@
       if (typeof c === 'function') {
         if (!this.px[i]) return;
         c = c(this.px[i]);
+      }
+      // A translucent colour over something solid mixes into it.
+      const a = alphaOf(c);
+      const under = this.px[i];
+      if (a < 1 && under && alphaOf(under) === 1) {
+        const [r1, g1, b1] = rgb(under);
+        const [r2, g2, b2] = rgb(c);
+        c = hex(r1 + (r2 - r1) * a, g1 + (g2 - g1) * a, b1 + (b2 - b1) * a);
       }
       this.px[i] = c;
     }
@@ -138,7 +152,7 @@
       for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
           const c = px[y * w + x];
-          if (!c) continue;
+          if (!c || alphaOf(c) < 1) continue;
           const empty = (dx, dy) => {
             const nx = x + dx;
             const ny = y + dy;
@@ -160,7 +174,7 @@
           if (!col) continue;
           const [r, gg, b] = rgb(col);
           const i = (y * this.w + x) * 4;
-          img.data[i] = r; img.data[i + 1] = gg; img.data[i + 2] = b; img.data[i + 3] = 255;
+          img.data[i] = r; img.data[i + 1] = gg; img.data[i + 2] = b; img.data[i + 3] = Math.round(alphaOf(col) * 255);
         }
       }
       g.putImageData(img, 0, 0);
@@ -226,6 +240,17 @@
       P.top(x * TU + 8, y * TU, 1, TU, '#97502f', z);
       if ((x * 5 + y * 3) % 4 === 0) P.top(x * TU + 2, y * TU + 2, 3, 1, '#c87452', z);
     } },
+    magic: { base: '#3e2f63', draw: (P, x, y, z) => { // a starry rug-like floor
+      P.top(x * TU, y * TU, TU, TU, (x + y) % 2 ? '#3e2f63' : '#46356f', z);
+      P.top(x * TU, y * TU, TU, 1, '#2c2148', z);
+      if ((x * 5 + y * 3) % 4 === 0) P.top(x * TU + 7, y * TU + 6, 1, 3, '#e8c25a', z);
+      if ((x * 5 + y * 3) % 4 === 0) P.top(x * TU + 6, y * TU + 7, 3, 1, '#e8c25a', z);
+    } },
+    plank: { base: '#b07a4a', draw: (P, x, y, z) => { // deck boards run along y
+      P.top(x * TU, y * TU, TU, TU, '#b07a4a', z);
+      for (let i = 0; i < TU; i += 4) P.top(x * TU + i, y * TU, 1, TU, '#8f5f36', z);
+      if ((x + y * 3) % 3 === 0) P.top(x * TU + 6, y * TU + ((x * 5) % 10) + 2, 2, 1, '#6e4628', z);
+    } },
     grass: { base: '#5f9a4e', draw: (P, x, y, z) => {
       P.top(x * TU, y * TU, TU, TU, (x * 3 + y) % 4 ? '#5f9a4e' : '#6aa857', z);
       P.top(x * TU + ((x * 7 + y) % 12) + 2, y * TU + ((y * 5) % 12) + 2, 1, 2, '#83c06c', z);
@@ -260,6 +285,17 @@
       for (let u = 0; u < len; u += 12) F(u, 24, 6, WALL_H - 28, '#9dd6c4');
       F(0, 22, len, 2, '#7fbcaa');
     } },
+    wood: { base: '#8a5a36', trim: '#5c3a22', cap: '#4a2e1a', paint: (F, len, h = WALL_H) => {
+      for (let u = 0; u < len; u += 5) F(u, 6, 1, h - 8, '#7a4e2e');
+      F(0, h - 12, len, 1, '#6e4628');
+    } },
+    stone: { base: '#6f6c78', trim: '#4c4a55', paint: (F, len, h = WALL_H) => {
+      for (let v = 6, row = 0; v < h - 4; v += 9, row++) {
+        F(0, v, len, 1, '#5a5764');
+        for (let u = row % 2 ? 6 : 0; u < len; u += 13) F(u, v + 1, 1, 8, '#5a5764');
+      }
+    } },
+    glass: { base: 'rgba(170,230,215,0.22)', trim: '#4f7a52', cap: '#5f8f5f', glass: true, paint: () => {} },
     cyber: { base: '#161b30', trim: '#0b0e1a', paint: (F, len) => {
       for (let u = 0; u < len; u += 16) { F(u, 8, 1, WALL_H - 10, '#22294a'); F(u + 6, 30, 4, 1, '#22294a'); }
       F(0, WALL_H - 10, len, 1, '*#36f9ff');
@@ -540,7 +576,57 @@
       for (let i = 0; i < 7; i++) P.box(4 + i, 9 - i * 0.6, 18 + i * 1.6, 3, 3, 3, i === 6 ? '#c9a24a' : '#3f6fb0', false);
       if (s.active && s.frame % 3 === 0) P.dot(14, 3, 32, '*#ffffff', 1, 1);
     } },
+    tree: { w: 1, d: 1, h: 84, draw: (P) => {
+      P.box(6, 6, 0, 4, 4, 30, { t: '#6e4428', l: '#6e4428', r: '#55331d' }, false);
+      for (const [x, y, z, r, c] of [[8, 8, 40, 11, '#3f7a3a'], [4, 9, 50, 8, '#4f8f45'], [12, 6, 54, 8, '#4f8f45'], [8, 8, 62, 8, '#62a656'], [7, 9, 70, 5, '#7cbf6a']]) P.disc(x, y, z, r, c);
+      P.dot(3, 9, 54, '#9fd88a', 2, 1);
+      P.dot(10, 7, 66, '#9fd88a', 2, 1);
+    } },
+    bush: { w: 1, d: 1, h: 22, draw: (P) => {
+      for (const [x, y, z, r, c] of [[8, 8, 7, 7, '#3f7a3a'], [5, 9, 10, 5, '#4f8f45'], [11, 7, 11, 5, '#4f8f45'], [8, 8, 14, 4, '#62a656']]) P.disc(x, y, z, r, c);
+      P.dot(6, 9, 15, '#ff8fb1', 1, 1);
+      P.dot(11, 7, 16, '#ffd65a', 1, 1);
+    } },
+    lilypad: { w: 1, d: 1, h: 4, flat: true, onWater: true, draw: (P) => {
+      P.top(3, 4, 9, 8, '#5aa85a', 0.5);
+      P.top(7, 4, 2, 4, '#4f8f45', 0.6);
+      P.dot(10, 10, 2, '#ff8fb1', 2, 1);
+    } },
+    boat: { w: 2, d: 1, h: 14, onWater: true, draw: (P) => {
+      P.box(2, 3, -2, 28, 10, 7, { t: '#8a4a2e', l: '#c25b3a', r: '#9a432a' }, false);
+      P.box(4, 4, 4, 24, 8, 1, '#6e3a24', false);
+      P.box(15, 7, 5, 1, 1, 16, '#5a4a3a', false);
+      P.left(16, 12, 7, 8, '#f4efe4', 7.5);
+    } },
+    cauldron: { anim: true, w: 1, d: 1, h: 26, station: 'art', stations: front(1, 1), draw: (P, s) => {
+      P.disc(8, 8, 8, 6.5, '#2a2833');
+      P.box(3, 3, 0, 10, 10, 3, '#3a3844', false);
+      P.top(3, 4, 10, 8, '#7cff8c', 13);
+      const b = s.frame % 3;
+      P.dot(6 + b, 7, 15 + b, '#c8ffd0', 1, 1);
+      P.dot(10 - b, 9, 17 - b, '#9dff8a', 1, 1);
+      P.glow(8, 8, 14, 14, 'rgba(124,255,140,0.35)');
+    } },
+    planter: { w: 2, d: 1, h: 26, draw: (P) => {
+      P.box(1, 3, 0, 30, 10, 9, { t: '#5a3a24', l: '#8a5a36', r: '#6e4428' }, false);
+      P.top(2, 4, 28, 8, '#4a3020', 9);
+      for (let i = 0; i < 6; i++) {
+        P.disc(4 + i * 5, 8, 13 + (i % 2) * 2, 3.5, i % 2 ? '#4f8f45' : '#62a656');
+        P.dot(4 + i * 5, 8, 17 + (i % 2) * 2, ['#ff8fb1', '#c27bff', '#ffd65a'][i % 3], 1, 1);
+      }
+    } },
     // Wall-mounted: mount height z, drawn on the plane y = 0; `top` is the highest point drawn.
+    potions: { anim: true, w: 1, d: 0, h: 60, top: 58, wall: true, z: 30, draw: (P, s) => {
+      P.box(1, 0, 34, 14, 6, 2, WOOD, false);
+      P.box(1, 0, 46, 14, 6, 2, WOOD, false);
+      const cols = ['#7cff8c', '#c27bff', '#ff8fb1', '#7ad1ff'];
+      for (let i = 0; i < 3; i++) {
+        P.box(2 + i * 4, 2, 36, 3, 3, 5, cols[i], false);
+        P.box(3 + i * 4, 2, 48, 2, 2, 6, cols[(i + 1) % 4], false);
+      }
+      if (s.frame % 4 === 0) P.dot(4, 4, 42, '*#ffffff', 1, 1);
+      P.glow(8, 4, 42, 12, 'rgba(194,123,255,0.25)');
+    } },
     aircon: { anim: true, w: 1, d: 0, h: 80, top: 76, wall: true, z: 60, draw: (P, s) => {
       P.box(1, 0, 60, 14, 7, 12, '#c9ccd4', false);
       P.top(1, 0, 14, 7, '#e2e4ea', 72);
@@ -765,6 +851,106 @@
         [5, 'vending', 8, 0], [5, 'arcade', 9, 0], [5, 'boxes', 8, 3], [5, 'bin', 9, 6], [5, 'streetlamp', 9, 5],
       ],
     },
+    lake: {
+      name: '湖畔溫室',
+      desc: '湖面上的高腳木平台，玻璃溫室裡種滿植物，可以加蓋側翼溫室、釣魚碼頭和屋頂露台',
+      zones: [
+        { name: '湖', z: 0, kind: 'water', depth: 40, wall: 'brick', floor: 'stone', rects: [[0, 0, 9, 9]] },
+        { name: '下層平台', z: 24, kind: 'outdoor', thin: true, base: 'stilts', rails: true, wall: 'wood', floor: 'plank', rects: [[2, 5, 4, 3]] },
+        { name: '木平台', z: 48, kind: 'outdoor', thin: true, base: 'stilts', rails: true, wall: 'wood', floor: 'plank', rects: [[3, 0, 3, 3], [0, 3, 6, 2]] },
+        { name: '溫室', z: 48, kind: 'room', thin: true, base: 'stilts', wall: 'glass', floor: 'plank', rects: [[0, 0, 3, 3]] },
+        { name: '側翼溫室', z: 48, kind: 'room', level: 1, thin: true, base: 'stilts', wall: 'glass', floor: 'plank', rects: [[6, 0, 3, 3]] },
+        { name: '釣魚碼頭', z: 24, kind: 'outdoor', level: 2, thin: true, base: 'stilts', rails: true, lights: true, wall: 'wood', floor: 'plank', rects: [[6, 3, 3, 4]] },
+        { name: '屋頂露台', z: 112, kind: 'outdoor', level: 3, thin: true, rails: true, lights: true, wall: 'wood', floor: 'plank', rects: [[0, 0, 4, 2]] },
+      ],
+      flights: [
+        { from: 1, to: 2, style: 'open', cells: [[3, 5]], bottom: [3, 6], top: [3, 4] },
+        { from: 2, to: 6, style: 'open', cells: [[3, 3], [3, 2]], bottom: [3, 4], top: [3, 1] },
+      ],
+      door: [5, 7, 1],
+      objects: [
+        [0, 'lilypad', 0, 6], [0, 'lilypad', 1, 7], [0, 'lilypad', 7, 7], [0, 'lilypad', 8, 2], [0, 'boat', 5, 8],
+        [3, 'lamp', 0, 0], [3, 'bookshelf', 1, 0], [3, 'desk', 0, 1, true],
+        [2, 'table', 4, 0], [2, 'coffee', 0, 3, true], [2, 'plant', 0, 4],
+        [1, 'sofa', 2, 6, true], [1, 'bush', 2, 5], [1, 'bell', 4, 5],
+        [4, 'planter', 6, 0], [4, 'plant', 8, 0], [4, 'planter', 7, 2],
+        [5, 'streetlamp', 8, 6], [5, 'boxes', 8, 3], [5, 'plant', 8, 5],
+        [6, 'telescope', 0, 0], [6, 'plant', 2, 0],
+      ],
+    },
+    tower: {
+      name: '魔法塔',
+      desc: '一層疊一層的小塔：底下是發光的實驗室，往上蓋臥室、書房和觀星台',
+      zones: [
+        { name: '門廊', z: 0, kind: 'outdoor', wall: 'wood', floor: 'plank', rects: [[0, 5, 5, 2]] },
+        { name: '實驗室', z: 0, kind: 'room', wall: 'stone', floor: 'stone', rects: [[0, 0, 5, 5]] },
+        { name: '臥室', z: 80, kind: 'room', level: 1, thin: true, rails: true, wall: 'plum', floor: 'carpet', rects: [[0, 0, 4, 4]] },
+        { name: '書房', z: 160, kind: 'room', level: 2, thin: true, rails: true, wall: 'wood', floor: 'stone', rects: [[0, 0, 3, 3]] },
+        { name: '觀星台', z: 160, kind: 'outdoor', level: 3, thin: true, rails: true, lights: true, wall: 'wood', floor: 'plank', rects: [[3, 0, 2, 2]] },
+      ],
+      flights: [
+        { from: 1, to: 2, style: 'open', cells: [[4, 3], [4, 2], [4, 1], [4, 0]], bottom: [4, 4], top: [3, 0] },
+        { from: 2, to: 3, style: 'open', cells: [[2, 3], [1, 3], [0, 3]], bottom: [3, 3], top: [0, 2] },
+      ],
+      door: [4, 6, 0],
+      objects: [
+        [0, 'streetlamp', 0, 6], [0, 'plant', 1, 6], [0, 'bell', 2, 5],
+        [1, 'workstation', 1, 0], [1, 'server', 3, 0], [1, 'screens', 1, 0], [1, 'potions', 0, 2, true],
+        [1, 'holo', 0, 3, true], [1, 'cauldron', 2, 3], [1, 'plant', 0, 0],
+        [2, 'bed', 0, 0], [2, 'window', 1, 0], [2, 'poster', 0, 2, true],
+        [3, 'bookshelf', 0, 0], [3, 'globe', 2, 0], [3, 'clock', 2, 0], [3, 'shelf', 0, 1, true],
+        [4, 'telescope', 4, 0],
+      ],
+    },
+    treehouse: {
+      name: '樹屋',
+      desc: '樹林裡高腳木平台上的小屋，可以接出側平台、加蓋二樓和陽台',
+      zones: [
+        { name: '草地', z: 0, kind: 'outdoor', base: 'earth', wall: 'brick', floor: 'grass', rects: [[0, 0, 8, 8]] },
+        { name: '平台', z: 48, kind: 'outdoor', thin: true, base: 'stilts', rails: true, wall: 'wood', floor: 'plank', rects: [[2, 2, 5, 5]] },
+        { name: '房間', z: 48, kind: 'room', thin: true, base: 'stilts', wall: 'cream', floor: 'plank', rects: [[2, 0, 5, 2]] },
+        { name: '側平台', z: 48, kind: 'outdoor', level: 1, thin: true, base: 'stilts', rails: true, wall: 'wood', floor: 'plank', rects: [[7, 2, 2, 4]] },
+        { name: '二樓', z: 112, kind: 'room', level: 2, thin: true, rails: true, wall: 'cream', floor: 'wood', rects: [[2, 0, 3, 2]] },
+        { name: '陽台', z: 112, kind: 'outdoor', level: 3, thin: true, rails: true, lights: true, wall: 'wood', floor: 'plank', rects: [[2, 2, 3, 2]] },
+      ],
+      flights: [
+        { from: 0, to: 1, style: 'open', cells: [[1, 6], [1, 5], [1, 4]], bottom: [1, 7], top: [2, 4] },
+        { from: 1, to: 4, style: 'open', cells: [[5, 2], [5, 1], [5, 0]], bottom: [5, 3], top: [4, 0] },
+      ],
+      door: [6, 7, 0],
+      objects: [
+        [0, 'tree', 0, 0], [0, 'tree', 0, 1], [0, 'bush', 0, 2], [0, 'tree', 7, 7], [0, 'bush', 2, 7], [0, 'streetlamp', 4, 7], [0, 'bush', 7, 0],
+        [2, 'workstation', 2, 0], [2, 'server', 4, 0], [2, 'plant', 6, 0], [2, 'window', 3, 0],
+        [1, 'table', 3, 4], [1, 'coffee', 6, 5], [1, 'plant', 2, 6],
+        [3, 'bookshelf', 7, 2], [3, 'plant', 8, 5],
+        [4, 'sofa', 2, 0], [4, 'window', 3, 0],
+        [5, 'telescope', 3, 2], [5, 'plant', 2, 2],
+      ],
+    },
+    witch: {
+      name: '魔女小屋',
+      desc: '圍著小燈籠籬笆的魔女小屋，有魔藥鍋和星星地毯，可以加蓋閣樓、藥草園和前院',
+      zones: [
+        { name: '庭院', z: 0, kind: 'outdoor', base: 'earth', rails: true, lights: true, wall: 'brick', floor: 'stone', rects: [[0, 0, 7, 1], [0, 1, 1, 6], [6, 1, 1, 6], [1, 5, 5, 2]] },
+        { name: '小屋', z: 32, kind: 'room', wall: 'brick', floor: 'magic', rects: [[1, 1, 5, 4]] },
+        { name: '閣樓', z: 96, kind: 'room', level: 1, thin: true, rails: true, wall: 'wood', floor: 'carpet', rects: [[1, 1, 3, 2]] },
+        { name: '藥草園', z: 0, kind: 'outdoor', level: 2, base: 'earth', rails: true, wall: 'brick', floor: 'grass', rects: [[7, 0, 2, 7]] },
+        { name: '前院', z: 0, kind: 'outdoor', level: 3, base: 'earth', rails: true, lights: true, wall: 'brick', floor: 'grass', rects: [[0, 7, 9, 2]] },
+      ],
+      flights: [
+        { from: 0, to: 1, style: 'solid', cells: [[3, 5]], bottom: [3, 6], top: [3, 4] },
+        { from: 1, to: 2, style: 'open', cells: [[4, 2], [4, 1]], bottom: [4, 3], top: [3, 1] },
+      ],
+      door: [5, 6, 0],
+      objects: [
+        [0, 'streetlamp', 0, 6], [0, 'streetlamp', 6, 6], [0, 'plant', 4, 0], [0, 'catbed', 3, 0],
+        [1, 'bookshelf', 1, 1], [1, 'potions', 3, 1], [1, 'fireplace', 1, 3, true], [1, 'desk', 2, 3, true], [1, 'cauldron', 5, 1],
+        [1, 'window', 4, 1],
+        [2, 'sofa', 1, 1],
+        [3, 'planter', 7, 0], [3, 'planter', 7, 3], [3, 'bush', 8, 6],
+        [4, 'tree', 0, 8], [4, 'streetlamp', 2, 8], [4, 'bush', 4, 8], [4, 'plant', 6, 7],
+      ],
+    },
   };
 
   // Materials by what a zone is, so a theme can reskin any blueprint.
@@ -850,6 +1036,7 @@
             const nb = tilesAt(x + dx, y + dy);
             if (mine.has(`${x + dx},${y + dy}`) || (stairAt.get(`${x + dx},${y + dy}`) || []).includes(f)) continue;
             if (nb.some((t) => t.z >= zn.z && !zones[t.f].thin)) continue;
+            if (nb.some((t) => t.z === zn.z && zones[t.f].kind !== 'water')) continue;
             edges.push([plane, atv, u, zn.wallH || WALL_H]);
           }
         }
@@ -929,9 +1116,9 @@
     // A stair tile takes the place of the floor at its foot; solid steps, built up from the
     // ground, also take any lower floor beneath them.
     const taken = (x, y, f) => L.flights.some((fl) => fl.cells.some(([cx, cy]) => cx === x && cy === y)
-      && (fl.from === f || (fl.style === 'solid' && L.areas[f].z <= L.areas[fl.from].z)));
+      && (fl.style === 'solid' ? L.areas[f].z <= L.areas[fl.from].z : L.areas[f].z >= L.areas[fl.from].z && L.areas[f].z < L.areas[fl.to].z));
     L.areas.forEach((a, f) => {
-      if (!isOpen(room, f)) return;
+      if (!isOpen(room, f) || a.kind === 'water') return;
       for (const r of a.rects) {
         for (let y = r[1]; y < r[1] + r[3]; y++) for (let x = r[0]; x < r[0] + r[2]; x++) {
           if (!taken(x, y, f)) add({ x, y, z: a.z, f, kind: 'floor' });
@@ -958,7 +1145,8 @@
       const rise = (z1 - z0) / (fl.cells.length + 1);
       let prev = floorAt(fl.bottom[0], fl.bottom[1], fl.from);
       // Treads face the way the flight climbs.
-      const dir = fl.top[0] !== fl.bottom[0] ? 'x' : 'y';
+      const [c0, c1 = fl.top] = fl.cells;
+      const dir = c1[0] !== c0[0] ? 'x' : 'y';
       fl.cells.forEach(([x, y], k) => {
         // Solid steps stand on the ground; open treads hang one rise deep.
         const c = add({ x, y, z: z0 + rise * (k + 1), f: fl.from, kind: 'stair', rise, dir, style: fl.style, base: fl.style === 'solid' ? 0 : z0 });
@@ -973,7 +1161,7 @@
   const resetCells = (room) => { delete room._cells; };
   const cellAt = (room, x, y, f) => (cells(room).at.get(`${x},${y}`) || []).find((c) => c.kind === 'floor' && c.f === f) || null;
   const neighbours = (room, c) => cells(room).links.get(c.id) || [];
-  const door = (room) => cellAt(room, layoutOf(room).door[0], layoutOf(room).door[1], 0);
+  const door = (room) => { const [x, y, f = 0] = layoutOf(room).door; return cellAt(room, x, y, f); };
 
   // Footprint in tiles, after flipping onto the left wall.
   function footprint(o) {
@@ -1009,7 +1197,15 @@
         return along + def.w <= oa || oa + od.w <= along;
       });
     }
-    for (let ty = fp.y; ty < fp.y + fp.d; ty++) for (let tx = fp.x; tx < fp.x + fp.w; tx++) if (!cellAt(room, tx, ty, f)) return false;
+    const lay = layoutOf(room);
+    for (let ty = fp.y; ty < fp.y + fp.d; ty++) {
+      for (let tx = fp.x; tx < fp.x + fp.w; tx++) {
+        const ok = def.onWater
+          ? lay.areas[f]?.kind === 'water' && isOpen(room, f) && lay.tilesAt(tx, ty).some((t) => t.f === f)
+          : cellAt(room, tx, ty, f);
+        if (!ok) return false;
+      }
+    }
     return room.objects.every((o, i) => {
       const od = OBJECTS[o.type];
       if (i === ignoreIndex || !od || od.wall || !!od.flat !== !!def.flat || (o.f || 0) !== f) return true;
@@ -1173,6 +1369,135 @@
     resetCells(room);
   }
 
+  // ---- Blocks ---------------------------------------------------------------------------
+  // Building by hand, one block at a time: a block is a tile of some kind, half a storey tall.
+  // Click a block's top to stack another on it, a side to put one beside it; each kind of block
+  // lands in its own layer (a zone) at that height, made on the spot if there isn't one yet.
+  const BLOCKS = {
+    brick: { name: '磚地基', kind: 'outdoor', wall: 'brick', floor: 'stone' },
+    grass: { name: '草地', kind: 'outdoor', base: 'earth', wall: 'brick', floor: 'grass' },
+    deck: { name: '木平台', kind: 'outdoor', thin: true, base: 'stilts', rails: true, wall: 'wood', floor: 'plank' },
+    room: { name: '室內地板', kind: 'room', wall: 'cream', floor: 'wood' },
+    loft: { name: '閣樓', kind: 'room', thin: true, rails: true, wall: 'cream', floor: 'wood' },
+    glass: { name: '玻璃屋', kind: 'room', wall: 'glass', floor: 'plank' },
+    water: { name: '水池', kind: 'water', wall: 'brick', floor: 'stone', depth: 40 },
+  };
+
+  // The open layer for this kind of block at height z, made if need be.
+  function zoneFor(room, id, z) {
+    const b = BLOCKS[id] || BLOCKS.brick;
+    const found = room.zones.findIndex((zn, f) => zn.z === z && isOpen(room, f) && (zn.block === id
+      || (!zn.block && zn.kind === b.kind && !!zn.thin === !!b.thin && (zn.base || '') === (b.base || '') && (zn.kind !== 'room' || zn.wall === b.wall))));
+    if (found >= 0) return found;
+    const { name, ...props } = b;
+    room.zones.push({ ...props, name: `${name} ${z / STEP_Z / 2 + 1}F`, z, block: id });
+    return room.zones.length - 1;
+  }
+
+  // The block face under a screen point: { x, y, f, z, face: 'top' | 'left' | 'right' } for the
+  // frontmost block, or a stair step { stair: cell }.
+  function pickBlock(room, fx, fy) {
+    const lay = layoutOf(room);
+    const inside = (pts) => {
+      let hit = false;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        const [xi, yi] = pts[i];
+        const [xj, yj] = pts[j];
+        if ((yi > fy) !== (yj > fy) && fx < ((xj - xi) * (fy - yi)) / (yj - yi) + xi) hit = !hit;
+      }
+      return hit;
+    };
+    const P = (x, y, z) => { const p = project(room, x * TU, y * TU, z); return [p.x, p.y]; };
+    let best = null;
+    const consider = (hit, score) => { if (!best || score > best.score) best = { ...hit, score }; };
+    for (const [x, y, f] of room.tiles) {
+      const zn = room.zones[f];
+      if (!zn || !isOpen(room, f)) continue;
+      const z = zn.z;
+      const low = zn.kind === 'water' ? z - (zn.depth || 40) : zn.thin ? z - SLAB : Math.min(-SLAB, z - STEP_Z);
+      const score = (x + y) * 1000 + z;
+      if (inside([P(x, y, z), P(x + 1, y, z), P(x + 1, y + 1, z), P(x, y + 1, z)])) consider({ x, y, f, z, face: 'top' }, score + 2);
+      if (inside([P(x, y + 1, z), P(x + 1, y + 1, z), P(x + 1, y + 1, low), P(x, y + 1, low)])) consider({ x, y, f, z, face: 'left' }, score + 1);
+      if (inside([P(x + 1, y, z), P(x + 1, y + 1, z), P(x + 1, y + 1, low), P(x + 1, y, low)])) consider({ x, y, f, z, face: 'right' }, score + 1);
+    }
+    for (const c of cells(room).list) {
+      if (c.kind !== 'stair') continue;
+      if (inside([P(c.x, c.y, c.z), P(c.x + 1, c.y, c.z), P(c.x + 1, c.y + 1, c.z), P(c.x, c.y + 1, c.z)])) consider({ stair: c, x: c.x, y: c.y, z: c.z }, (c.x + c.y) * 1000 + c.z + 3);
+    }
+    void lay;
+    return best;
+  }
+
+  // Where a new block would go for a face: on top, or beside it at the same height.
+  function blockTarget(hit) {
+    if (!hit || hit.stair) return null;
+    if (hit.face === 'top') return { x: hit.x, y: hit.y, z: hit.z + STEP_Z };
+    if (hit.face === 'left') return { x: hit.x, y: hit.y + 1, z: hit.z };
+    return { x: hit.x + 1, y: hit.y, z: hit.z };
+  }
+
+  function placeBlock(room, id, t) {
+    if (!t) return '這裡放不了';
+    if (t.z > 8 * STEP_Z) return '太高了';
+    const b = BLOCKS[id];
+    if (b?.kind === 'water' && t.z > 0) t = { ...t, z: 0 };
+    return addTile(room, t.x, t.y, zoneFor(room, id, t.z));
+  }
+
+  // Take away one block: a solid stack gets one block shorter; a deck, loft or pool goes.
+  function removeBlock(room, hit) {
+    if (!hit) return null;
+    if (hit.stair) { removeFlightAt(room, hit.x, hit.y); return null; }
+    const zn = room.zones[hit.f];
+    const i = tileIndex(room, hit.x, hit.y, hit.f);
+    if (i < 0) return null;
+    room.tiles.splice(i, 1);
+    if (!zn.thin && zn.kind !== 'water' && zn.z >= STEP_Z) {
+      const id = zn.block || (zn.base === 'earth' ? 'grass' : zn.kind === 'room' ? 'room' : 'brick');
+      room.tiles.push([hit.x, hit.y, zoneFor(room, id, zn.z - STEP_Z)]);
+    }
+    tidy(room);
+    return null;
+  }
+
+  // Stairs down from the side of a higher block: as long as they need to be, onto the first
+  // floor in front low enough.
+  function stairsFrom(room, hit) {
+    if (!hit || hit.stair || hit.face === 'top') return '點高台的側面來放樓梯';
+    const dx = hit.face === 'right' ? 1 : 0;
+    const dy = hit.face === 'left' ? 1 : 0;
+    for (let n = 1; n <= 8; n++) {
+      const bx = hit.x + dx * (n + 1);
+      const by = hit.y + dy * (n + 1);
+      const below = room.tiles.filter((t) => t[0] === bx && t[1] === by && room.zones[t[2]].z < hit.z && isOpen(room, t[2]) && room.zones[t[2]].kind !== 'water')
+        .sort((p, q) => room.zones[q[2]].z - room.zones[p[2]].z)[0];
+      if (!below) continue;
+      if ((hit.z - room.zones[below[2]].z) / (n + 1) > STEP_Z) continue;
+      return addFlight(room, { x: bx, y: by, f: below[2] }, { x: hit.x, y: hit.y, f: hit.f });
+    }
+    return '樓梯前面要有比較低的地板可以落腳';
+  }
+
+  // A little block of each kind, for the palette.
+  function blockSprite(id) {
+    const b = BLOCKS[id] || BLOCKS.brick;
+    return cached(`block|${id}`, () => renderSprite(1, 1, 8, (P) => {
+      const fl = FLOORS[b.floor] || FLOORS.stone;
+      if (b.kind === 'water') { waterBox(P, 1, 1, 14, [0, 0]); return; }
+      if (b.thin) {
+        if (b.base === 'stilts') stiltPosts(P, 1, 1, 18);
+        P.box(0, 0, -SLAB, TU, TU, SLAB, { t: fl.base, l: '#5a3a2a', r: '#432a1e' }, false);
+      } else if (b.base === 'earth') earthFaces(P, 1, 1, 16, true);
+      else brickFaces(P, 1, 1, 16, (WALLS[b.wall] || WALLS.brick).base);
+      fl.draw(P, 0, 0, 0);
+      if (b.kind === 'room') {
+        const w = WALLS[b.wall] || WALLS.cream;
+        P.left(0, 0, TU, 12, w.glass ? w.base : w.base, 0);
+        P.right(TU, 0, TU, 12, w.glass ? w.base : dk(w.base, 0.1), 0);
+      }
+    }, false, 24));
+  }
+
   // ---- Rendering --------------------------------------------------------------------
 
   // Room canvas in fine pixels: world (0, 0, 0) lands at origin().
@@ -1261,6 +1586,70 @@
     }
   }
 
+  // A cliff of earth: dark soil in layers with stones, under a lip of turf when the top is grass.
+  function earthFaces(P, w, d, h, grass) {
+    const L = w * TU;
+    const D = d * TU;
+    P.left(0, -h, L, h, '#6e4429', D);
+    P.right(D, -h, D, h, '#573420', L);
+    for (let v = 10; v < h; v += 11) {
+      P.left(0, -v, L, 2, '#5e3922', D);
+      P.right(D, -v, D, 2, '#482b1a', L);
+    }
+    for (let i = 0; i < (L + D) / 9; i++) {
+      const u = (i * 37) % L;
+      const v = 6 + ((i * 23) % Math.max(4, h - 8));
+      if (v < h - 2) P.left(u, -v, 3, 2, '#8a7a6a', D);
+      if (v < h - 2 && u < D) P.right(D - u, -v, 3, 2, '#6a5c50', L);
+    }
+    if (grass) {
+      P.left(0, -4, L, 4, '#5f9a4e', D);
+      P.right(D, -4, D, 4, '#4f8642', L);
+      for (let u = 1; u < L; u += 4) P.left(u, -6 - (u % 3), 2, 3, '#5f9a4e', D);
+      for (let u = 2; u < D; u += 4) P.right(D - u, -6 - (u % 3), 2, 3, '#4f8642', L);
+    }
+  }
+
+  // Wooden posts under a deck, down to the ground (or the water), with a cross brace.
+  function stiltPosts(P, w, d, z) {
+    const posts = [];
+    for (let x = 0; x <= w; x += 2) posts.push([Math.min(x, w) * TU - (x >= w ? 3 : 0), d * TU - 3]);
+    if (w % 2) posts.push([w * TU - 3, d * TU - 3]);
+    for (let y = 0; y < d; y += 2) posts.push([w * TU - 3, y * TU]);
+    for (const [x, y] of posts) P.box(x, y, -z, 3, 3, z - SLAB, { t: '#8a5a36', l: '#6e4428', r: '#55331d' }, false);
+    if (z > 30) {
+      P.left(0, -z + 8, w * TU, 2, '#6e4428', d * TU - 1);
+      P.right(d * TU, -z + 8, d * TU, 2, '#55331d', w * TU - 1);
+    }
+  }
+
+  // A tank of water seen through its glass sides: sand and stones below, a lit surface above.
+  function waterBox(P, w, d, depth, r) {
+    const L = w * TU;
+    const D = d * TU;
+    P.box(0, 0, -depth - SLAB, L, D, SLAB, { t: '#d8c48e', l: '#7a5a3a', r: '#5e4430' }, false);
+    for (let i = 0; i < w * d * 2; i++) {
+      const x = (i * 29 + r[0] * 7) % L;
+      const y = (i * 17 + r[1] * 5) % D;
+      if (i % 3 === 0) P.box(x, y, -depth, 3, 2, 2, '#8a8478', false);
+      else if (i % 3 === 1) P.box(x, y, -depth, 1, 1, 6 + (i % 5), '#4f9e57', false);
+      else P.top(x, y, 2, 1, '#c9b27a', -depth);
+    }
+    for (let i = 0; i < Math.max(1, (w * d) / 6); i++) {
+      const x = ((i * 41 + 9) % (L - 8)) + 4;
+      const y = ((i * 23 + 5) % (D - 8)) + 4;
+      P.dot(x, y, -depth / 2 - (i % 3) * 4, '#f0a35e', 3, 1);
+      P.dot(x + 3, y, -depth / 2 - (i % 3) * 4, '#e07a3a', 1, 1);
+    }
+    P.left(0, -depth, L, depth, 'rgba(30,110,190,0.62)', D);
+    P.right(D, -depth, D, depth, 'rgba(20,85,160,0.68)', L);
+    P.top(0, 0, L, D, 'rgba(50,150,215,0.62)', 0);
+    for (let i = 0; i < w * d; i++) P.top((i * 31) % (L - 6), (i * 13) % (D - 2), 5, 1, 'rgba(235,250,255,0.55)', 0);
+    P.left(0, -1, L, 1, 'rgba(235,250,255,0.85)', D);
+    P.right(D, -1, D, 1, 'rgba(235,250,255,0.85)', L);
+    P.right(1, -depth, 1, depth, 'rgba(235,250,255,0.45)', L);
+  }
+
   // One rect of an area: its floor and, for raised areas, the brick base down to the ground.
   function slabSprite(room, f, r) {
     const a = layoutOf(room).areas[f];
@@ -1268,14 +1657,20 @@
     const base = (WALLS[floorOf(room, 0).wall] || WALLS.brick).base;
     const fl = FLOORS[floor] || FLOORS.wood;
     const [, , w, d] = r;
-    const h = a.thin ? SLAB : a.z + SLAB;
+    const stilts = a.thin && a.base === 'stilts';
+    const depth = a.depth || 40;
+    const h = a.kind === 'water' ? depth + SLAB : stilts ? a.z + SLAB : a.thin ? SLAB : a.z + SLAB;
     const lay = layoutOf(room);
     return cached(`slab|${lay.id}|${f}|${r}|${floor}|${base}|${room.level || 0}`, () => renderSprite(w, d, 8, (P) => {
+      if (a.kind === 'water') { waterBox(P, w, d, depth, r); return; }
       if (a.thin) { // a floor on joists: a timber edge with a beam showing underneath
+        if (stilts) stiltPosts(P, w, d, a.z);
         P.box(0, 0, -SLAB, w * TU, d * TU, SLAB, { t: fl.base, l: '#5a3a2a', r: '#432a1e' }, false);
         P.left(0, -SLAB, w * TU, 2, '#3a2418', d * TU);
         P.right(d * TU, -SLAB, d * TU, 2, '#2e1c13', w * TU);
-      } else if (a.z > 0) brickFaces(P, w, d, h, base);
+      } else if (a.z > 0 && a.base === 'earth') earthFaces(P, w, d, h, floor === 'grass');
+      else if (a.z > 0) brickFaces(P, w, d, h, base);
+      else if (a.base === 'earth') earthFaces(P, w, d, SLAB + 6, floor === 'grass');
       else P.box(0, 0, -SLAB, w * TU, d * TU, SLAB, { t: fl.base, l: dk(fl.base, 0.3), r: dk(fl.base, 0.45) }, false);
       for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) fl.draw(P, x, y, 0);
       shadeFloor(P, room, f, r);
@@ -1303,6 +1698,21 @@
     // Timber framing: a cap along the top and a post at the open end.
     const cap = w.cap || '#6e4a32';
     return cached(`wall|${f}|${wall}|${wallId}`, () => renderSprite(plane === 'y' ? to - from : 1, plane === 'y' ? 1 : to - from + 1, h + 6, (P) => {
+      if (w.glass) {
+        const bar = { t: lt(w.trim, 0.2), l: w.trim, r: dk(w.trim, 0.2) };
+        if (plane === 'y') {
+          P.left(0, 0, L, h, w.base, 0);
+          for (let u = 0; u <= L; u += TU) P.box(Math.min(u, L - 2), -2, 0, 2, 2, h, bar, false);
+          for (const v of [0, h / 2, h - 2]) P.box(0, -2, v, L, 2, 2, bar, false);
+          for (let u = 4; u < L; u += TU) P.left(u, h / 2 + 6, 1, 10, 'rgba(255,255,255,0.4)', 0.5);
+        } else {
+          P.right(L, 0, L, h, w.base, 0);
+          for (let u = 0; u <= L; u += TU) P.box(-2, Math.min(u, L - 2), 0, 2, 2, h, bar, false);
+          for (const v of [0, h / 2, h - 2]) P.box(-2, 0, v, 2, L, 2, bar, false);
+          for (let u = 4; u < L; u += TU) P.right(L - u, h / 2 + 6, 1, 10, 'rgba(255,255,255,0.4)', 0.5);
+        }
+        return;
+      }
       if (plane === 'y') { // plane y = 0 in local space, running along x
         P.box(0, -5, 0, L, 5, h, { t: lt(w.trim, 0.25), l: w.base, r: w.trim }, false);
         w.paint((u, v, ww, hh, c) => P.left(u, v, ww, hh, c, 0), L, h);
@@ -1384,7 +1794,8 @@
       if (!open && !a.keep) return;
       for (const r of a.rects) {
         const [x, y, w, d] = r;
-        items.push({ x0: x, y0: y, x1: x + w - e, y1: y + d - e, z0: a.thin ? a.z - SLAB : -SLAB, z1: a.z, sprite: () => slabSprite(room, f, r), wx: x * TU, wy: y * TU, wz: a.z });
+        const z0 = a.kind === 'water' ? a.z - (a.depth || 40) - SLAB : a.thin ? a.z - SLAB : -SLAB;
+        items.push({ x0: x, y0: y, x1: x + w - e, y1: y + d - e, z0, z1: a.z, sprite: () => slabSprite(room, f, r), wx: x * TU, wy: y * TU, wz: a.z });
       }
       if (!open) return;
       for (const wall of a.walls) {
@@ -1398,7 +1809,7 @@
         // neighbouring floor or the top of a flight meets it.
         const inside = (x, y) => a.rects.some((r) => x >= r[0] && x < r[0] + r[2] && y >= r[1] && y < r[1] + r[3]);
         const onWall = (plane, at, u) => a.walls.some((w) => !w[5] && w[0] === plane && w[1] === at && u >= w[2] && u < w[3]);
-        const meets = (x, y) => (C.at.get(`${x},${y}`) || []).some((c) => Math.abs(c.z - a.z) <= 20);
+        const meets = (x, y) => (C.at.get(`${x},${y}`) || []).some((c) => Math.abs(c.z - a.z) <= 20) || L.higher(x, y, a.z);
         let k = 0;
         for (const r of a.rects) {
           for (let x = r[0]; x < r[0] + r[2]; x++) {
@@ -1544,7 +1955,7 @@
   // Dev preview: the street corner unbuilt and built, the other blueprints fully built, plus every
   // object on its own.
   function preview(canvas, z = 2) {
-    const rooms = [['shop', 0], ['shop', 3], ['cottage', 3], ['cyber', 3]].map(([id, level]) => Object.assign(generateRoom(id), { level }));
+    const rooms = [['lake', 3], ['tower', 3], ['treehouse', 3], ['witch', 3]].map(([id, level]) => Object.assign(generateRoom(id), { level }));
     const S = rooms.map(size).reduce((m, q) => ({ w: Math.max(m.w, q.w), h: Math.max(m.h, q.h) }));
     const themes = rooms;
     canvas.width = S.w * z * themes.length;
@@ -1573,6 +1984,7 @@
   return {
     TU, SLAB, STEP_Z, LAND, ZONE_KINDS, FLOORS, WALLS, OBJECTS, THEMES, BLUEPRINTS, applyTheme, isOpen, migrate, derive,
     pick, addZone, addTile, removeTile, addFlight, removeFlightAt, setZoneZ,
+    BLOCKS, pickBlock, blockTarget, placeBlock, removeBlock, stairsFrom, blockSprite,
     size, origin, project, floorZ, levels, cells, resetCells, cellAt, neighbours, door, walkable, footprint, canPlace, stationSpots,
     generateRoom, objectSprite, drawRoom, blit, tileAt, wallAt, solidAt, preview,
   };

@@ -16,12 +16,13 @@
   let hover = null; // { x, y, f, flip } — a floor tile, or a wall spot for wall items
   let storey = 0; // which floor the floor/wall tabs paint
   // Terrain: the layer being built on, the tool, and the first end of a stair being laid.
-  const build = { zone: 2, tool: 'paint', stairFrom: null, drag: null, hover: null };
+  // Building: the block in hand (or the stairs tool) and the face under the mouse.
+  const build = { block: 'brick', tool: 'block', hover: null };
 
   const HINTS = {
     furniture: '點家具放進房間；R 或右下按鈕換方向；點房間裡的家具可搬動，右鍵刪除',
-    terrain: '選一層，在房間上點擊或拖曳鋪地板，右鍵拆掉；▲▼ 調整整層高度',
-    stairs: '樓梯：先點低處的地板，再點同一排高處的地板',
+    terrain: '左鍵：點方塊頂面往上疊、點側面往旁邊接、點空地鋪地面；右鍵：拆掉一顆',
+    stairs: '樓梯：點高台的側面，會一路往下接到前面比較低的地板；右鍵點樓梯拆掉',
     floor: '選樓層，再點一下換那層的地板',
     wall: '選樓層，再點一下換那層的牆面',
     room: '換整體風格，或重設成預設房間',
@@ -154,34 +155,19 @@
   }
 
   function refreshTerrain() {
-    const r = room();
-    if (!r.zones[build.zone] || !Iso.isOpen(r, build.zone)) build.zone = 0;
-    const layers = document.createElement('div');
-    layers.className = 'row';
-    r.zones.forEach((zn, i) => {
-      if (!Iso.isOpen(r, i)) return;
-      layers.append(button(`${zn.name}（${zn.z / Iso.STEP_Z * 0.5}F）`, null, build.zone === i && build.tool === 'paint', () => {
-        Object.assign(build, { zone: i, tool: 'paint', stairFrom: null });
+    const row = document.createElement('div');
+    row.className = 'row';
+    for (const [id, b] of Object.entries(Iso.BLOCKS)) {
+      row.append(button(b.name, swatch(Iso.blockSprite(id).canvas, 2), build.tool === 'block' && build.block === id, () => {
+        Object.assign(build, { block: id, tool: 'block' });
         refresh();
       }));
-    });
-    palette.append(layers);
-    const tools = document.createElement('div');
-    tools.className = 'row';
-    tools.append(button('▲ 整層升高', null, false, () => terrain(Iso.setZoneZ(r, build.zone, r.zones[build.zone].z + Iso.STEP_Z))));
-    tools.append(button('▼ 整層降低', null, false, () => terrain(Iso.setZoneZ(r, build.zone, r.zones[build.zone].z - Iso.STEP_Z))));
-    tools.append(button('🪜 樓梯', null, build.tool === 'stairs', () => {
-      Object.assign(build, { tool: build.tool === 'stairs' ? 'paint' : 'stairs', stairFrom: null });
+    }
+    row.append(button('🪜 樓梯', null, build.tool === 'stairs', () => {
+      build.tool = build.tool === 'stairs' ? 'block' : 'stairs';
       refresh();
     }));
-    for (const [type, k] of Object.entries(Iso.ZONE_KINDS)) {
-      tools.append(button(`＋新${k.name}層`, null, false, () => {
-        build.zone = Iso.addZone(r, type, r.zones[build.zone].z + Iso.STEP_Z);
-        build.tool = 'paint';
-        terrain(null, '新的一層建好了，在房間上點擊鋪地板');
-      }));
-    }
-    palette.append(tools);
+    palette.append(row);
   }
 
   // Apply a terrain edit: save, re-lay the room (its size may change) and report.
@@ -261,57 +247,31 @@
     return found;
   }
 
-  // Terrain: the tile under the mouse on the layer being built.
-  function buildTarget(e) {
+  // Building: the block face under the mouse, or bare ground when there is none.
+  function buildHit(e) {
     const p = RoomApp.finePoint(e);
-    if (build.tool === 'stairs') return Iso.tileAt(room(), p.x, p.y);
-    const zn = room().zones[build.zone];
-    return zn ? { ...Iso.pick(room(), p.x, p.y, zn.z), f: build.zone } : null;
+    const hit = Iso.pickBlock(room(), p.x, p.y);
+    if (hit) return hit;
+    const g = Iso.pick(room(), p.x, p.y, 0);
+    return { ground: true, x: g.x, y: g.y, z: 0 };
   }
+  const targetOf = (hit) => (hit?.ground ? { x: hit.x, y: hit.y, z: 0 } : Iso.blockTarget(hit));
 
   function terrainDown(e) {
     const r = room();
-    const t = buildTarget(e);
-    if (build.tool === 'stairs') {
-      if (e.button === 2) {
-        const p = RoomApp.finePoint(e);
-        const c = Iso.cells(r).list.find((cc) => cc.kind === 'stair' && Math.abs(Iso.project(r, (cc.x + 0.5) * TU, (cc.y + 0.5) * TU, cc.z).x - p.x) < 12
-          && Math.abs(Iso.project(r, (cc.x + 0.5) * TU, (cc.y + 0.5) * TU, cc.z).y - p.y) < 10);
-        build.stairFrom = null;
-        terrain(c && Iso.removeFlightAt(r, c.x, c.y) ? null : '右鍵點在樓梯上可以拆掉它', c ? '樓梯拆掉了' : null);
-        return;
-      }
-      if (!t) return;
-      if (!build.stairFrom) {
-        build.stairFrom = t;
-        hint.textContent = `起點：${r.zones[t.f].name}，再點另一端`;
-        return;
-      }
-      const err = Iso.addFlight(r, build.stairFrom, t);
-      build.stairFrom = null;
-      terrain(err, '樓梯蓋好了');
+    const hit = buildHit(e);
+    if (e.button === 2) {
+      if (!hit.ground) terrain(Iso.removeBlock(r, hit));
       return;
     }
-    if (!t) return;
-    build.drag = e.button === 2 ? 'erase' : 'paint';
-    build.last = null;
-    terrainPaint(t);
+    if (build.tool === 'stairs') terrain(hit.ground ? '點高台的側面來放樓梯' : Iso.stairsFrom(r, hit), '樓梯蓋好了');
+    else terrain(Iso.placeBlock(r, build.block, targetOf(hit)));
   }
-
-  function terrainPaint(t) {
-    if (!t || `${t.x},${t.y}` === build.last) return;
-    build.last = `${t.x},${t.y}`;
-    const err = build.drag === 'erase' ? Iso.removeTile(room(), t.x, t.y, t.f) : Iso.addTile(room(), t.x, t.y, t.f);
-    terrain(err);
-  }
-
-  window.addEventListener('mouseup', () => { build.drag = null; });
 
   canvas.addEventListener('mousemove', (e) => {
     if (!state.editing) return;
     if (tab === 'terrain') {
-      build.hover = buildTarget(e);
-      if (build.drag) terrainPaint(build.hover);
+      build.hover = buildHit(e);
       return;
     }
     hover = tool ? target(e) : { pick: objectAt(e) };
@@ -373,6 +333,26 @@
     }
   });
 
+  // A see-through block from z0 down to z1 at tile (x, y), in device pixels.
+  function ghost(ctx, z, x, y, z0, z1, color) {
+    const P = (px, py, pz) => { const q = Iso.project(room(), px * TU, py * TU, pz); return [q.x * z, q.y * z]; };
+    const faces = [
+      [P(x, y, z0), P(x + 1, y, z0), P(x + 1, y + 1, z0), P(x, y + 1, z0)],
+      [P(x, y + 1, z0), P(x + 1, y + 1, z0), P(x + 1, y + 1, z1), P(x, y + 1, z1)],
+      [P(x + 1, y, z0), P(x + 1, y + 1, z0), P(x + 1, y + 1, z1), P(x + 1, y, z1)],
+    ];
+    ctx.fillStyle = color;
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = Math.max(1, z / 2);
+    for (const f of faces) {
+      ctx.beginPath();
+      f.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
   // Diamond outline of a footprint, in device pixels.
   function diamond(ctx, z, f, h, color) {
     const pts = [[f.x, f.y], [f.x + f.w, f.y], [f.x + f.w, f.y + f.d], [f.x, f.y + f.d]].map(([x, y]) => Iso.project(room(), x * TU, y * TU, h));
@@ -387,10 +367,15 @@
   state.onDrawTop = (ctx, z) => {
     if (!state.editing) return;
     if (tab === 'terrain') {
-      const r = room();
-      const mark = (t, color) => t && r.zones[t.f] && diamond(ctx, z, { x: t.x, y: t.y, w: 1, d: 1 }, r.zones[t.f].z, color);
-      mark(build.stairFrom, 'rgba(255,214,90,0.55)');
-      mark(build.hover, build.tool === 'stairs' ? 'rgba(255,214,90,0.35)' : 'rgba(124,196,255,0.4)');
+      const h = build.hover;
+      if (!h) return;
+      if (build.tool === 'stairs') {
+        if (!h.ground && !h.stair) ghost(ctx, z, h.x, h.y, h.z, h.z - Iso.STEP_Z, 'rgba(255,214,90,0.35)');
+        return;
+      }
+      const t = targetOf(h);
+      const b = Iso.BLOCKS[build.block];
+      if (t) ghost(ctx, z, t.x, t.y, b.kind === 'water' ? 0 : t.z, b.thin ? t.z - Iso.SLAB : Math.min(t.z - Iso.STEP_Z, -Iso.SLAB), 'rgba(124,196,255,0.35)');
       return;
     }
     if (!hover) return;
@@ -428,7 +413,6 @@
   tabButtons.forEach((b) => b.addEventListener('click', () => {
     tab = b.dataset.tab;
     tool = null;
-    build.stairFrom = null;
     build.hover = null;
     refresh();
   }));
