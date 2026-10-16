@@ -160,7 +160,8 @@ function renderEquip() {
 
   const slot = slotFor(target);
   const skins = ITEMS.filter((i) => i.type === 'skin' && owns(i.id)).map((i) => ({ key: i.id.slice(5), name: i.name }));
-  for (const m of settings.characters.customs || []) skins.push({ key: `mix:${m.id}`, name: `✨ ${m.name}` });
+  for (const m of settings.characters.customs || []) skins.push({ key: `mix:${m.id}`, name: `👗 ${m.name}` });
+  for (const d of settings.characters.drawings || []) skins.push({ key: `draw:${d.id}`, name: `${d.friend ? '💌' : '🖌️'} ${d.name}` });
   for (const c of assets.characters) skins.push({ key: c.id, name: `${c.name}（自訂）`, custom: true });
   if (target === 'ai' || target.startsWith('project:')) skins.unshift({ key: 'auto', name: '🎲 每個 session 自動換', custom: true });
   const skinList = $('skin-list');
@@ -233,7 +234,7 @@ function animateEquip() {
 // Dress-up, not a form: a big character in the middle, pictures to click underneath, a dice for
 // a surprise. Parts from recruited characters unlock with them.
 
-const studio = { id: null, cat: 'head', recipe: null, saved: false };
+const studio = { id: null, cat: 'head', recipe: null, saved: false, mode: 'dress' };
 const STUDIO_CATS = [['head', '🙂', '頭'], ['hat', '💇', '頭髮'], ['body', '👕', '身體'], ['extra', '🎀', '配件'], ['colors', '🎨', '顏色']];
 const COLOR_ROWS = [['skin', '膚色／毛色'], ['body', '衣服'], ['leg', '褲子'], ['boot', '鞋子'], ['hair', '頭髮']];
 const partOpen = (kind, key) => !Sprites.PART_FROM[`${kind}:${key}`] || owns(`skin:${Sprites.PART_FROM[`${kind}:${key}`]}`);
@@ -247,6 +248,13 @@ function recipeCanvas(recipe, unit = 2, pose = 'rest') {
 
 function renderStudio() {
   if (!studio.recipe) studio.recipe = freshRecipe();
+  // Three ways to make someone: dress up, draw, or bring a photo.
+  document.querySelectorAll('.studio-modes .mode').forEach((b) => b.classList.toggle('active', b.dataset.mode === studio.mode));
+  for (const m of ['dress', 'draw', 'photo']) document.querySelectorAll(`#tab-studio .mode-${m}`).forEach((el) => el.classList.toggle('hidden', studio.mode !== m));
+  renderMine();
+  if (studio.mode === 'draw') renderPaint();
+  if (studio.mode === 'photo') renderPhoto();
+  if (studio.mode !== 'dress') return;
   const r = studio.recipe;
   // Categories along the top: icons first.
   const cats = $('studio-cats');
@@ -303,33 +311,60 @@ function renderStudio() {
       box.append(b);
     }
   }
-  // Your characters, and a fresh one.
+  $('studio-delete').classList.toggle('hidden', !studio.id);
+  $('studio-wear').classList.toggle('hidden', !studio.id);
+  $('studio-save').textContent = studio.id && studio.saved ? '✓ 已存好' : '✨ 完成';
+}
+
+// Your characters, dressed-up and drawn, and a fresh one.
+function renderMine() {
   const list = $('studio-list');
   list.replaceChildren();
   const fresh = document.createElement('button');
   fresh.className = 'mine new';
   fresh.innerHTML = '<span class="ico">＋</span><span>新角色</span>';
-  fresh.addEventListener('click', () => { Object.assign(studio, { id: null, recipe: freshRecipe(), saved: false }); $('studio-name').value = ''; renderStudio(); });
+  fresh.addEventListener('click', () => {
+    if (studio.mode === 'draw') loadPaint(null);
+    else if (studio.mode === 'photo') photo.img = null;
+    else {
+      Object.assign(studio, { id: null, recipe: freshRecipe(), saved: false });
+      $('studio-name').value = '';
+    }
+    renderStudio();
+  });
   list.append(fresh);
   for (const m of settings.characters.customs || []) {
     const b = document.createElement('button');
     b.className = 'mine';
     b.append(recipeCanvas(m.recipe, 3));
     const label = document.createElement('span');
-    label.textContent = m.name;
+    label.textContent = `👗 ${m.name}`;
     b.append(label);
-    b.classList.toggle('active', studio.id === m.id);
+    b.classList.toggle('active', studio.mode === 'dress' && studio.id === m.id);
     b.addEventListener('click', () => {
-      Object.assign(studio, { id: m.id, recipe: JSON.parse(JSON.stringify(m.recipe)), saved: true });
+      Object.assign(studio, { id: m.id, recipe: JSON.parse(JSON.stringify(m.recipe)), saved: true, mode: 'dress' });
       studio.recipe.colors ||= {};
       $('studio-name').value = m.name;
       renderStudio();
     });
     list.append(b);
   }
-  $('studio-delete').classList.toggle('hidden', !studio.id);
-  $('studio-wear').classList.toggle('hidden', !studio.id);
-  $('studio-save').textContent = studio.id && studio.saved ? '✓ 已存好' : '✨ 完成';
+  for (const d of (settings.characters.drawings || []).filter((x) => !x.friend)) {
+    const b = document.createElement('button');
+    b.className = 'mine';
+    b.append(canvasOf((Sprites.W * 3) / DPR, (Sprites.H * 3) / DPR, (x) => Sprites.drawCharacterAt(x, 3, 0, 0, `draw:${d.id}`, 'rest', 0, Sprites.colorsFor(210), 1, { prop: false })));
+    const label = document.createElement('span');
+    label.textContent = `🖌️ ${d.name}`;
+    b.append(label);
+    b.classList.toggle('active', studio.mode === 'draw' && paint.id === d.id);
+    b.addEventListener('click', () => {
+      if (studio.mode === 'draw' && !paint.saved && paint.poses.base.some(Boolean) && paint.id !== d.id && !window.confirm('現在這張還沒存，要換掉嗎？')) return;
+      loadPaint(d);
+      studio.mode = 'draw';
+      renderStudio();
+    });
+    list.append(b);
+  }
 }
 
 async function saveStudio() {
@@ -607,6 +642,7 @@ function showTab(name) {
 }
 
 document.querySelectorAll('nav.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+document.querySelectorAll('.studio-modes .mode').forEach((b) => b.addEventListener('click', () => { studio.mode = b.dataset.mode; renderStudio(); }));
 
 function render() {
   if (!settings || !progress) return;
@@ -614,12 +650,13 @@ function render() {
   $('level').textContent = `Lv.${progress.level}（${progress.xp - progress.levelFloor}/${progress.levelCeil - progress.levelFloor} XP）`;
   if (tab === 'equip') renderEquip();
   if (tab === 'studio') renderStudio();
+  if (tab === 'friends') renderFriends();
   if (tab === 'book') renderBook();
   if (tab === 'achievements') renderAchievements();
   if (tab === 'stats') renderShare();
 }
 
-desk.on('settings', (s) => { settings = s; Sprites.useCustoms(s.characters?.customs); render(); });
+desk.on('settings', (s) => { settings = s; Sprites.useCustoms(s.characters?.customs); Sprites.useDrawings(s.characters?.drawings); render(); });
 desk.on('progress', (p) => { progress = p; render(); });
 desk.on('actors', (list) => {
   const before = projectNames && settings ? projectNames().join() : '';
@@ -640,9 +677,10 @@ desk.on('guild:tab', openTab);
 // The drawer asks for a tab by message once this page is loaded.
 window.addEventListener('message', (e) => openTab(e.data?.guildTab));
 
-desk.invoke('init').then((init) => {
+// After every script on the page has run (draw.js comes after this file).
+window.addEventListener('DOMContentLoaded', () => desk.invoke('init').then((init) => {
   settings = init.settings;
-  Sprites.useCustoms(init.settings.characters?.customs);
+  Sprites.useCustoms(init.settings.characters?.customs); Sprites.useDrawings(init.settings.characters?.drawings);
   progress = init.progress;
   actors = init.actors;
   assets = init.assets;
@@ -651,6 +689,7 @@ desk.invoke('init').then((init) => {
   drawMachine();
   animateEquip();
   animateStudio();
+  initDraw();
   render();
   openTab(new URLSearchParams(location.search).get('tab'));
-});
+}));

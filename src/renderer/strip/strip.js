@@ -230,7 +230,7 @@ function update(v, dt, now) {
     ? { pose: 'rest', frame: Math.floor(now / 300) % 2, station: null }
     : Common.poseFor(a, { moving, dragging: v.dragging, now });
   const prop = !!(station && Catalog.STATIONS[station].prop);
-  const key = `${pose}:${frame}:${v.facing}:${a.skin}:${a.accessory}:${prop}:${Common.sheets.has(a.skin) ? Math.floor(now / 80) : ''}`;
+  const key = `${pose}:${frame}:${v.facing}:${a.skin}:${a.accessory}:${prop}:${Common.sheets.has(a.skin) ? Math.floor(now / 80) : ''}:${looksRev}`;
   if (key !== v.drawKey) {
     v.drawKey = key;
     v.ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -481,9 +481,11 @@ document.addEventListener('mouseleave', (e) => {
 
 // ---- Wiring ----------------------------------------------------------------------
 
+let looksRev = 0;
 function applySettings(s) {
   settings = s;
-  Sprites.useCustoms(s.characters?.customs);
+  Sprites.useCustoms(s.characters?.customs); Sprites.useDrawings(s.characters?.drawings);
+  looksRev++; // home-made looks may have been redrawn
   if (s.scale !== scale) {
     scale = s.scale;
     rebuildCanvases();
@@ -496,7 +498,7 @@ drawer.el.classList.add('hit', 'strip-drawer');
 document.body.append(drawer.el);
 function placeDrawer() {
   drawer.el.style.width = `${Math.min(Drawer.widthBeside(0), window.innerWidth - 12)}px`;
-  drawer.el.style.height = `${Math.min(290, window.innerHeight - 40)}px`;
+  drawer.el.style.height = `${Math.min(340, window.innerHeight - 40)}px`;
 }
 window.addEventListener('resize', placeDrawer);
 desk.on('dock:open', ({ pane, tab }) => drawer.open(pane, tab));
@@ -530,7 +532,7 @@ desk.on('command', (cmd) => {
 desk.invoke('init').then((init) => {
   scale = init.settings.scale;
   settings = init.settings;
-  Sprites.useCustoms(init.settings.characters?.customs);
+  Sprites.useCustoms(init.settings.characters?.customs); Sprites.useDrawings(init.settings.characters?.drawings);
   Common.loadSheets(init.assets);
   syncActors(init.actors);
 });

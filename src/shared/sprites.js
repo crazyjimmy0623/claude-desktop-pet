@@ -363,7 +363,40 @@
     return rows;
   }
 
+  // Props and effects. No arms: a head on a body with two legs, props float in front of it.
+  function poseProps(g, pose, frame, col, B) {
+  const sparks = (pts) => g([], pts.flatMap(([x, y, color]) => twinkle(x, y, color)));
+  const note = (x, y, color) => g([], [[x, y, 1, 6, color], [x + 1, y, 2, 1, color], [x + 2, y + 1, 1, 1, color], [x - 3, y + 5, 3, 2, color]]);
+  switch (pose) {
+    case 'done':
+      sparks(frame ? [[16, -10, PAL.shine], [26, -6, PAL.spark], [-2, -2, PAL.spark], [28, -12, PAL.spark]]
+        : [[18, -6, PAL.spark], [27, -11, PAL.shine], [0, -9, PAL.spark], [-3, 0, PAL.shine]]);
+      break;
+    case 'wait':
+      g([], frame ? [[30, 7, 2, 1, HL2], [30, 11, 2, 1, HL2]] : [[22, 7, 2, 1, HL2], [22, 11, 2, 1, HL2]]);
+      break;
+    case 'game':
+      g([[13, 24 + B, 13, 5, '#3a3f4c'], [13, 28 + B, 3, 3, '#3a3f4c'], [23, 28 + B, 3, 3, '#3a3f4c']], [[15, 26 + B, 3, 1, '#c9ced8'], [16, 25 + B, 1, 3, '#c9ced8'], [21, 25 + B, 2, 2, '#5aa7ff'], [23, 27 + B, 2, 2, '#ffd65a'], [13, 24 + B, 13, 1, HL], [18, 26 + B - frame, 3, 2, '#e0405a']]);
+      break;
+    case 'read': {
+      const lines = [];
+      for (let i = 0; i < 4; i++) {
+        lines.push([15, 23 + i * 2 + B, i === 3 ? 2 : 4, 1, PAL.ink]);
+        if (i !== (frame ? 1 : 3)) lines.push([21, 23 + i * 2 + B, i === 3 ? 2 : 4, 1, PAL.ink]);
+      }
+      g([[13, 21 + B, 14, 10, PAL.cover]], [[14, 22 + B, 5, 8, PAL.page], [21, 22 + B, 5, 8, PAL.page], [19, 22 + B, 2, 8, SH2], ...lines, [13, 21 + B, 14, 1, HL]]);
+      break;
+    }
+    case 'dance':
+      note(frame ? 27 : -2, frame ? -8 : -10, col.main);
+      break;
+    default:
+      break;
+  }
+  }
+
   function buildBody(skinId, pose, step, col, opts, ox, oy) {
+    if (DRAWN[skinId]) return drawnBody(DRAWN[skinId], pose, step, col, ox, oy);
     const sk = SKINS[skinId] || SKINS.commander;
     const c = sk.c;
     const groups = [];
@@ -453,11 +486,11 @@
 
     // --- Head.
     const H = B + (sk.drop || 0);
-    const eyeDots = (color = PAL.eye, at = [[11, 10], [20, 10]]) => at.map(([x, y]) => (sleeping ? [x - 1, y + 1 + H, 4, 1, color] : [x, y + H, 2, 2, color]));
-    const blush = [[7, 12 + H, 3, 2, PAL.blush], [22, 12 + H, 3, 2, PAL.blush]];
+    const eyeDots = (color = PAL.eye, at = [[8, 12], [22, 12]]) => at.map(([x, y]) => (sleeping ? [x - 1, y + 1 + H, 4, 1, color] : [x, y + H, 2, 2, color]));
+    const blush = [[5, 14 + H, 3, 2, PAL.blush], [23, 14 + H, 2, 2, PAL.blush]];
     const face = (skin) => {
       L(FACE, { k: skin, K: dark(skin) }, 2, 1 + H);
-      g([], [...eyeDots(), ...blush, [16, 13 + H, 2, 1, dark(dark(skin))]]);
+      g([], [...eyeDots(), ...blush, [15, 15 + H, 2, 1, dark(dark(skin))]]);
     };
     switch (sk.head) {
       case 'helmet': {
@@ -474,8 +507,8 @@
         L(FACE, { k: c.body, K: c.bodyShade }, 2, 1 + H);
         g([], [
           [12, 2 + H, 1, 3, c.bodyShade], [14, 2 + H, 1, 4, c.bodyShade], [16, 2 + H, 1, 3, c.bodyShade],
-          ...eyeDots('#3a3020'), [13, 12 + H, 7, 3, c.belly], [15, 12 + H, 2, 1, '#e07a7a'], [14, 14 + H, 1, 1, '#b07050'], [17, 14 + H, 1, 1, '#b07050'],
-          [7, 12 + H, 3, 2, PAL.blush], [25, 11 + H, 3, 1, '#a08a78'], [25, 13 + H, 3, 1, '#a08a78'],
+          ...eyeDots('#3a3020'), [12, 13 + H, 7, 3, c.belly], [14, 13 + H, 2, 1, '#e07a7a'], [13, 15 + H, 1, 1, '#b07050'], [16, 15 + H, 1, 1, '#b07050'],
+          [5, 14 + H, 3, 2, PAL.blush], [25, 11 + H, 3, 1, '#a08a78'], [25, 13 + H, 3, 1, '#a08a78'],
         ]);
         break;
       }
@@ -485,8 +518,8 @@
         const arch = ([x, y]) => (sleeping
           ? [[x, y + 1 + H, 4, 1, PAL.eye]]
           : [[x, y + 1 + H, 1, 2, PAL.eye], [x + 1, y + H, 2, 1, PAL.eye], [x + 3, y + 1 + H, 1, 2, PAL.eye]]);
-        g([], [...arch([8, 8]), ...arch([15, 8]),
-          [7, 12 + H, 4, 2, PAL.blush], [14, 12 + H, 4, 2, PAL.blush], [8, 12 + H, 1, 2, '#e88a8a'], [15, 12 + H, 1, 2, '#e88a8a'],
+        g([], [...arch([5, 10]), ...arch([15, 10]),
+          [4, 13 + H, 4, 2, PAL.blush], [14, 13 + H, 3, 2, PAL.blush], [5, 13 + H, 1, 2, '#e88a8a'], [15, 13 + H, 1, 2, '#e88a8a'],
           [6, 1 + H, 6, 1, PAL.shine], [5, 2 + H, 2, 1, PAL.shine]]);
         L(PLUSH_BILL, { b: c.bill, B: c.bodyShade }, 17, 12 + H);
         g([], [[19, 14 + H, 9, 1, '#d2ccc4'], [25, 13 + H, 1, 1, '#c2bbb2'], [27, 13 + H, 1, 1, '#c2bbb2'], [20, 12 + H, 6, 1, PAL.shine]]);
@@ -499,10 +532,10 @@
         L(OKAI_HEAD, { k: c.body, K: c.bodyShade, h: c.body, H: c.bodyShade }, 1, 1 + H);
         // Bean eyes like everyone else's, a bead of sweat, a small open mouth, a crescent moon.
         const lid = '#3a2a36';
-        g([], [...eyeDots(PAL.eye, [[10, 9], [18, 9]]),
+        g([], [...eyeDots(PAL.eye, [[7, 11], [22, 11]]),
           [14, 13 + H, 3, 1, lid], [14, 14 + H, 1, 1, lid], [16, 14 + H, 1, 1, lid], [15, 14 + H, 1, 1, '#f08a6a'], [15, 15 + H, 1, 1, lid],
           [6, 3 + H, 1, 1, '#7cc0ee'], [6, 4 + H, 2, 1, '#8fcdf5'], [5, 5 + H, 4, 2, '#8fcdf5'], [6, 7 + H, 2, 1, '#6fb2e0'], [6, 5 + H, 1, 1, PAL.shine],
-          [9, 13 + H, 2, 1, 'rgba(245,163,163,0.7)'], [19, 13 + H, 2, 1, 'rgba(245,163,163,0.7)']]);
+          [6, 13 + H, 2, 1, 'rgba(245,163,163,0.7)'], [22, 13 + H, 2, 1, 'rgba(245,163,163,0.7)']]);
         g([], [[23, 15 + H, 2, 1, '#ffd84a'], [22, 16 + H, 2, 2, '#ffd84a'], [23, 18 + H, 2, 1, '#ffd84a'], [22, 16 + H, 1, 1, '#fff2a8'], [24, 18 + H, 1, 1, '#d9a62a']]);
         break;
       }
@@ -510,7 +543,7 @@
         g([[14, -4 + H, 2, 4, c.bodyShade]], []);
         g([[13, -7 + H, 4, 3, col.main]], [[14, -6 + H, 2, 1, glow(col.main)]]);
         L(ROBOT_HEAD, { a: c.head, A: c.bodyShade, s: '#1b2b3a', '+': lite(c.head) }, 2, H);
-        g([[0, 7 + H, 2, 4, c.bodyShade]], [...eyeDots(glow('#5ef0ff'), [[11, 8], [20, 8]]), [15, 12 + H, 3, 1, 'rgba(94,240,255,0.55)']]);
+        g([[0, 7 + H, 2, 4, c.bodyShade]], [...eyeDots(glow('#5ef0ff'), [[9, 10], [21, 10]]), [14, 13 + H, 3, 1, 'rgba(94,240,255,0.55)']]);
         break;
       case 'droid': {
         const E = glow(c.glow);
@@ -518,20 +551,20 @@
         L(HORN.map((r) => [...r].reverse().join('')), { a: c.plate }, 21, -5 + H);
         L(DROID_HEAD, { a: c.head, A: c.headShade, f: c.face, t: '#c9ced8', '+': lite(c.head) }, 2, -1 + H);
         g([], sleeping
-          ? [[7, 7 + H, 5, 1, '#5a6070'], [17, 7 + H, 5, 1, '#5a6070']]
-          : [[6, 4 + H, 3, 1, E], [8, 5 + H, 3, 1, E], [10, 6 + H, 2, 1, E], [17, 6 + H, 2, 1, E], [18, 5 + H, 3, 1, E], [20, 4 + H, 3, 1, E], [4, -5 + H, 1, 1, E], [23, -5 + H, 1, 1, E]]);
+          ? [[5, 9 + H, 5, 1, '#5a6070'], [19, 9 + H, 5, 1, '#5a6070']]
+          : [[4, 6 + H, 3, 1, E], [6, 7 + H, 3, 1, E], [8, 8 + H, 2, 1, E], [19, 8 + H, 2, 1, E], [20, 7 + H, 3, 1, E], [21, 6 + H, 3, 1, E], [4, -5 + H, 1, 1, E], [23, -5 + H, 1, 1, E]]);
         break;
       }
       case 'ninja': {
         const tail = frame ? [[-3, 6 + H, 6, 2], [-5, 9 + H, 5, 2]] : [[-3, 5 + H, 6, 2], [-4, 8 + H, 5, 2]];
         g(tail.map((r) => [...r, col.main]), []);
         L(FACE, { k: c.head, K: c.bodyShade }, 2, 1 + H);
-        g([[6, 7 + H, 19, 6, c.skin]], [...eyeDots(), [22, 11 + H, 2, 1, PAL.blush], [2, 4 + H, 24, 2, col.main], [2, 4 + H, 24, 1, lite(col.main)]]);
+        g([[4, 9 + H, 22, 6, c.skin]], [...eyeDots(), [22, 14 + H, 2, 1, PAL.blush], [2, 4 + H, 24, 2, col.main], [2, 4 + H, 24, 1, lite(col.main)]]);
         break;
       }
       case 'astronaut':
         L(ASTRO_HELMET, { w: c.head, W: c.bodyShade, v: '#2a3b66', '+': PAL.shine }, 1, -1 + H);
-        g([], [...eyeDots('#dfe8ff'), [6, 4 + H, 4, 1, '#6a84c0'], [5, 5 + H, 1, 3, '#6a84c0'], [0, 7 + H, 1, 3, glow('#3dffb0')], [8, 12 + H, 3, 1, 'rgba(245,163,163,0.6)']]);
+        g([], [...eyeDots('#dfe8ff', [[8, 11], [21, 11]]), [6, 4 + H, 4, 1, '#6a84c0'], [5, 5 + H, 1, 3, '#6a84c0'], [0, 7 + H, 1, 3, glow('#3dffb0')], [6, 13 + H, 3, 1, 'rgba(245,163,163,0.6)']]);
         break;
     }
     // Hair and hats over the face.
@@ -541,35 +574,7 @@
     if (sk.hat === 'chef') L(CHEF_HAT, { w: '#ffffff', W: '#d9dde6' }, 3, -10 + H);
     if (sk.specs) g([], glassesAt(H, '#6a5040'));
 
-    // --- Props and effects. No arms: a head on a body with two legs, props float in front of it.
-    const sparks = (pts) => g([], pts.flatMap(([x, y, color]) => twinkle(x, y, color)));
-    const note = (x, y, color) => g([], [[x, y, 1, 6, color], [x + 1, y, 2, 1, color], [x + 2, y + 1, 1, 1, color], [x - 3, y + 5, 3, 2, color]]);
-    switch (pose) {
-      case 'done':
-        sparks(frame ? [[16, -10, PAL.shine], [26, -6, PAL.spark], [-2, -2, PAL.spark], [28, -12, PAL.spark]]
-          : [[18, -6, PAL.spark], [27, -11, PAL.shine], [0, -9, PAL.spark], [-3, 0, PAL.shine]]);
-        break;
-      case 'wait':
-        g([], frame ? [[30, 7, 2, 1, HL2], [30, 11, 2, 1, HL2]] : [[22, 7, 2, 1, HL2], [22, 11, 2, 1, HL2]]);
-        break;
-      case 'game':
-        g([[13, 24 + B, 13, 5, '#3a3f4c'], [13, 28 + B, 3, 3, '#3a3f4c'], [23, 28 + B, 3, 3, '#3a3f4c']], [[15, 26 + B, 3, 1, '#c9ced8'], [16, 25 + B, 1, 3, '#c9ced8'], [21, 25 + B, 2, 2, '#5aa7ff'], [23, 27 + B, 2, 2, '#ffd65a'], [13, 24 + B, 13, 1, HL], [18, 26 + B - frame, 3, 2, '#e0405a']]);
-        break;
-      case 'read': {
-        const lines = [];
-        for (let i = 0; i < 4; i++) {
-          lines.push([15, 23 + i * 2 + B, i === 3 ? 2 : 4, 1, PAL.ink]);
-          if (i !== (frame ? 1 : 3)) lines.push([21, 23 + i * 2 + B, i === 3 ? 2 : 4, 1, PAL.ink]);
-        }
-        g([[13, 21 + B, 14, 10, PAL.cover]], [[14, 22 + B, 5, 8, PAL.page], [21, 22 + B, 5, 8, PAL.page], [19, 22 + B, 2, 8, SH2], ...lines, [13, 21 + B, 14, 1, HL]]);
-        break;
-      }
-      case 'dance':
-        note(frame ? 27 : -2, frame ? -8 : -10, col.main);
-        break;
-      default:
-        break;
-    }
+    poseProps(g, pose, frame, col, B);
 
     // --- Accessory on top of everything.
     const A = H;
@@ -585,7 +590,7 @@
         g([], glassesAt(A, PAL.line, true));
         break;
       case 'sunglasses':
-        g([], [[9, 9 + A, 6, 4, '#1c1c26'], [18, 9 + A, 6, 4, '#1c1c26'], [15, 10 + A, 3, 1, '#1c1c26'], [3, 10 + A, 6, 1, '#1c1c26'], [10, 10 + A, 2, 1, '#6a6a7a'], [19, 10 + A, 1, 1, '#6a6a7a']]);
+        g([], [[5, 11 + A, 7, 4, '#1c1c26'], [19, 11 + A, 7, 4, '#1c1c26'], [12, 12 + A, 7, 1, '#1c1c26'], [2, 12 + A, 3, 1, '#1c1c26'], [6, 12 + A, 2, 1, '#6a6a7a'], [20, 12 + A, 1, 1, '#6a6a7a']]);
         break;
       case 'headphones':
         g([[4, -2 + A, 18, 2, '#3a3a46']], [[6, -2 + A, 14, 1, HL]]);
@@ -598,18 +603,18 @@
         g([[17, -2 + A, 4, 4, '#ff6fa8'], [23, -2 + A, 4, 4, '#ff6fa8'], [21, -1 + A, 2, 2, '#e0508a']], [[18, -1 + A, 1, 1, HL2]]);
         break;
       case 'vr':
-        g([[2, 9 + A, 8, 3, '#3a3d4c']]);
-        g([[9, 7 + A, 17, 6, '#2b2d3a']], [[10, 9 + A, 15, 2, glow('#36f9ff')], [9, 7 + A, 17, 1, HL], [24, 8 + A, 1, 1, glow('#ff3ea5')]]);
+        g([[1, 11 + A, 6, 3, '#3a3d4c']]);
+        g([[4, 9 + A, 23, 7, '#2b2d3a']], [[5, 11 + A, 21, 3, glow('#36f9ff')], [4, 9 + A, 23, 1, HL], [25, 10 + A, 1, 1, glow('#ff3ea5')]]);
         break;
     }
     return groups;
   }
 
-  // Round frames around the bean eyes at (11, 10) and (20, 10).
+  // Round frames around the bean eyes at (8, 12) and (22, 12).
   function glassesAt(A, color, tint) {
-    const ring = (x) => [[x - 2, 8 + A, 6, 1, color], [x - 2, 13 + A, 6, 1, color], [x - 2, 8 + A, 1, 6, color], [x + 3, 8 + A, 1, 6, color],
-      ...(tint ? [[x - 1, 9 + A, 4, 4, 'rgba(191,227,255,0.35)'], [x - 1, 9 + A, 1, 1, PAL.shine]] : [[x - 1, 9 + A, 1, 1, HL2]])];
-    return [...ring(11), ...ring(20), [15, 10 + A, 3, 1, color], [3, 10 + A, 6, 1, color]];
+    const ring = (x) => [[x - 2, 10 + A, 6, 1, color], [x - 2, 15 + A, 6, 1, color], [x - 2, 10 + A, 1, 6, color], [x + 3, 10 + A, 1, 6, color],
+      ...(tint ? [[x - 1, 11 + A, 4, 4, 'rgba(191,227,255,0.35)'], [x - 1, 11 + A, 1, 1, PAL.shine]] : [[x - 1, 11 + A, 1, 1, HL2]])];
+    return [...ring(8), ...ring(22), [12, 12 + A, 8, 1, color], [2, 12 + A, 4, 1, color]];
   }
 
   // Full-size character: the body box sits at the bottom-left of a 64x56 canvas with room for props.
@@ -915,6 +920,180 @@
     return { main: `hsl(${hue}, 65%, 55%)`, dark: `hsl(${hue}, 60%, 38%)` };
   }
 
+  // ---- Drawn characters ------------------------------------------------------
+  // A drawing is a small picture, ART.W x ART.H fine pixels, feet on the bottom row. It is stored as
+  // a palette and run-length text: { pal: ['#rrggbb', ...], px: '40.3a2b...' } where '.' is
+  // see-through, a letter picks a palette colour and a number repeats the next pixel.
+  // One picture is enough: the game finds the legs and makes it walk, breathe, nod, sit and jump.
+  // Anyone who wants to can also draw a step, a working pose, a sleeping pose and a happy one.
+  const ART = { W: 32, H: 44 };
+  const ART_POSES = ['base', 'walk', 'work', 'sleep', 'happy'];
+  const ART_KEYS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const DRAWN = {};
+
+  function encodeArt(px) {
+    const pal = [];
+    const key = (c) => {
+      if (!c) return '.';
+      let i = pal.indexOf(c);
+      if (i < 0) {
+        if (pal.length >= ART_KEYS.length) i = 0; // never happens: drawings use far fewer colours
+        else { pal.push(c); i = pal.length - 1; }
+      }
+      return ART_KEYS[i];
+    };
+    let out = '';
+    for (let i = 0; i < px.length;) {
+      const k = key(px[i]);
+      let n = 1;
+      while (i + n < px.length && key(px[i + n]) === k) n++;
+      out += (n > 1 ? n : '') + k;
+      i += n;
+    }
+    return { pal, px: out };
+  }
+
+  function decodeArt(a) {
+    const px = new Array(ART.W * ART.H).fill(null);
+    if (!a || typeof a.px !== 'string') return px;
+    let i = 0;
+    for (const [, n, k] of a.px.matchAll(/(\d*)([.a-zA-Z])/g)) {
+      const c = k === '.' ? null : a.pal?.[ART_KEYS.indexOf(k)] || null;
+      for (let j = 0; j < (Number(n) || 1) && i < px.length; j++) px[i++] = c;
+    }
+    return px;
+  }
+
+  // Where the legs are: from the bottom up, the rows where the picture splits in two.
+  function findLegs(px) {
+    const W = ART.W;
+    const runs = (y) => {
+      const out = [];
+      let from = -1;
+      for (let x = 0; x <= W; x++) {
+        const on = x < W && px[y * W + x];
+        if (on && from < 0) from = x;
+        if (!on && from >= 0) { out.push([from, x - 1]); from = -1; }
+      }
+      return out;
+    };
+    let top = -1;
+    let bottom = -1;
+    for (let y = 0; y < ART.H; y++) if (runs(y).length) { if (top < 0) top = y; bottom = y; }
+    if (bottom < 0) return null;
+    let y = bottom;
+    let skipped = 0;
+    while (y > top && runs(y).length < 2 && skipped < 2) { y--; skipped++; }
+    let legTop = -1;
+    while (y > top && runs(y).length >= 2) { legTop = y; y--; }
+    if (legTop < 0 || bottom - legTop < 1) return { top, bottom, legTop: null };
+    legTop = Math.max(legTop, bottom - Math.floor((bottom - top) * 0.45));
+    // Split the legs at the gap nearest the middle of the picture.
+    const r = runs(legTop);
+    const mid = (r[0][0] + r[r.length - 1][1]) / 2;
+    let split = mid;
+    let best = Infinity;
+    for (let i = 1; i < r.length; i++) {
+      const gap = (r[i - 1][1] + r[i][0]) / 2;
+      if (Math.abs(gap - mid) < best) { best = Math.abs(gap - mid); split = gap; }
+    }
+    return { top, bottom, legTop, split };
+  }
+
+  // { base, walk?, work?, sleep?, happy? } of encoded (or already decoded) pictures.
+  function makeDrawn(art) {
+    const d = { cache: new Map() };
+    for (const k of ART_POSES) if (art?.[k]) d[k] = Array.isArray(art[k]) ? art[k] : decodeArt(art[k]);
+    d.base ||= new Array(ART.W * ART.H).fill(null);
+    d.legs = findLegs(d.base);
+    return d;
+  }
+
+  // The picture for a pose and step, as pixel moves: which picture, then where each part goes.
+  function drawnFrame(d, pose, step) {
+    const f = step % 2;
+    const work = ['type', 'command', 'game', 'read', 'paint'].includes(pose);
+    const legs = d.legs?.legTop != null ? d.legs : null;
+    let pic = d.base;
+    let all = [0, 0];
+    let body = [0, 0];
+    let legL = [0, 0];
+    let legR = [0, 0];
+    let mirror = false;
+    let feetOnly = false;
+    if (pose === 'walk' && d.walk) { pic = step % 2 ? d.base : d.walk; body = [0, step % 2]; }
+    else if (pose === 'walk' && legs) {
+      const s4 = step % 4;
+      legL = [[-1, 0, 1, 0][s4], [-1, 0, 0, 0][s4]];
+      legR = [[1, 0, -1, 0][s4], [0, 0, -1, 0][s4]];
+      body = [0, s4 % 2];
+    } else if (pose === 'walk') all = [0, step % 2 ? -1 : 0];
+    else if (pose === 'rest') body = [0, BREATH[step % 8]];
+    else if (work && d.work) pic = f ? d.work : d.base;
+    else if (work) body = [0, f];
+    else if (pose === 'sleep' && d.sleep) pic = d.sleep;
+    else if (pose === 'sleep' && legs) { feetOnly = true; body = [0, legs.bottom - legs.legTop - 1 + f]; }
+    else if (pose === 'sleep') body = [0, f];
+    else if (pose === 'done') { pic = d.happy || d.base; all = [0, f ? 0 : -3]; }
+    else if (pose === 'dance') { pic = d.happy || d.base; all = [f ? 1 : -1, f ? -1 : 0]; mirror = !!f; }
+    else if (pose === 'dangle' && legs) { legL = [f ? 1 : -1, 0]; legR = [f ? -1 : 1, 0]; }
+    if (pic !== d.base) return { pic, parts: [{ all: true, at: [all[0] + body[0], all[1] + body[1]] }], mirror };
+    return { pic, legs, all, body, legL, legR, mirror, feetOnly };
+  }
+
+  function drawnBody(d, pose, step, col, ox, oy) {
+    const key = `${pose}:${pose === 'walk' ? step % 4 : pose === 'rest' ? step % 8 : step % 2}:${ox}:${oy}`;
+    let groups = d.cache.get(key);
+    if (!groups) {
+      const fr = drawnFrame(d, pose, step);
+      const W = ART.W;
+      const x0 = ox + 14 - W / 2;
+      const y0 = oy + BOX.H - ART.H;
+      // Legs behind, body over them; each part keeps its own offset.
+      const layers = [];
+      if (fr.parts) layers.push({ test: () => true, at: fr.parts[0].at });
+      else if (fr.legs) {
+        const { legTop, split, bottom } = fr.legs;
+        const leg = (left, mv) => ({ test: (x, y) => y >= legTop && (left ? x < split : x >= split) && (!fr.feetOnly || y >= bottom - 1), at: [fr.all[0] + mv[0], fr.all[1] + mv[1]] });
+        layers.push(leg(true, fr.legL), leg(false, fr.legR), { test: (x, y) => y < legTop, at: [fr.all[0] + fr.body[0], fr.all[1] + fr.body[1]] });
+      } else layers.push({ test: () => true, at: [fr.all[0] + fr.body[0], fr.all[1] + fr.body[1]] });
+      const details = [];
+      for (const { test, at } of layers) {
+        for (let y = 0; y < ART.H; y++) {
+          let run = null;
+          for (let x = 0; x <= W; x++) {
+            const sx = fr.mirror ? W - 1 - x : x;
+            const c = x < W && test(sx, y) ? fr.pic[y * W + sx] : null;
+            if (run && run.c === c) { run.w++; continue; }
+            if (run?.c) details.push([x0 + at[0] + run.x, y0 + at[1] + y, run.w, 1, run.c]);
+            run = { x, w: 1, c };
+          }
+        }
+      }
+      groups = [{ rects: [], details }];
+      d.cache.set(key, groups);
+    }
+    const out = [...groups];
+    const t = ([x, y, w, h, c]) => [ox + x, oy + y, w, h, c];
+    poseProps((rects, details = []) => out.push({ rects: rects.map(t), details: details.map(t) }), pose, step % 2, col, 0);
+    return out;
+  }
+
+  // Registers drawn characters (and friends' dress-up characters) as skins 'draw:<id>'.
+  function useDrawings(list = []) {
+    for (const k of Object.keys(DRAWN)) if (!k.startsWith('draw:__')) delete DRAWN[k];
+    for (const k of Object.keys(SKINS)) if (k.startsWith('draw:') && !k.startsWith('draw:__')) delete SKINS[k];
+    for (const m of list) {
+      if (m.art) DRAWN[`draw:${m.id}`] = makeDrawn(m.art);
+      else if (m.recipe) SKINS[`draw:${m.id}`] = skinFor(m.recipe);
+    }
+  }
+  // A drawing being painted right now (no saving): skin 'draw:__<name>'.
+  function setDrawing(name, art) {
+    if (art) DRAWN[`draw:__${name}`] = makeDrawn(art);
+    else delete DRAWN[`draw:__${name}`];
+  }
+
   // ---- The character studio --------------------------------------------------
   // A home-made character is a recipe: a head, hair, a body, a tail, a cape or a backpack, and a
   // few colours. It becomes a skin like any other ('mix:<id>'). Parts that come from a recruited
@@ -1002,5 +1181,6 @@
     buildCharacter, buildMini, drawMiniAt, drawCharacter, drawCharacterAt, drawFx, drawFxAt, paint,
     parseSheet, drawCustomAt, colorsFor,
     PARTS, PART_FROM, SWATCHES, skinFor, useCustoms, randomRecipe,
+    ART, ART_POSES, encodeArt, decodeArt, useDrawings, setDrawing, findLegs, drawnFrame,
   };
 });

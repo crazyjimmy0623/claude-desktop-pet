@@ -14,6 +14,15 @@ const { Focus } = require('./focus');
 const { ActivityMonitor } = require('./activity');
 const { Windows } = require('./windows');
 
+// A dress-up recipe, keeping only known kinds of fields.
+function cleanRecipe(recipe) {
+  const clean = {};
+  for (const k of ['head', 'hat', 'body', 'extra']) if (typeof recipe?.[k] === 'string') clean[k] = recipe[k].slice(0, 20);
+  clean.colors = {};
+  for (const [k, v] of Object.entries(recipe?.colors || {})) if (/^#[0-9a-f]{6}$/i.test(v)) clean.colors[k] = v;
+  return clean;
+}
+
 function loginItemOptions() {
   // In dev the app runs as electron.exe + project path, so both must be registered.
   return app.isPackaged ? {} : { path: process.execPath, args: [app.getAppPath()] };
@@ -122,13 +131,14 @@ function boot() {
     store.updateSettings({ characters: chars });
   });
   // Residents: invite one in (a starter look; change it like any other character), rename, see them out.
-  handle('resident:add', (name) => {
+  handle('resident:add', (arg) => {
+    const { name, skin } = typeof arg === 'object' && arg ? arg : { name: arg };
     const chars = JSON.parse(JSON.stringify(store.settings.characters));
     chars.residents ??= [];
     if (chars.residents.length >= MAX_RESIDENTS) return { error: `房間最多住 ${MAX_RESIDENTS} 位居民` };
     const id = Date.now().toString(36);
     const n = String(name || '').trim().slice(0, 12) || `居民 ${chars.residents.length + 1}`;
-    chars.residents.push({ id, name: n, skin: 'office', accessory: null });
+    chars.residents.push({ id, name: n, skin: typeof skin === 'string' ? skin.slice(0, 40) : 'office', accessory: null });
     store.updateSettings({ characters: chars });
     return { id };
   });
@@ -148,10 +158,7 @@ function boot() {
   handle('custom:save', ({ id, name, recipe }) => {
     const chars = JSON.parse(JSON.stringify(store.settings.characters));
     chars.customs ??= [];
-    const clean = {};
-    for (const k of ['head', 'hat', 'body', 'extra']) if (typeof recipe?.[k] === 'string') clean[k] = recipe[k].slice(0, 20);
-    clean.colors = {};
-    for (const [k, v] of Object.entries(recipe?.colors || {})) if (/^#[0-9a-f]{6}$/i.test(v)) clean.colors[k] = v;
+    const clean = cleanRecipe(recipe);
     const n = String(name || '').trim().slice(0, 12) || '我的角色';
     let m = id && chars.customs.find((x) => x.id === id);
     if (m) Object.assign(m, { name: n, recipe: clean });
@@ -167,6 +174,49 @@ function boot() {
     const chars = JSON.parse(JSON.stringify(store.settings.characters));
     chars.customs = (chars.customs || []).filter((x) => x.id !== id);
     store.updateSettings({ characters: chars });
+  });
+  // Drawn characters, and friends who arrived on a character card.
+  handle('drawing:save', ({ id, name, art, recipe, friend }) => {
+    const chars = JSON.parse(JSON.stringify(store.settings.characters));
+    chars.drawings ??= [];
+    const entry = { name: String(name || '').trim().slice(0, 12) || (friend ? '新朋友' : '我畫的角色') };
+    const cleanArt = {};
+    for (const k of ['base', 'walk', 'work', 'sleep', 'happy']) {
+      const a = art?.[k];
+      if (a && typeof a.px === 'string' && a.px.length <= 6000 && /^[0-9.a-zA-Z]*$/.test(a.px)
+        && Array.isArray(a.pal) && a.pal.length <= 52 && a.pal.every((c) => /^#[0-9a-f]{6}$/i.test(c))) cleanArt[k] = { pal: a.pal, px: a.px };
+    }
+    if (cleanArt.base) entry.art = cleanArt;
+    else if (recipe) entry.recipe = cleanRecipe(recipe);
+    else return { error: '這張圖是空的' };
+    let m = id && chars.drawings.find((x) => x.id === id);
+    if (m) {
+      delete m.art;
+      delete m.recipe;
+      Object.assign(m, entry);
+    } else {
+      const mine = chars.drawings.filter((x) => !!x.friend === !!friend).length;
+      if (!friend && mine >= 12) return { error: '最多畫 12 個角色，先刪掉一個吧' };
+      if (friend && mine >= 40) return { error: '朋友圖鑑滿了（40 位），先送走一位吧' };
+      m = { id: Date.now().toString(36), ...entry, ...(friend ? { friend: true } : {}) };
+      chars.drawings.push(m);
+    }
+    store.updateSettings({ characters: chars });
+    return { id: m.id };
+  });
+  handle('drawing:remove', (id) => {
+    const chars = JSON.parse(JSON.stringify(store.settings.characters));
+    chars.drawings = (chars.drawings || []).filter((x) => x.id !== id);
+    store.updateSettings({ characters: chars });
+  });
+  handle('card:save', ({ dataUrl, name }) => {
+    const dir = path.join(app.getPath('pictures'), 'Deskmates');
+    fs.mkdirSync(dir, { recursive: true });
+    const safe = String(name || '角色').replace(/[\\/:*?"<>|]/g, '').slice(0, 12) || '角色';
+    const file = path.join(dir, `${safe}-角色卡-${Date.now() % 100000}.png`);
+    fs.writeFileSync(file, Buffer.from(String(dataUrl).split(',')[1], 'base64'));
+    shell.showItemInFolder(file);
+    return file;
   });
   handle('project:forget', (name) => {
     const chars = JSON.parse(JSON.stringify(store.settings.characters));

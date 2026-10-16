@@ -65,7 +65,8 @@ class Actors extends EventEmitter {
       skin = pool.length ? pool[a.seq % pool.length] : fallback;
     }
     const isCustom = (skin.startsWith('custom:') && this.customSkins.has(skin))
-      || (skin.startsWith('mix:') && (characters.customs || []).some((m) => `mix:${m.id}` === skin));
+      || (skin.startsWith('mix:') && (characters.customs || []).some((m) => `mix:${m.id}` === skin))
+      || (skin.startsWith('draw:') && (characters.drawings || []).some((m) => `draw:${m.id}` === skin));
     if (!isCustom && !(SKIN_IDS.has(skin) && owned.has(`skin:${skin}`))) skin = fallback;
     const accessory = pick?.accessory && owned.has(`acc:${pick.accessory}`) ? pick.accessory : null;
     return { skin, accessory };

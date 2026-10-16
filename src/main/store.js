@@ -28,6 +28,7 @@ const DEFAULTS = {
       projects: {}, // project name -> { skin, accessory }
       residents: [], // characters who simply live in the room: { id, name, skin, accessory }
       customs: [], // characters made in the studio: { id, name, recipe } - worn as skin 'mix:<id>'
+      drawings: [], // hand-drawn characters and friends' cards: { id, name, art | recipe, friend } - skin 'draw:<id>'
     },
     pomodoro: { focus: 25, break: 5 },
     reminders: { water: 0, stretch: 0 }, // minutes between reminders, 0 = off

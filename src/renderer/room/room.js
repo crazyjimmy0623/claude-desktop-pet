@@ -5,7 +5,7 @@ const DPR = window.devicePixelRatio || 1;
 const TU = Iso.TU;
 const SPEED = 2.5; // tiles per second
 const M = Sprites.MINI;
-const DRAWER_H = 290;
+const DRAWER_H = 340;
 const TOOLBAR_H = 34;
 
 // Station → acceptable furniture, best first.
@@ -747,7 +747,7 @@ document.getElementById('btn-quit').addEventListener('click', () => desk.invoke(
 
 function applySettings(s) {
   state.settings = s;
-  Sprites.useCustoms(s.characters?.customs);
+  Sprites.useCustoms(s.characters?.customs); Sprites.useDrawings(s.characters?.drawings);
   if (s.roomZoom !== state.zoom) {
     state.zoom = s.roomZoom;
     layout();
@@ -777,7 +777,7 @@ window.RoomApp = { state, setRoom, layout, tileAt, finePoint, Z, clone, rebuildN
 
 desk.invoke('init').then((init) => {
   state.settings = init.settings;
-  Sprites.useCustoms(init.settings.characters?.customs);
+  Sprites.useCustoms(init.settings.characters?.customs); Sprites.useDrawings(init.settings.characters?.drawings);
   state.zoom = init.settings.roomZoom;
   state.assets = init.assets;
   Common.loadSheets(init.assets);

@@ -7,6 +7,7 @@ const INVOKE = new Set([
   'assets:open-folder', 'window:open', 'demo', 'share:save', 'share:copy',
   'autostart:get', 'autostart:set', 'actors:clear', 'actors:regroup', 'app:quit', 'focus:toggle',
   'coins:spend', 'resident:add', 'resident:rename', 'resident:remove', 'custom:save', 'custom:remove',
+  'drawing:save', 'drawing:remove', 'card:save',
 ]);
 const SEND = new Set(['mouse:ignore', 'room:hide', 'room:drag', 'actor:pat', 'actor:menu']);
 const LISTEN = new Set(['actors', 'progress', 'settings', 'room', 'fx', 'assets', 'command', 'guild:tab', 'dock:open']);

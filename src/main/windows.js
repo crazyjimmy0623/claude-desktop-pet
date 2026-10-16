@@ -5,7 +5,7 @@ const path = require('path');
 
 const PRELOAD = path.join(__dirname, '..', 'preload.js');
 const page = (...p) => path.join(__dirname, '..', 'renderer', ...p);
-const STRIP_HEIGHT = 300;
+const STRIP_HEIGHT = 380;
 const DEBUG = !!process.env.DESKMATES_DEBUG;
 
 function wireDebug(w, name) {
@@ -221,7 +221,9 @@ class Windows {
         const steps = (() => { try { return JSON.parse(process.env.DESKMATES_DEBUG_STEPS || '[]'); } catch { return []; } })();
         for (const [i, js] of steps.entries()) {
           if (w.isDestroyed()) return;
-          await w.webContents.executeJavaScript(js).catch((e) => console.log(`[room] debug step ${i + 1}: ${e}`));
+          // '@guild ...' runs inside the drawer's guild page.
+          const frame = js.startsWith('@guild ') ? w.webContents.mainFrame.framesInSubtree.find((f) => f.url.includes('/guild/')) : null;
+          await (frame || w.webContents).executeJavaScript(js.replace(/^@guild /, '')).then((r) => console.log(`[room] debug step ${i + 1} -> ${String(r).slice(0, 300)}`)).catch((e) => console.log(`[room] debug step ${i + 1}: ${e}`));
           await new Promise((r) => setTimeout(r, 1800));
           const file = require('path').join(require('os').tmpdir(), `deskmates-window-${i + 1}.png`);
           require('fs').writeFileSync(file, (await w.webContents.capturePage()).toPNG());

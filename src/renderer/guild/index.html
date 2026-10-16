@@ -18,6 +18,7 @@
   <nav class="tabs">
     <button data-tab="equip" class="active">🧑‍🤝‍🧑 夥伴</button>
     <button data-tab="studio">✨ 創角</button>
+    <button data-tab="friends">💌 朋友</button>
     <button data-tab="gacha">🎰 招募</button>
     <button data-tab="book">📚 圖鑑</button>
     <button data-tab="achievements">🏆 成就</button>
@@ -47,7 +48,12 @@
     </div>
 
     <div id="tab-studio" class="tab hidden">
-      <section class="card studio-stage">
+      <section class="card studio-modes">
+        <button class="mode active" data-mode="dress"><span class="ico">👗</span><span>換裝</span></button>
+        <button class="mode" data-mode="draw"><span class="ico">🖌️</span><span>畫畫</span></button>
+        <button class="mode" data-mode="photo"><span class="ico">📷</span><span>照片</span></button>
+      </section>
+      <section class="card studio-stage mode-dress">
         <canvas id="studio-canvas" class="pixel"></canvas>
         <div class="studio-controls">
           <input type="text" id="studio-name" maxlength="12" placeholder="幫他取個名字">
@@ -59,13 +65,97 @@
           </div>
         </div>
       </section>
-      <section class="card studio-parts">
+      <section class="card studio-parts mode-dress">
         <div id="studio-cats" class="studio-cats"></div>
         <div id="studio-options" class="studio-options"></div>
+      </section>
+      <section class="card paint-board mode-draw hidden">
+        <canvas id="paint-canvas" class="pixel" title="左鍵畫、右鍵擦"></canvas>
+      </section>
+      <section class="card studio-stage mode-draw hidden">
+        <canvas id="paint-preview" class="pixel"></canvas>
+        <div class="studio-controls">
+          <input type="text" id="paint-name" maxlength="12" placeholder="幫他取個名字">
+          <button class="btn primary big" id="paint-save">✨ 完成</button>
+          <div class="studio-actions">
+            <button class="btn" id="paint-wear" title="讓代表你的角色穿上">👕 我要穿</button>
+            <button class="btn danger" id="paint-delete" title="刪掉這個角色">🗑</button>
+          </div>
+          <button class="btn" id="paint-send">💌 送給朋友</button>
+        </div>
+      </section>
+      <section class="card paint-tools mode-draw hidden">
+        <div id="paint-tools" class="tool-row"></div>
+        <div id="paint-toggles" class="tool-row"></div>
+        <div id="paint-palette" class="palette"></div>
+        <div class="start-row">重新開始：
+          <button class="chip" data-start="blank">⬜ 空白</button>
+          <button class="chip" data-start="person">🧍 人形</button>
+          <button class="chip" data-start="dress">👗 換裝角色</button>
+        </div>
+      </section>
+      <section class="card paint-poses-card mode-draw hidden">
+        <h2>姿勢 <small>只畫正面也會自己動</small></h2>
+        <div id="paint-poses" class="paint-poses"></div>
+      </section>
+      <section class="card photo-in mode-photo hidden">
+        <label class="dropzone">
+          <span class="ico">📷</span>
+          <b>把照片或圖拖進來</b>
+          <small>娃娃、公仔、手繪都可以・也能 Ctrl+V 貼上</small>
+          <span class="btn">選一張圖</span>
+          <input type="file" id="photo-file" accept="image/*" hidden>
+        </label>
+      </section>
+      <section class="card photo-out mode-photo hidden">
+        <p id="photo-hint" class="desc">背景越單純，變出來越乾淨。</p>
+        <div id="photo-result" class="photo-result hidden">
+          <img id="photo-original" alt="">
+          <span class="arrow">➜</span>
+          <div id="photo-canvas" class="photo-canvas"></div>
+          <div class="photo-controls">
+            <p id="photo-note" class="desc"></p>
+            <b>去背景</b><div id="photo-cut" class="chips"></div>
+            <b>大小</b><div id="photo-size" class="chips"></div>
+            <div class="studio-actions">
+              <button class="btn" id="photo-edit">🖌️ 修一修</button>
+              <button class="btn primary" id="photo-done">✨ 直接完成</button>
+            </div>
+          </div>
+        </div>
       </section>
       <section class="card studio-mine">
         <h2>🧸 我的角色</h2>
         <div id="studio-list" class="studio-list"></div>
+      </section>
+    </div>
+
+    <div id="tab-friends" class="tab hidden">
+      <section class="card friends-send">
+        <h2>💌 送角色給朋友</h2>
+        <div id="send-list" class="studio-list"></div>
+      </section>
+      <section class="card friends-card">
+        <div id="card-preview" class="card-preview"></div>
+        <div id="card-actions" class="card-actions">
+          <button class="btn primary" id="card-copy">📋 複製圖片<small>貼到 LINE、Discord</small></button>
+          <button class="btn" id="card-file">💾 存成檔案</button>
+          <p class="desc">朋友把這張圖拖進他的 Deskmates，角色就會跑到他那邊。</p>
+        </div>
+      </section>
+      <section class="card friends-get">
+        <label class="dropzone">
+          <span class="ico">📥</span>
+          <b>收到角色卡？</b>
+          <small>拖進來，或 Ctrl+V 貼上</small>
+          <span class="btn">選檔案</span>
+          <input type="file" id="card-pick" accept="image/*" hidden>
+        </label>
+        <p id="friend-status" class="status-line"></p>
+      </section>
+      <section class="card friends-book">
+        <h2>👫 朋友圖鑑 <span id="friend-count" class="pill"></span></h2>
+        <div id="friend-list" class="studio-list"></div>
       </section>
     </div>
 
@@ -119,6 +209,8 @@
   <script src="../../shared/sprites.js"></script>
   <script src="../../shared/iso.js"></script>
   <script src="../common.js"></script>
+  <script src="pixels.js"></script>
   <script src="guild.js"></script>
+  <script src="draw.js"></script>
 </body>
 </html>
