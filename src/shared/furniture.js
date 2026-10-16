@@ -37,6 +37,22 @@
       r(0, 15, 16, 1, '#dcdfe5'); r(15, 0, 1, 16, '#dcdfe5');
       r(((x * 3 + y) % 10) + 2, 4, 4, 1, '#d8dbe2'); r(((x + y * 5) % 9) + 3, 10, 3, 1, '#d8dbe2');
     },
+    cyber: (r, x, y) => {
+      r(0, 0, 16, 16, '#121729');
+      r(0, 0, 16, 1, '#1c2440');
+      r(0, 0, 1, 16, '#1c2440');
+      r(1, 1, 1, 1, '#2a3558');
+      r(8, 8, 1, 1, '#182036');
+      if ((x * 7 + y * 3) % 11 === 0) r(0, 0, 1, 1, '*#36f9ff');
+      if ((x * 5 + y * 9) % 17 === 0) r(4, 11, 7, 1, '#1a2a4a');
+    },
+    neon: (r, x, y) => {
+      r(0, 0, 16, 16, '#150f24');
+      r(0, 0, 16, 1, '#281846');
+      r(0, 0, 1, 16, '#281846');
+      if ((x + y) % 2 === 0) r(7, 7, 2, 2, '#1f1536');
+      if ((x * 3 + y * 5) % 13 === 0) r(0, 0, 1, 1, '*#ff3ea5');
+    },
     grass: (r, x, y) => {
       r(0, 0, 16, 16, '#6db85a');
       r(((x * 5 + y * 3) % 12) + 1, 3, 1, 2, '#5aa84a'); r(((x * 3 + y * 7) % 12) + 2, 10, 1, 2, '#5aa84a'); r(((x + y) % 12) + 3, 7, 1, 1, '#ffe066');
@@ -44,14 +60,23 @@
   };
 
   const WALLS = {
-    cream: { base: '#f3e6cf', draw: (r, x) => { r(x % 2 ? 0 : 8, 0, 1, 32, '#ead9bc'); } },
-    brick: { base: '#b5523b', draw: (r, x) => {
-      for (let row = 0; row < 8; row++) {
+    cream: { base: '#f3e6cf', draw: (r, x, h) => { r(x % 2 ? 0 : 8, 0, 1, h, '#ead9bc'); } },
+    brick: { base: '#b5523b', draw: (r, x, h) => {
+      for (let row = 0; row < h / 4; row++) {
         r(0, row * 4 + 3, 16, 1, '#8f3f2d');
         r(((row + x) % 2) * 8 + 4, row * 4, 1, 3, '#8f3f2d');
       }
     } },
-    navy: { base: '#2f3e66', draw: (r, x) => { r(x % 2 ? 2 : 10, 0, 2, 32, '#36477a'); } },
+    navy: { base: '#2f3e66', draw: (r, x, h) => { r(x % 2 ? 2 : 10, 0, 2, h, '#36477a'); } },
+    cyber: { base: '#141a2e', neon: true, draw: (r, x, h) => {
+      r(0, 0, 1, h, '#0b0f1d');
+      r(2, 6, 12, h - 14, '#182038');
+      r(2, 6, 12, 1, '#222b4a');
+      r(3, 10, 1, h - 20, '#1d2644');
+      if (x % 3 === 0) r(12, 9, 1, 1, '*#36f9ff');
+      if (x % 5 === 2) r(12, 12, 1, 1, '*#ff3ea5');
+      if (x % 4 === 1) { r(5, h - 11, 6, 1, '#0b0f1d'); r(5, h - 10, 1, 3, '#0b0f1d'); }
+    } },
     mint: { base: '#a8e0cf', draw: (r, x) => { r(0, 10, 16, 1, '#93d0bd'); r(x % 2 ? 4 : 12, 11, 1, 1, '#ffffff'); } },
   };
 
@@ -181,6 +206,67 @@
     } },
   };
 
+  // ---- Cyberpunk theme ----------------------------------------------------------
+  // Furniture is drawn in its cozy colours and recoloured here; '*' marks neon that glows.
+  const CYBER = {
+    '#1d1b26': '#06070e', '#b88452': '#2a3046', '#9c6b3c': '#252b40', '#7a522c': '#161a29', '#5e3d22': '#0f1220',
+    '#c98b5a': '#262c42', '#e0a878': '#3a4260', '#a86f45': '#1c2133', '#c9ced8': '*#2bd9ff', '#2a2f3a': '#0e1120',
+    '#16324a': '#062438', '#1b2030': '#0a0d18', '#7cc47f': '*#3dffb0', '#7ad1ff': '*#36f9ff', '#ffd65a': '*#ffd23f',
+    '#2b2f3a': '#0c0f1c', '#3d4352': '#171c2e', '#4a5060': '#2a3150', '#7cff8c': '*#3dffb0', '#ffb347': '*#ff3ea5',
+    '#d9534f': '#ff3ea5', '#5aa7ff': '#2a7ab0', '#c27bff': '#9b5cff', '#f0a35e': '#ff8a3d', '#4a90d9': '*#36f9ff',
+    '#ffffff': '#d8e4ff', '#e8b13a': '*#ffd23f', '#5a7bd6': '#7a2a8c', '#4a68bd': '#5c1f6b', '#6a8ae0': '#94349f',
+    '#8aa6f0': '*#ff6ad5', '#444a56': '#1c2236', '#2f343e': '#121626', '#ff5f5f': '*#ff3e5f', '#4f9a4f': '#0f6b5c',
+    '#6cc06c': '*#3dffb0', '#3f7f3f': '#0a4a40', '#c46a3c': '#2a3150', '#d98a5a': '*#ff3ea5', '#fbf6e6': '#d8e4ff',
+    '#c25b56': '#1b1433', '#d9776f': '#2c1a4d', '#ffd08a': '*#ff3ea5', '#3a3f4c': '#1a1f30', '#ffe9a8': '*#ff6ad5',
+    '#e6d8b8': '#5c3a66', '#fff6d0': '*#ffb8f0', '#e0405a': '*#ff3e5f', '#3d2f7a': '#2a1850', '#8d939c': '#2a3046',
+    '#737983': '#1c2133', '#ff9a3c': '*#ff9a3c', '#ff5fc8': '*#ff5fc8', '#ffe066': '*#ffe066', '#8a6fb5': '#3b1f5c',
+    '#b49ad8': '#5c2f8a',
+  };
+  const cyberRemap = (c) => CYBER[c] || c;
+
+  // Extra neon trims drawn on top of the recoloured furniture.
+  const CYBER_TRIM = {
+    desk: (g) => g([], [[0, 5, 32, 1, '*#36f9ff']]),
+    server: (g) => g([], [[1, -17, 14, 1, '*#36f9ff'], [1, 14, 14, 1, '*#ff3ea5']]),
+    bookshelf: (g) => g([], [[0, -20, 32, 1, '*#ff3ea5']]),
+    table: (g, s) => {
+      g([], [[0, 22, 48, 1, '*#ff3ea5']]);
+      if (s.meeting) g([], [[17, -8 + (s.frame % 2), 14, 9, '*rgba(54,249,255,0.28)'], [21, -5, 6, 1, '*#36f9ff']]);
+    },
+    bell: (g) => g([], [[0, -4, 32, 1, '*#ff3ea5']]),
+    sofa: (g) => g([], [[1, 14, 30, 1, '*#ff6ad5']]),
+    coffee: (g) => g([], [[2, -12, 1, 26, '*#ff3e5f']]),
+    whiteboard: (g, s) => g([], [[3, 5, 26, 16, '#0a1426'], ...(s.meeting
+      ? [[8, 14, 3, 4, '*#36f9ff'], [13, 11, 3, 7, '*#3dffb0'], [18, 8, 3, 10, '*#ff3ea5']]
+      : [[6, 8, 12, 1, '*#36f9ff'], [6, 11, 16, 1, '#2a3a5a'], [6, 14, 9, 1, '*#ff3ea5']])]),
+    plant: (g) => g([], [[4, 13, 8, 1, '*#ff3ea5']]),
+    clock: (g, s) => {
+      const d = new Date(s.now);
+      const hh = String(d.getHours()).padStart(2, '0');
+      const blink = d.getSeconds() % 2 ? '*#36f9ff' : '#0b2a3a';
+      // A digital readout instead of the round face: two glowing blocks per digit pair and a blinking colon.
+      g([[1, 8, 14, 8, '#0a0e1c']], [[2, 10, 2, 4, Number(hh[0]) ? '*#36f9ff' : '#123044'], [5, 10, 2, 4, '*#36f9ff'], [7, 11, 1, 1, blink], [7, 13, 1, 1, blink], [9, 10, 2, 4, '*#ff3ea5'], [12, 10, 2, 4, '*#ff3ea5']]);
+    },
+  };
+
+  // Night city through the window, with drifting rain.
+  function cyberWindow(g, s) {
+    const rain = [];
+    for (let i = 0; i < 6; i++) {
+      const x = 5 + ((i * 7 + Math.floor(s.now / 90)) % 22);
+      const y = 6 + ((i * 5 + Math.floor(s.now / 60)) % 15);
+      rain.push([x, y, 1, 2, '#3a4a7a']);
+    }
+    const lit = [];
+    for (let i = 0; i < 9; i++) if ((i * 13 + Math.floor(s.now / 4000)) % 3) lit.push([6 + (i % 5) * 4, 13 + Math.floor(i / 5) * 4, 1, 1, i % 2 ? '*#ffd23f' : '*#36f9ff']);
+    g([[3, 4, 26, 22, '#1a1f30']], [
+      [5, 6, 22, 18, '#0a0e24'], [5, 6, 22, 5, '#1a1440'],
+      [6, 12, 5, 12, '#141a33'], [12, 9, 4, 15, '#10162c'], [17, 14, 4, 10, '#141a33'], [22, 11, 4, 13, '#10162c'],
+      ...lit, [13, 10, 2, 1, s.frame % 6 ? '*#ff3ea5' : '#5c1f6b'],
+      ...rain, [15, 6, 2, 18, '#1a1f30'], [5, 14, 22, 1, '#1a1f30'],
+    ]);
+  }
+
   // ---- Rooms -----------------------------------------------------------------
 
   // A long office docked above the taskbar: 3 wall rows + floor rows, as wide as the screen.
@@ -196,9 +282,15 @@
     { w: 9, objs: [['desk', 1, 0], ['desk', 5, 0], ['plant', 8, 0]], wall: [['window', 3]] },
   ];
 
-  function generateRoom(w, h = 8) {
+  const THEMES = {
+    cyber: { name: '賽博龐克', wall: 'cyber', floor: 'cyber' },
+    cozy: { name: '溫馨', wall: 'cream', floor: 'wood' },
+  };
+
+  function generateRoom(w, h = 8, theme = 'cyber') {
     const wallRows = 3;
-    const room = { w, h, wallRows, wall: 'cream', floor: 'wood', tiles: {}, objects: [] };
+    const t = THEMES[theme] || THEMES.cyber;
+    const room = { w, h, wallRows, theme, wall: t.wall, floor: t.floor, tiles: {}, objects: [] };
     const floorRows = h - wallRows;
     let x = 0;
     let i = 0;
@@ -230,8 +322,15 @@
 
   function makeRect(ctx, unit, ox, oy) {
     return (x, y, w, h, color) => {
+      const glow = color[0] === '*';
+      if (glow) {
+        color = color.slice(1);
+        ctx.shadowColor = color;
+        ctx.shadowBlur = unit * 3;
+      }
       ctx.fillStyle = color;
       ctx.fillRect(ox + x * unit, oy + y * unit, w * unit, h * unit);
+      if (glow) ctx.shadowBlur = 0;
     };
   }
 
@@ -253,13 +352,20 @@
 
   function drawWall(ctx, unit, room) {
     const wall = WALLS[room.wall] || WALLS.cream;
+    const h = room.wallRows * T;
     for (let x = 0; x < room.w; x++) {
       const r = makeRect(ctx, unit, x * T * unit, 0);
-      r(0, 0, 16, room.wallRows * T, wall.base);
-      wall.draw(r, x);
+      r(0, 0, 16, h, wall.base);
+      wall.draw(r, x, h);
       r(0, 0, 16, 2, '#00000033');
-      r(0, room.wallRows * T - 4, 16, 4, PAL.woodDark);
-      r(0, room.wallRows * T - 4, 16, 1, '#9a6a3c');
+      if (wall.neon) {
+        r(0, 3, 16, 1, '*#36f9ff');
+        r(0, h - 4, 16, 4, '#0b0e1a');
+        r(0, h - 4, 16, 1, '*#ff3ea5');
+      } else {
+        r(0, h - 4, 16, 4, PAL.woodDark);
+        r(0, h - 4, 16, 1, '#9a6a3c');
+      }
     }
   }
 
@@ -267,13 +373,17 @@
   function drawObject(ctx, unit, obj, state) {
     const def = OBJECTS[obj.type];
     if (!def) return;
+    const cyber = state.theme === 'cyber';
     const ox = obj.x * T * unit;
     const oy = obj.y * T * unit;
     const groups = [];
-    def.draw((rects, details = []) => groups.push({ rects, details }), state);
+    const g = (rects, details = []) => groups.push({ rects, details });
+    if (cyber && obj.type === 'window') cyberWindow(g, state);
+    else def.draw(g, state);
+    if (cyber) CYBER_TRIM[obj.type]?.(g, state);
     ctx.save();
     ctx.translate(ox, oy);
-    Sprites.paint(ctx, unit, groups, 1, def.w * T);
+    Sprites.paint(ctx, unit, groups, 1, def.w * T, cyber ? cyberRemap : null);
     ctx.restore();
   }
 
@@ -344,5 +454,5 @@
     });
   }
 
-  return { T, FLOORS, WALLS, OBJECTS, DEFAULT_ROOM, generateRoom, fitRoom, drawFloorTile, drawWall, drawObject, footprint, walkGrid, stationSpots, canPlace, preview };
+  return { T, FLOORS, WALLS, OBJECTS, THEMES, DEFAULT_ROOM, generateRoom, fitRoom, cyberRemap, drawFloorTile, drawWall, drawObject, footprint, walkGrid, stationSpots, canPlace, preview };
 });

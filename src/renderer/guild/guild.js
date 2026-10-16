@@ -48,7 +48,7 @@ function itemPreview(id, size = 2) {
       x.fillStyle = w.base;
       x.fillRect(0, 0, x.canvas.width, x.canvas.height);
       const u = (size / 2) * DPR;
-      for (let i = 0; i < 2; i++) w.draw((rx, ry, rw, rh, color) => { x.fillStyle = color; x.fillRect((rx + i * 16) * u, ry * u, rw * u, rh * u); }, i);
+      for (let i = 0; i < 2; i++) w.draw((rx, ry, rw, rh, color) => { x.fillStyle = color; x.fillRect((rx + i * 16) * u, ry * u, rw * u, rh * u); }, i, 32);
     });
   }
   if (type === 'obj') {

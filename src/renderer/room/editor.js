@@ -73,7 +73,7 @@
         const top = def.wall ? 0 : 20;
         const pc = previewCanvas(def.w * T * s, (def.h * T + top) * s, (x) => {
           x.translate(0, top * s * DPR);
-          Furniture.drawObject(x, s * DPR, { type, x: 0, y: 0 }, { frame: 0, active: false, now: Date.now(), hour: 12 });
+          Furniture.drawObject(x, s * DPR, { type, x: 0, y: 0 }, { frame: 0, active: false, now: Date.now(), hour: 12, theme: room().theme });
         });
         palette.append(button(itemName(`obj:${type}`), pc, tool?.kind === 'object' && tool.type === type && !tool.moving, () => {
           tool = { kind: 'object', type };
@@ -101,7 +101,7 @@
           const w = Furniture.WALLS[id];
           x.fillStyle = w.base;
           x.fillRect(0, 0, 32 * DPR, 32 * DPR);
-          w.draw((rx, ry, rw, rh, color) => { x.fillStyle = color; x.fillRect(rx * 2 * DPR, ry * DPR, rw * 2 * DPR, rh * DPR); }, 0);
+          w.draw((rx, ry, rw, rh, color) => { x.fillStyle = color; x.fillRect(rx * 2 * DPR, ry * DPR, rw * 2 * DPR, rh * DPR); }, 0, 32);
         });
         palette.append(button(itemName(`wall:${id}`), pc, room().wall === id, () => {
           room().wall = id;
@@ -145,6 +145,20 @@
         r.append(l, button('－', null, false, onMinus), button('＋', null, false, onPlus));
         return r;
       };
+      const themeRow = document.createElement('div');
+      themeRow.className = 'row';
+      const label = document.createElement('span');
+      label.textContent = '風格：';
+      label.style.minWidth = '80px';
+      themeRow.append(label);
+      for (const [id, t] of Object.entries(Furniture.THEMES)) {
+        themeRow.append(button(t.name, null, (room().theme || 'cozy') === id, () => {
+          Object.assign(room(), { theme: id, wall: t.wall, floor: t.floor });
+          save();
+          refresh();
+        }));
+      }
+      palette.append(themeRow);
       palette.append(row('高度', `${room().h} 格`, () => resize(0, -1), () => resize(0, 1)));
       const r = document.createElement('div');
       r.className = 'row';
@@ -286,7 +300,7 @@
       const y = hover.y - def.h + 1;
       const ok = Furniture.canPlace(r, tool.type, x, y);
       ctx.globalAlpha = 0.6;
-      Furniture.drawObject(ctx, u, { type: tool.type, x, y }, { frame: 0, active: false, now: Date.now(), hour: 12 });
+      Furniture.drawObject(ctx, u, { type: tool.type, x, y }, { frame: 0, active: false, now: Date.now(), hour: 12, theme: room().theme });
       ctx.globalAlpha = 1;
       ctx.fillStyle = ok ? 'rgba(124,196,127,0.35)' : 'rgba(224,64,90,0.4)';
       ctx.fillRect(x * T * u, y * T * u, def.w * T * u, def.h * T * u);

@@ -493,15 +493,31 @@ function onFx(f) {
 
 // ---- Drawing -----------------------------------------------------------------------
 
+// Floor and wall only change when the room is edited, so they are drawn once into a cache.
+let bgCache = { key: '', canvas: document.createElement('canvas') };
+function background(u) {
+  const { room } = state;
+  const key = JSON.stringify([room.w, room.h, room.wall, room.floor, room.tiles, u, Object.values(state.customTiles).filter((t) => t.img.complete).length]);
+  if (bgCache.key === key) return bgCache.canvas;
+  const c = bgCache.canvas;
+  c.width = room.w * T * u;
+  c.height = room.h * T * u;
+  const b = c.getContext('2d');
+  b.imageSmoothingEnabled = false;
+  Furniture.drawWall(b, u, room);
+  for (let y = room.wallRows; y < room.h; y++) {
+    for (let x = 0; x < room.w; x++) Furniture.drawFloorTile(b, u, x, y, room.tiles[`${x},${y}`] || room.floor, state.customTiles);
+  }
+  bgCache.key = key;
+  return c;
+}
+
 function draw(now) {
   const { room } = state;
   const u = unit();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  Furniture.drawWall(ctx, u, room);
-  for (let y = room.wallRows; y < room.h; y++) {
-    for (let x = 0; x < room.w; x++) Furniture.drawFloorTile(ctx, u, x, y, room.tiles[`${x},${y}`] || room.floor, state.customTiles);
-  }
+  ctx.drawImage(background(u), 0, 0);
 
   const active = new Set();
   let meeting = false;
@@ -511,7 +527,7 @@ function draw(now) {
     if (s && (v.actor.state === 'work' || v.actor.state === 'wait')) active.add(s.objIndex);
     if (s?.type === 'meeting') meeting = true;
   }
-  const objState = (i) => ({ frame: Math.floor(now / 250), active: active.has(i), now, hour: new Date(now).getHours(), meeting });
+  const objState = (i) => ({ frame: Math.floor(now / 250), active: active.has(i), now, hour: new Date(now).getHours(), meeting, theme: room.theme });
 
   const drawables = [];
   room.objects.forEach((o, i) => {
@@ -693,7 +709,8 @@ desk.invoke('init').then((init) => {
   loadCustomTiles(init.assets);
   applyProgress(init.progress);
   state.room = init.room || Furniture.generateRoom(tilesAcross(), ROOM_ROWS);
-  if (!init.room) desk.invoke('room:set', state.room);
+  if (!state.room.theme) Object.assign(state.room, { theme: 'cyber', wall: 'cyber', floor: 'cyber' });
+  if (!init.room || !init.room.theme) desk.invoke('room:set', state.room);
   layout();
   syncActors(init.actors);
   window.RoomEditor?.refresh();

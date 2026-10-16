@@ -11,6 +11,8 @@ function wireDebug(w, name) {
   if (!DEBUG) return;
   w.webContents.on('console-message', (e) => console.log(`[${name}] ${e.level}: ${e.message} (${e.sourceId?.split('/').pop()}:${e.lineNumber})`));
   w.webContents.on('render-process-gone', (_e, d) => console.log(`[${name}] renderer gone: ${d.reason}`));
+  w.webContents.on('did-fail-load', (_e, code, desc) => console.log(`[${name}] load failed: ${code} ${desc}`));
+  w.on('show', () => console.log(`[${name}] shown at ${JSON.stringify(w.getBounds())}`));
 }
 const TOP_LEVEL = 'screen-saver';
 
@@ -145,9 +147,20 @@ class Windows {
     w.loadFile(page('room', 'index.html'));
     w.once('ready-to-show', () => this.shouldShow() && w.showInactive());
     w.on('closed', () => { if (this.room === w) this.room = null; });
+    if (DEBUG) {
+      // Dump what the room canvas actually contains, for debugging without looking at the screen.
+      setTimeout(async () => {
+        if (w.isDestroyed()) return;
+        const out = require('path').join(require('os').tmpdir(), 'deskmates-room.png');
+        const url = await w.webContents.executeJavaScript('document.getElementById("room").toDataURL("image/png")').catch((e) => String(e));
+        if (url.startsWith('data:')) require('fs').writeFileSync(out, Buffer.from(url.split(',')[1], 'base64'));
+        console.log(`[room] canvas dump -> ${url.startsWith('data:') ? out : url}`);
+      }, 6000);
+    }
   }
 
   resizeRoom(_width, height) {
+    if (DEBUG) console.log(`[deskmates] room height ${height}`);
     this.roomHeight = Math.round(height);
     this.placeRoom();
   }

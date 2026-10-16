@@ -474,20 +474,32 @@
 
   // ---- Drawing ---------------------------------------------------------------
 
-  function paint(ctx, unit, groups, facing, width) {
+  // Outlines are half an art pixel thick (finer than the fill pixels); every edge is rounded to whole
+  // device pixels so nothing smears. Colours starting with '*' are emissive and get a soft neon glow.
+  // `remap` lets room themes recolour furniture without redrawing it.
+  function paint(ctx, unit, groups, facing, width, remap) {
     ctx.save();
     if (facing < 0) ctx.setTransform(-1, 0, 0, 1, width * unit + ctx.getTransform().e, ctx.getTransform().f);
+    const o = Math.max(1, Math.round(unit / 2));
+    const px = (v) => Math.round(v * unit);
+    const fill = (x, y, w, h, color) => {
+      let c = remap ? remap(color) : color;
+      const glow = c[0] === '*';
+      if (glow) {
+        c = c.slice(1);
+        ctx.shadowColor = c;
+        ctx.shadowBlur = unit * 3;
+      }
+      ctx.fillStyle = c;
+      ctx.fillRect(px(x), px(y), px(x + w) - px(x), px(y + h) - px(y));
+      if (glow) ctx.shadowBlur = 0;
+    };
+    const line = remap ? remap(PAL.line) : PAL.line;
     for (const { rects, details } of groups) {
-      ctx.fillStyle = PAL.line;
-      for (const [x, y, w, h] of rects) ctx.fillRect((x - 1) * unit, (y - 1) * unit, (w + 2) * unit, (h + 2) * unit);
-      for (const [x, y, w, h, color] of rects) {
-        ctx.fillStyle = color;
-        ctx.fillRect(x * unit, y * unit, w * unit, h * unit);
-      }
-      for (const [x, y, w, h, color] of details) {
-        ctx.fillStyle = color;
-        ctx.fillRect(x * unit, y * unit, w * unit, h * unit);
-      }
+      ctx.fillStyle = line;
+      for (const [x, y, w, h] of rects) ctx.fillRect(px(x) - o, px(y) - o, px(x + w) - px(x) + 2 * o, px(y + h) - px(y) + 2 * o);
+      for (const [x, y, w, h, color] of rects) fill(x, y, w, h, color);
+      for (const [x, y, w, h, color] of details) fill(x, y, w, h, color);
     }
     ctx.restore();
   }

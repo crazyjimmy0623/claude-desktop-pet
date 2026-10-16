@@ -48,6 +48,8 @@
     { id: 'acc:halo', type: 'accessory', rarity: 'rare', name: '光環' },
     { id: 'acc:crown', type: 'accessory', rarity: 'epic', name: '王冠' },
     // Floors
+    { id: 'floor:cyber', type: 'floor', rarity: 'starter', name: '金屬網格' },
+    { id: 'floor:neon', type: 'floor', rarity: 'common', name: '霓虹地磚' },
     { id: 'floor:wood', type: 'floor', rarity: 'starter', name: '木地板' },
     { id: 'floor:tile', type: 'floor', rarity: 'starter', name: '磁磚' },
     { id: 'floor:carpet', type: 'floor', rarity: 'common', name: '地毯' },
@@ -55,6 +57,7 @@
     { id: 'floor:marble', type: 'floor', rarity: 'rare', name: '大理石' },
     { id: 'floor:grass', type: 'floor', rarity: 'rare', name: '草地' },
     // Walls
+    { id: 'wall:cyber', type: 'wall', rarity: 'starter', name: '霓虹金屬牆' },
     { id: 'wall:cream', type: 'wall', rarity: 'starter', name: '米色牆' },
     { id: 'wall:brick', type: 'wall', rarity: 'common', name: '紅磚牆' },
     { id: 'wall:navy', type: 'wall', rarity: 'common', name: '深藍牆' },

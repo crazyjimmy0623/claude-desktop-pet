@@ -1,6 +1,8 @@
 /* global Sprites, Catalog */
 // Helpers shared by the strip and room views.
 (function () {
+  window.addEventListener('error', (e) => console.error(`[uncaught] ${e.message} @ ${e.filename?.split('/').pop()}:${e.lineno}`));
+  window.addEventListener('unhandledrejection', (e) => console.error(`[unhandled] ${e.reason?.stack || e.reason}`));
   const { STATIONS } = Catalog;
 
   const STATE_LABEL = {
