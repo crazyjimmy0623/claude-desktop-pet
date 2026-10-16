@@ -652,7 +652,7 @@ async function pictureArrived(bytes) {
   const saved = await desk.invoke('drawing:save', { name, art: card.art, recipe: card.recipe, friend: true });
   if (saved?.error) { showToast(saved.error); return; }
   const moved = await desk.invoke('resident:add', { name, skin: `draw:${saved.id}` });
-  showToast(moved?.error ? `💌 ${name} 進了朋友圖鑑（${moved.error}）` : `🏡 ${name} 搬進來了！`);
+  showToast(moved?.error ? `${name} 進了朋友圖鑑（${moved.error}）` : `${name} 搬進來了！`);
 }
 document.addEventListener('dragover', (e) => {
   if (!e.dataTransfer?.types?.includes('Files')) return;
@@ -774,7 +774,7 @@ function buildLike() {
   banner?.remove();
   banner = null;
   setRoom(built, { save: true });
-  showToast(`🏠 照「${v.name}」的房間蓋好了！`);
+  showToast(`照「${v.name}」的房間蓋好了！`);
 }
 
 function showBanner() {
@@ -783,11 +783,9 @@ function showBanner() {
     st.id = 'visit-style';
     st.textContent = `
       #visit { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 8px;
-        padding: 6px 8px 6px 14px; border-radius: 999px; background: rgba(31,26,23,0.92); color: #fff4e2; font: 700 13px/1.3 "Microsoft JhengHei UI", sans-serif;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.35); white-space: nowrap; }
-      #visit button { font: inherit; padding: 4px 12px; border-radius: 999px; border: 1px solid rgba(255,236,214,0.2); background: #3a322c; color: #fff4e2; cursor: pointer; }
-      #visit button:hover { filter: brightness(1.2); }
-      #visit button.home { background: #f0b54d; color: #2a2420; border-color: #f0b54d; }`;
+        padding: 5px 6px 5px 12px; border: 2px solid var(--ink); border-radius: var(--r); background: var(--paper); color: var(--ink);
+        font: 700 13px/1.3 var(--font); box-shadow: var(--shadow); white-space: nowrap; }
+      #visit .btn { display: inline-flex; align-items: center; gap: 5px; }`;
     document.head.append(st);
   }
   banner?.remove();
@@ -795,16 +793,19 @@ function showBanner() {
   banner.id = 'visit';
   const v = state.visiting;
   const label = document.createElement('span');
-  label.textContent = `👀 參觀「${v.name}」的房間`;
+  label.textContent = `參觀「${v.name}」的房間`;
   const copy = document.createElement('button');
-  copy.textContent = `📐 照著蓋 ${Iso.roomCost(v.room, Catalog.priceOf)} 🪙`;
+  copy.className = 'btn';
+  copy.textContent = `照著蓋（${Iso.roomCost(v.room, Catalog.priceOf)} 金幣）`;
   copy.title = '零件都解鎖的話，付錢請人照這樣蓋一間（現在的房子拆掉退一半）';
   copy.addEventListener('click', buildLike);
   const home = document.createElement('button');
-  home.className = 'home';
-  home.textContent = '🏠 回家';
+  home.className = 'btn primary';
+  home.dataset.icon = 'house';
+  home.textContent = '回家';
   home.addEventListener('click', goHome);
   banner.append(label, copy, home);
+  Icons.fill(banner);
   viewport.append(banner);
 }
 window.addEventListener('mousemove', (e) => {

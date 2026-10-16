@@ -266,3 +266,4 @@ canvas.share {
 .room-share .room-card-row { display: flex; gap: 12px; align-items: stretch; height: 100%; }
 .room-card-preview { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; min-width: 160px; }
 .room-card-preview img { height: 100%; max-height: 100%; width: auto; border-radius: var(--r); box-shadow: var(--shadow-s); }
+.paint-tools .tool { justify-content: center; }

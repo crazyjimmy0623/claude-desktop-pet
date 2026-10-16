@@ -2,7 +2,7 @@
 // The drawing room, photos into characters, and friends' character cards. Loaded after guild.js.
 
 const { W: AW, H: AH } = Sprites.ART;
-const POSE_TABS = [['base', '⭐', '正面'], ['walk', '🚶', '走路'], ['work', '💻', '工作'], ['sleep', '😴', '睡覺'], ['happy', '🎉', '開心']];
+const POSE_TABS = [['base', '正面'], ['walk', '走路'], ['work', '工作'], ['sleep', '睡覺'], ['happy', '開心']];
 const PAINT_COLORS = [
   '#f6cfa6', '#e8b48a', '#c98e64', '#8d5a3c', '#ffffff', '#f4f4f6', '#c9ced8', '#8a91a3',
   '#4a4f5e', '#2a2b33', '#e2564a', '#b8323a', '#ff8fb1', '#f5a3a3', '#f0a35e', '#f0b54d',
@@ -145,10 +145,11 @@ function undo() {
 
 // ---- Tools, colours, poses ------------------------------------------------------------------
 
+// `icon` is a pixel icon's name (icons.js), or nothing for a word-only button.
 function iconButton(icon, label, active, onClick, cls = '') {
   const b = document.createElement('button');
   b.className = `tool ${cls}`;
-  b.innerHTML = `<span class="ico">${icon}</span><span>${label}</span>`;
+  b.innerHTML = `${icon ? `<span class="ico">${Icons.svg(icon, 2)}</span>` : ''}<span>${label}</span>`;
   b.classList.toggle('active', !!active);
   b.addEventListener('click', onClick);
   return b;
@@ -158,14 +159,14 @@ function renderPaint() {
   drawBoard();
   const tools = $('paint-tools');
   tools.replaceChildren(
-    ...[['pen', '✏️', '筆'], ['erase', '🧽', '擦掉'], ['fill', '🪣', '倒色'], ['pick', '💧', '吸色']]
+    ...[['pen', 'edit', '筆'], ['erase', '', '擦掉'], ['fill', '', '倒色'], ['pick', '', '吸色']]
       .map(([id, icon, label]) => iconButton(icon, label, paint.tool === id, () => { paint.tool = id; renderPaint(); })),
   );
   $('paint-toggles').replaceChildren(
-    iconButton('●', paint.big ? '粗筆' : '細筆', paint.big, () => { paint.big = !paint.big; renderPaint(); }, 'small'),
-    iconButton('🪞', '對稱', paint.mirror, () => { paint.mirror = !paint.mirror; renderPaint(); }, 'small'),
-    iconButton('↩️', '復原', false, undo, 'small'),
-    iconButton('🗑', '清空', false, () => { remember(); paint.poses[paint.cur] = Pixels.blank(); changed(); renderPaintSide(); }, 'small'),
+    iconButton('', paint.big ? '粗筆' : '細筆', paint.big, () => { paint.big = !paint.big; renderPaint(); }, 'small'),
+    iconButton('', '對稱', paint.mirror, () => { paint.mirror = !paint.mirror; renderPaint(); }, 'small'),
+    iconButton('', '復原', false, undo, 'small'),
+    iconButton('', '清空', false, () => { remember(); paint.poses[paint.cur] = Pixels.blank(); changed(); renderPaintSide(); }, 'small'),
   );
   // Colours: the box of paints, the ones already in the picture, and any colour at all.
   const pal = $('paint-palette');
@@ -183,7 +184,7 @@ function renderPaint() {
   const any = document.createElement('label');
   any.className = 'swatch sq any';
   any.title = '任何顏色';
-  any.innerHTML = '🎨<input type="color">';
+  any.innerHTML = '+<input type="color">';
   any.querySelector('input').value = paint.color;
   any.querySelector('input').addEventListener('input', (e) => { paint.color = e.target.value; if (paint.tool !== 'fill') paint.tool = 'pen'; });
   any.querySelector('input').addEventListener('change', () => renderPaint());
@@ -211,13 +212,13 @@ function renderPaintSide() {
   Sprites.setDrawing('paint', paint.poses);
   const box = $('paint-poses');
   box.replaceChildren();
-  for (const [id, icon, label] of POSE_TABS) {
+  for (const [id, label] of POSE_TABS) {
     const b = document.createElement('button');
     b.className = 'pose';
     const drawn = !!paint.poses[id];
     b.append(artCanvas(drawn ? paint.poses[id] : autoFrame(id), 2, false));
     const t = document.createElement('span');
-    t.textContent = `${icon} ${label}`;
+    t.textContent = label;
     b.append(t);
     if (id !== 'base' && !drawn) {
       const tag = document.createElement('i');
@@ -248,7 +249,7 @@ function renderPaintSide() {
     }
     box.append(b);
   }
-  $('paint-save').textContent = paint.id && paint.saved ? '✓ 已存好' : '✨ 完成';
+  $('paint-save').textContent = paint.id && paint.saved ? '已存好' : '完成';
   $('paint-delete').classList.toggle('hidden', !paint.id);
 }
 
@@ -324,8 +325,8 @@ $('paint-wear').addEventListener('click', async () => {
   const id = paint.saved ? paint.id : await savePaint();
   if (!id) return;
   desk.invoke('equip', { target: 'user', skin: `draw:${id}` });
-  $('paint-wear').textContent = '👕 穿上了！';
-  setTimeout(() => { $('paint-wear').textContent = '👕 我要穿'; }, 1800);
+  $('paint-wear').textContent = '穿上了！';
+  setTimeout(() => { $('paint-wear').textContent = '我要穿'; }, 1800);
 });
 $('paint-send').addEventListener('click', async () => {
   const id = paint.saved ? paint.id : await savePaint();
@@ -421,7 +422,7 @@ function renderFriends() {
   if (!looks.length) {
     const p = document.createElement('p');
     p.className = 'desc';
-    p.textContent = '先去「✨ 創角」做一個角色，才有東西可以送。';
+    p.textContent = '先去「創角」做一個角色，才有東西可以送。';
     list.append(p);
   }
   for (const l of looks) {
@@ -462,17 +463,17 @@ function renderFriends() {
     row.className = 'mini-actions';
     const act = (icon, title, fn) => {
       const a = document.createElement('span');
-      a.textContent = icon;
+      a.innerHTML = Icons.svg(icon, 2);
       a.title = title;
       a.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
       row.append(a);
     };
-    if (!living.has(skin)) act('🏡', '請他住進房間', async () => {
+    if (!living.has(skin)) act('house', '請他住進房間', async () => {
       const res = await desk.invoke('resident:add', { name: f.name, skin });
-      flash(res?.error || `🏡 ${f.name} 搬進來了！`);
+      flash(res?.error || `${f.name} 搬進來了！`);
     });
-    act('👕', '我要穿', () => { desk.invoke('equip', { target: 'user', skin }); flash(`👕 穿上了 ${f.name}`); });
-    act('🗑', '從圖鑑拿掉', () => { if (window.confirm(`確定把「${f.name}」從朋友圖鑑拿掉嗎？`)) desk.invoke('drawing:remove', f.id); });
+    act('person', '我要穿', () => { desk.invoke('equip', { target: 'user', skin }); flash(`穿上了 ${f.name}`); });
+    act('close', '從圖鑑拿掉', () => { if (window.confirm(`確定把「${f.name}」從朋友圖鑑拿掉嗎？`)) desk.invoke('drawing:remove', f.id); });
     tile.append(row);
     book.append(tile);
   }
@@ -494,12 +495,12 @@ $('card-copy').addEventListener('click', async () => {
   if (!lastCard) return;
   // Pasted pictures lose their insides, so the copy is the plain picture; the game reads the pixels.
   await desk.invoke('share:copy', lastCard.canvas.toDataURL('image/png'));
-  flash('📋 複製好了，去 LINE 或 Discord 貼給朋友');
+  flash('複製好了，去 LINE 或 Discord 貼給朋友');
 });
 $('card-file').addEventListener('click', async () => {
   if (!lastCard) return;
   const file = await desk.invoke('card:save', { dataUrl: lastCard.dataUrl, name: lastCard.name });
-  flash(`💾 存好了：${file.split(/[\\/]/).pop()}`);
+  flash(`存好了：${file.split(/[\\/]/).pop()}`);
 });
 $('card-pick').addEventListener('change', async (e) => {
   const file = e.target.files?.[0];
@@ -515,14 +516,14 @@ async function incoming(bytes, { photo: wantPhoto = false } = {}) {
     // Only the room window can show another room.
     if (!inRoom()) { flash('房間卡要在房間模式拖到房子上才能參觀'); return; }
     window.parent.postMessage({ visitRoom: roomCard }, '*');
-    flash(`👀 去參觀「${roomCard.name}」的房間`);
+    flash(`去參觀「${roomCard.name}」的房間`);
     return;
   }
   const card = await Pixels.readCard(bytes);
   if (card) {
     const res = await desk.invoke('drawing:save', { name: card.name, art: card.art, recipe: card.recipe, friend: true });
     showTab('friends');
-    flash(res?.error || `🎉 ${card.name || '新朋友'} 來了！`);
+    flash(res?.error || `${card.name || '新朋友'} 來了！`);
     return;
   }
   const img = await Pixels.imageOf(bytes);
@@ -554,13 +555,13 @@ const inRoom = () => { try { return window.parent !== window && !!window.parent.
 let roomShare = null;
 $('room-card-make').addEventListener('click', () => {
   if (!inRoom()) { flash('切到房間模式就能把房間做成卡片'); return; }
-  $('room-card-make').textContent = '📸 拍照中…';
+  $('room-card-make').textContent = '拍照中…';
   window.parent.postMessage({ makeRoomCard: true }, '*');
 });
 window.addEventListener('message', (e) => {
   const card = e.data?.roomCard;
   if (!card) return;
-  $('room-card-make').textContent = '📸 做成房間卡';
+  $('room-card-make').textContent = '做成房間卡';
   if (card.error) { flash(card.error); return; }
   roomShare = card;
   const img = document.createElement('img');
@@ -574,12 +575,12 @@ window.addEventListener('message', (e) => {
 $('room-card-copy').addEventListener('click', async () => {
   if (!roomShare) return;
   await desk.invoke('share:copy', roomShare.dataUrl);
-  flash('📋 房間卡複製好了，貼給朋友吧');
+  flash('房間卡複製好了，貼給朋友吧');
 });
 $('room-card-file').addEventListener('click', async () => {
   if (!roomShare) return;
   const file = await desk.invoke('card:save', { dataUrl: roomShare.dataUrl, name: `${roomShare.name}的房間` });
-  flash(`💾 存好了：${file.split(/[\\/]/).pop()}`);
+  flash(`存好了：${file.split(/[\\/]/).pop()}`);
 });
 
 function initDraw() {
