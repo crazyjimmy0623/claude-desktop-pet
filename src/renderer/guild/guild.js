@@ -1,6 +1,8 @@
 /* global desk, Catalog, Sprites, Furniture, Common */
 const $ = (id) => document.getElementById(id);
 const DPR = window.devicePixelRatio || 1;
+// Even device-pixel units so the 2x fine art grid lands on whole pixels.
+const even = (cssScale) => 2 * Math.max(1, Math.round((cssScale * DPR) / 2));
 const { ITEMS, RARITY, ACHIEVEMENTS } = Catalog;
 const ACH_ICONS = ['🏅', '🎖️', '🏆', '⭐', '👑', '💎'];
 
@@ -32,10 +34,12 @@ function itemPreview(id, size = 2) {
   const [type, key] = id.split(':');
   const col = Sprites.colorsFor(210);
   if (type === 'skin') {
-    return canvasOf(Sprites.W * size, Sprites.H * size, (x) => Sprites.drawCharacterAt(x, size * DPR, 0, 0, key, 'rest', 0, col, 1, {}));
+    const u = even(size);
+    return canvasOf((Sprites.W * u) / DPR, (Sprites.H * u) / DPR, (x) => Sprites.drawCharacterAt(x, u, 0, 0, key, 'rest', 0, col, 1, {}));
   }
   if (type === 'accessory' || type === 'acc') {
-    return canvasOf(Sprites.W * size, Sprites.H * size, (x) => Sprites.drawCharacterAt(x, size * DPR, 0, 0, 'office', 'rest', 0, col, 1, { accessory: key }));
+    const u = even(size);
+    return canvasOf((Sprites.W * u) / DPR, (Sprites.H * u) / DPR, (x) => Sprites.drawCharacterAt(x, u, 0, 0, 'office', 'rest', 0, col, 1, { accessory: key }));
   }
   if (type === 'floor') {
     return canvasOf(32 * size / 2, 32 * size / 2, (x) => {
@@ -43,13 +47,7 @@ function itemPreview(id, size = 2) {
     });
   }
   if (type === 'wall') {
-    return canvasOf(32 * size / 2, 32 * size / 2, (x) => {
-      const w = Furniture.WALLS[key];
-      x.fillStyle = w.base;
-      x.fillRect(0, 0, x.canvas.width, x.canvas.height);
-      const u = (size / 2) * DPR;
-      for (let i = 0; i < 2; i++) w.draw((rx, ry, rw, rh, color) => { x.fillStyle = color; x.fillRect((rx + i * 16) * u, ry * u, rw * u, rh * u); }, i, 32);
-    });
+    return canvasOf(32 * size / 2, 32 * size / 2, (x) => Furniture.drawWall(x, (size / 3) * DPR, { wall: key, w: 3, wallRows: 3 }));
   }
   if (type === 'obj') {
     const def = Furniture.OBJECTS[key];
@@ -57,7 +55,7 @@ function itemPreview(id, size = 2) {
     const top = def.wall ? 0 : 20;
     return canvasOf(def.w * 16 * s, (def.h * 16 + top) * s, (x) => {
       x.translate(0, top * s * DPR);
-      Furniture.drawObject(x, s * DPR, { type: key, x: 0, y: 0 }, { frame: 0, active: true, now: Date.now(), hour: 12, meeting: true });
+      Furniture.drawObject(x, even(s), { type: key, x: 0, y: 0 }, { frame: 0, active: true, now: Date.now(), hour: 12, meeting: true });
     });
   }
   return canvasOf(32, 32, () => {});
@@ -123,7 +121,7 @@ function renderEquip() {
   skinList.replaceChildren();
   for (const s of skins) {
     const b = document.createElement('button');
-    if (!s.custom) b.append(canvasOf(32, 28, (x) => Sprites.drawCharacterAt(x, DPR, 0, 0, s.key, 'rest', 0, Sprites.colorsFor(210), 1, {})));
+    if (!s.custom) b.append(canvasOf((Sprites.MINI.W * 4) / DPR, (Sprites.MINI.H * 4) / DPR, (x) => Sprites.drawMiniAt(x, 4, 0, 0, s.key, 'rest', 0, Sprites.colorsFor(210), 1, {})));
     b.append(document.createTextNode(s.name));
     b.classList.toggle('active', slot.skin === s.key);
     b.addEventListener('click', () => desk.invoke('equip', { target, skin: s.key }));
@@ -151,10 +149,10 @@ function renderEquip() {
 function animateEquip() {
   const c = $('equip-canvas');
   const scale = 5;
-  c.width = Sprites.W * scale * DPR;
-  c.height = Sprites.H * scale * DPR;
-  c.style.width = `${Sprites.W * scale}px`;
-  c.style.height = `${Sprites.H * scale}px`;
+  c.width = Sprites.W * even(scale);
+  c.height = Sprites.H * even(scale);
+  c.style.width = `${c.width / DPR}px`;
+  c.style.height = `${c.height / DPR}px`;
   const ctx = c.getContext('2d');
   const poses = ['rest', 'type', 'hammer', 'read', 'done', 'dance'];
   const tickEquip = () => {
@@ -166,7 +164,7 @@ function animateEquip() {
       const fake = { id: target, hue: 210, skin, accessory: slot.accessory };
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, c.width, c.height);
-      Common.drawActorAt(ctx, scale * DPR, 0, 0, fake, pose, Math.floor(now / 300) % 2, 1, { prop: true }, now);
+      Common.drawActorAt(ctx, even(scale), 0, 0, fake, pose, Math.floor(now / 300) % 2, 1, { prop: true }, now);
     }
     requestAnimationFrame(tickEquip);
   };
@@ -297,7 +295,7 @@ function renderShare() {
   if (crew.length < 3) crew.push({ id: 'ai', hue: 200, skin: settings.characters.ai.skin, accessory: settings.characters.ai.accessory });
   const poses = ['done', 'hammer', 'read', 'type'];
   crew.forEach((a, i) => {
-    const scale = 5;
+    const scale = 4;
     Common.drawActorAt(ctx, scale, 50 + i * 130, floorY - Sprites.H * scale + 6, a, poses[i % poses.length], 1, 1, { prop: false }, Date.now());
   });
 

@@ -8,7 +8,7 @@ canvas{image-rendering:pixelated}
 <script>
 const mode = new URLSearchParams(location.search).get('mode') || 'chars';
 const c = document.getElementById('c'); const ctx = c.getContext('2d');
-const U = 3, SW = Sprites.W * U, SH = Sprites.H * U;
+const U = 4, SW = Sprites.W * U, SH = Sprites.H * U;
 if (mode === 'chars') {
   const skins = Object.keys(Sprites.SKINS);
   const poses = ['rest','walk','hammer','type','read','paint','wait','done','sleep','dangle','dance'];
@@ -24,6 +24,18 @@ if (mode === 'chars') {
       Sprites.drawCharacterAt(ctx, U, 70 + poses.length * (SW + 6), y, sk, 'rest', f, col, -1, {});
       Sprites.drawCharacterAt(ctx, U, 70 + (poses.length + 1) * (SW + 6), y, sk, 'type', f, col, 1, { prop: false });
     }
+  });
+} else if (mode === 'minis') {
+  const skins = Object.keys(Sprites.SKINS);
+  const poses = ['rest','walk','type','read','wait','done','sleep','dangle','dance'];
+  const accs = [null,'crown','partyhat','flower','glasses','sunglasses','headphones','halo','bow'];
+  const MU = 6, MW = Sprites.MINI.W * MU, MH = Sprites.MINI.H * MU;
+  c.width = poses.length * (MW + 8) * 2 + 80; c.height = skins.length * (MH + 10) + 10;
+  ctx.fillStyle = '#3b4a5a'; ctx.fillRect(0,0,c.width,c.height);
+  skins.forEach((sk, r) => {
+    const col = Sprites.colorsFor(r * 137);
+    ctx.fillStyle = '#fff'; ctx.fillText(sk, 2, r * (MH + 10) + 40);
+    poses.forEach((p, i) => [0, 1].forEach((f) => Sprites.drawMiniAt(ctx, MU, 70 + (i * 2 + f) * (MW + 8), r * (MH + 10) + 6, sk, p, f, col, 1, { accessory: f ? accs[(r + i) % accs.length] : null })));
   });
 } else if (mode === 'fx') {
   c.width = 700; c.height = 140; ctx.fillStyle = '#3b4a5a'; ctx.fillRect(0,0,c.width,c.height);

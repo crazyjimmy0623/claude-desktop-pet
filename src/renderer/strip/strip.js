@@ -15,8 +15,8 @@ let mouseIgnored = true;
 
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-// Whole device pixels per art pixel keeps sprites crisp at any Windows display scaling.
-const devUnit = (s) => Math.max(1, Math.round(s * DPR));
+// Whole device pixels per fine art pixel (half a logical pixel) keeps sprites crisp at any Windows display scaling.
+const devUnit = (s) => 2 * Math.max(1, Math.round((s * DPR) / 2));
 const spriteW = () => (Sprites.W * devUnit(scale)) / DPR;
 const spriteH = () => (Sprites.H * devUnit(scale)) / DPR;
 const snapCss = (v) => Math.round(v * DPR) / DPR;

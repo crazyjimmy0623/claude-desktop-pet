@@ -69,7 +69,7 @@
       for (const type of owned('obj')) {
         const def = Furniture.OBJECTS[type];
         if (!def) continue;
-        const s = 1.5;
+        const s = 2 / DPR; // 2 device px per art px keeps the fine grid crisp
         const top = def.wall ? 0 : 20;
         const pc = previewCanvas(def.w * T * s, (def.h * T + top) * s, (x) => {
           x.translate(0, top * s * DPR);
@@ -97,12 +97,8 @@
       }
     } else if (tab === 'wall') {
       for (const id of owned('wall')) {
-        const pc = previewCanvas(32, 32, (x) => {
-          const w = Furniture.WALLS[id];
-          x.fillStyle = w.base;
-          x.fillRect(0, 0, 32 * DPR, 32 * DPR);
-          w.draw((rx, ry, rw, rh, color) => { x.fillStyle = color; x.fillRect(rx * 2 * DPR, ry * DPR, rw * 2 * DPR, rh * DPR); }, 0, 32);
-        });
+        // A 3x3-tile slice of wall, shrunk to fit the 32px swatch.
+        const pc = previewCanvas(32, 32, (x) => Furniture.drawWall(x, (32 / 48) * DPR, { wall: id, w: 3, wallRows: 3 }));
         palette.append(button(itemName(`wall:${id}`), pc, room().wall === id, () => {
           room().wall = id;
           save();

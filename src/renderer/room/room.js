@@ -39,8 +39,9 @@ const state = {
   drag: null,
   onDrawTop: null, // editor ghost
 };
-// Whole device pixels per art pixel, so every sprite pixel lands exactly on the screen grid.
-const unit = () => Math.max(1, Math.round(state.zoom * DPR));
+// Device pixels per logical art pixel. Art is drawn on a 2x fine grid, so the unit is always even:
+// roomZoom is the number of device pixels per fine pixel, and every fine pixel lands on the screen grid.
+const unit = () => 2 * clamp(Math.round(state.zoom) || 2, 1, 4);
 const cssUnit = () => unit() / DPR;
 const snap = (artPx) => Math.round(artPx) * unit();
 const spotKey = (s) => `${s.x},${s.y}`;

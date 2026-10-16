@@ -10,7 +10,7 @@ const STARTER_ITEMS = ITEMS.filter((i) => i.rarity === 'starter').map((i) => i.i
 const DEFAULTS = {
   settings: {
     mode: 'strip', // strip | room
-    layoutVersion: 3,
+    layoutVersion: 4,
     alwaysOnTop: true,
     hideInFullscreen: true,
     scale: 3,
@@ -69,9 +69,12 @@ class Store extends EventEmitter {
     // v2 rooms match Pixel Crew's proportions (28x21 tiles, 12x16 people at 2x); older rooms are reset once.
     // v3 docks a long room above the taskbar; older room layouts are reset once.
     if ((raw.settings?.layoutVersion || 0) < 3) {
-      s.layoutVersion = 3;
-      s.roomZoom = 2;
       this.data.room = null;
+    }
+    // v4 draws art on a 2x fine grid; roomZoom now counts device pixels per fine pixel.
+    if ((raw.settings?.layoutVersion || 0) < 4) {
+      s.layoutVersion = 4;
+      s.roomZoom = 2;
     }
     delete s.roomBounds;
     // Rooms from before themes existed switch to the cyberpunk look once.
