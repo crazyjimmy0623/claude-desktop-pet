@@ -1,4 +1,6 @@
 /* global desk, Catalog, Sprites, Iso, Common */
+// In the drawer the page lays its cards out side by side, scrolling sideways.
+if (new URLSearchParams(location.search).has('docked')) document.documentElement.classList.add('docked');
 const $ = (id) => document.getElementById(id);
 const DPR = window.devicePixelRatio || 1;
 // Even device-pixel units so the 2x fine art grid lands on whole pixels.
@@ -386,7 +388,7 @@ desk.on('actors', (list) => {
   if (tab === 'equip' && settings && projectNames().join() !== before) renderEquip();
 });
 desk.on('assets', (a) => { assets = a; Common.loadSheets(a); render(); });
-desk.on('guild:tab', (t) => {
+function openTab(t) {
   if (!t) return;
   if (t.startsWith('equip:')) {
     target = t.slice(6);
@@ -394,7 +396,10 @@ desk.on('guild:tab', (t) => {
   } else {
     showTab(t);
   }
-});
+}
+desk.on('guild:tab', openTab);
+// The drawer asks for a tab by message once this page is loaded.
+window.addEventListener('message', (e) => openTab(e.data?.guildTab));
 
 desk.invoke('init').then((init) => {
   settings = init.settings;
@@ -405,4 +410,5 @@ desk.invoke('init').then((init) => {
   renderRates();
   animateEquip();
   render();
+  openTab(new URLSearchParams(location.search).get('tab'));
 });

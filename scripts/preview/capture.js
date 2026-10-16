@@ -5,6 +5,8 @@ const path = require('path');
 const [mode = 'chars', out = 'preview.png'] = process.argv.slice(2).filter((a) => !a.startsWith('-') && !a.endsWith('capture.js') && a !== '.');
 app.whenReady().then(async () => {
   const win = new BrowserWindow({ show: false, width: 800, height: 600, webPreferences: { offscreen: true } });
+  // Page errors show up here, so a broken render is not just a blank image.
+  win.webContents.on('console-message', (e) => { if (e.level === 'error' || e.level === 'warning') console.log(`[page] ${e.message}`); });
   await win.loadFile(path.join(__dirname, 'preview.html'), { query: { mode } });
   await new Promise((r) => setTimeout(r, 300));
   // Export the canvas itself; capturePage is clipped to the screen size.

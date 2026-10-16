@@ -5,7 +5,7 @@ const DPR = window.devicePixelRatio || 1;
 const TU = Iso.TU;
 const SPEED = 2.5; // tiles per second
 const M = Sprites.MINI;
-const EDITOR_H = 170;
+const DRAWER_H = 290;
 const TOOLBAR_H = 34;
 
 // Station → acceptable furniture, best first.
@@ -23,6 +23,15 @@ const toastEl = document.getElementById('toast');
 const coinsEl = document.getElementById('coins');
 const toolbar = document.getElementById('toolbar');
 const editorEl = document.getElementById('editor');
+// Editor, guild book and settings open in a drawer beside the room, along the taskbar.
+const drawer = Drawer.create({
+  editor: editorEl,
+  onChange: (pane) => {
+    window.RoomEditor?.setEditing(pane === 'edit');
+    layout();
+  },
+});
+document.getElementById('frame').prepend(drawer.el);
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -84,7 +93,11 @@ function layout() {
   viewport.style.width = `${w}px`;
   viewport.style.height = `${h}px`;
   ctx.imageSmoothingEnabled = false;
-  desk.invoke('room:resize', { width: Math.max(w, state.editing ? 560 : 0), height: h + TOOLBAR_H + (state.editing ? EDITOR_H : 0) });
+  const dw = drawer.current ? Drawer.widthBeside(w) : 0;
+  drawer.el.style.width = `${dw}px`;
+  drawer.el.style.height = `${DRAWER_H}px`;
+  desk.invoke('room:resize', { width: w + (dw ? dw + 6 : 0), height: h + TOOLBAR_H, drawerH: dw ? DRAWER_H : 0 })
+    .then((gap) => { document.getElementById('roomcol').style.marginBottom = `${gap || 0}px`; });
   rebuildNav();
 }
 
@@ -614,13 +627,16 @@ function setIgnore(ignore) {
   desk.send('mouse:ignore', ignore);
 }
 window.addEventListener('mousemove', (e) => {
-  if (state.editing || state.drag || winDrag) return setIgnore(false);
+  if (state.drag || winDrag) return setIgnore(false);
   const el = document.elementFromPoint(e.clientX, e.clientY);
-  if (el && el !== canvas && el !== viewport && el !== overlay && !el.matches?.('#frame, body, html')) return setIgnore(false);
+  const onRoom = el === canvas || el === viewport || el === overlay;
+  if (el && !onRoom && !el.matches?.('#frame, #roomcol, body, html')) return setIgnore(false);
+  if (onRoom && state.editing) return setIgnore(false);
   const p = finePoint(e);
   setIgnore(!(Iso.solidAt(state.room, p.x, p.y) || actorAt(e)));
 });
-document.addEventListener('mouseleave', () => { if (!state.drag && !winDrag) setIgnore(true); });
+// Moving into one of the drawer's frames also counts as leaving this document.
+document.addEventListener('mouseleave', (e) => { if (!state.drag && !winDrag && !drawer.contains(e.clientX, e.clientY)) setIgnore(true); });
 
 canvas.addEventListener('mousedown', (e) => {
   if (state.editing || e.button !== 0) return;
@@ -707,8 +723,9 @@ function setZoom(z) {
 document.getElementById('btn-zoom-in').addEventListener('click', () => setZoom(state.zoom + 1));
 document.getElementById('btn-zoom-out').addEventListener('click', () => setZoom(state.zoom - 1));
 document.getElementById('btn-focus').addEventListener('click', () => desk.invoke('focus:toggle'));
-document.getElementById('btn-guild').addEventListener('click', () => desk.invoke('window:open', 'guild'));
-document.getElementById('btn-settings').addEventListener('click', () => desk.invoke('window:open', 'settings'));
+document.getElementById('btn-guild').addEventListener('click', () => drawer.toggle('guild'));
+document.getElementById('btn-settings').addEventListener('click', () => drawer.toggle('settings'));
+desk.on('dock:open', ({ pane, tab }) => drawer.open(pane, tab));
 document.getElementById('btn-strip').addEventListener('click', () => desk.send('room:hide'));
 document.getElementById('btn-quit').addEventListener('click', () => desk.invoke('app:quit'));
 
@@ -739,7 +756,7 @@ desk.on('assets', (assets) => {
   state.assets = assets;
 });
 
-window.RoomApp = { state, setRoom, layout, tileAt, finePoint, Z, clone, rebuildNav, toolbar, editorEl };
+window.RoomApp = { state, setRoom, layout, tileAt, finePoint, Z, clone, rebuildNav, toolbar, editorEl, drawer };
 
 desk.invoke('init').then((init) => {
   state.settings = init.settings;

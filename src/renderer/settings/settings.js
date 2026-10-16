@@ -1,4 +1,6 @@
 /* global desk, Catalog */
+// In the drawer the page lays its cards out side by side, scrolling sideways.
+if (new URLSearchParams(location.search).has('docked')) document.documentElement.classList.add('docked');
 const $ = (id) => document.getElementById(id);
 let settings = null;
 let builtIn = {};

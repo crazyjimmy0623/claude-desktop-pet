@@ -1225,9 +1225,10 @@
       // Treads face the way the flight climbs.
       const [c0, c1 = fl.top] = fl.cells;
       const dir = c1[0] !== c0[0] ? 'x' : 'y';
+      const up = Math.sign(dir === 'x' ? c1[0] - c0[0] : c1[1] - c0[1]) || -1;
       fl.cells.forEach(([x, y], k) => {
         // Solid steps stand on the ground; open treads hang one rise deep.
-        const c = add({ x, y, z: z0 + rise * (k + 1), f: fl.from, kind: 'stair', rise, dir, style: fl.style, base: fl.style === 'solid' ? 0 : z0 });
+        const c = add({ x, y, z: z0 + rise * (k + 1), f: fl.from, kind: 'stair', rise, dir, up, style: fl.style, base: fl.style === 'solid' ? 0 : z0 });
         link(prev, c);
         prev = c;
       });
@@ -1637,6 +1638,8 @@
   }
   // Paint into a Pix big enough for a w x d x h box (tiles, tiles, units) anchored at its origin.
   function renderSprite(w, d, h, paint, flip, below = 0) {
+    h = Math.ceil(h);
+    below = Math.ceil(below);
     const ox = d * TU + 8;
     const oy = h + 8;
     const P = new Pix(Math.ceil((w + d) * TU) + 16, Math.ceil(((w + d) * TU) / 2) + h + below + 16, ox, oy);
@@ -1960,31 +1963,51 @@
   }
 
   // One step. Solid steps are stone blocks down to the ground; open ones are metal treads.
+  // One stair tile: four treads climbing the way the flight goes, from half a rise below the
+  // tile's height to half a rise above, so neighbouring tiles and the floors at each end meet in an
+  // even run of steps. Solid steps are stone built up from the ground; open ones are metal treads
+  // on a stringer, with a handrail.
+  const TREADS = 4;
   function stairSprite(c, room) {
     const h = c.z - c.base;
     const fl = FLOORS[floorOf(room, c.f).floor] || FLOORS.stone;
     const base = (WALLS[floorOf(room, 0).wall] || WALLS.brick).base;
-    return cached(`stair|${c.style}|${c.dir}|${h}|${c.rise}|${fl.base}|${base}`, () => renderSprite(1, 1, 8, (P) => {
+    const up = c.up || -1;
+    const top = c.rise / 2;
+    return cached(`stair|${c.style}|${c.dir}|${up}|${h}|${c.rise}|${fl.base}|${base}`, () => renderSprite(1, 1, 16 + top, (P) => {
+      const D = TU / TREADS;
+      // Tread i (0 = lowest) as [u, height]: u is its start along the climb axis.
+      const treads = Array.from({ length: TREADS }, (_, i) => [up > 0 ? i * D : TU - (i + 1) * D, -c.rise / 2 + (c.rise * (i + 1)) / TREADS]);
+      // Back to front, so nearer treads paint over the ones behind.
+      treads.sort((a, b) => a[0] - b[0]);
+      const at = (u, z0, hh, col, rim) => (c.dir === 'x' ? P.box(u, 0, z0, D, TU, hh, col, rim) : P.box(0, u, z0, TU, D, hh, col, rim));
       if (c.style === 'solid') {
-        brickFaces(P, 1, 1, h, base);
-        P.top(0, 0, TU, TU, lt(fl.base, 0.05), 0);
-        if (c.dir === 'x') P.top(0, 0, 2, TU, lt(fl.base, 0.25), 0); else P.top(0, 0, TU, 2, lt(fl.base, 0.25), 0);
+        const stone = { t: lt(fl.base, 0.08), l: base, r: dk(base, 0.32) };
+        for (const [u, z1] of treads) at(u, -h, z1 + h, stone, false);
+        for (const [u, z1] of treads) {
+          // A worn lit nosing on each tread.
+          if (c.dir === 'x') P.top(up > 0 ? u : u + D - 1, 0, 1, TU, lt(fl.base, 0.3), z1);
+          else P.top(0, up > 0 ? u : u + D - 1, TU, 1, lt(fl.base, 0.3), z1);
+        }
         return;
       }
-      P.box(0, 0, -3, TU, TU, 3, { t: '#7a8399', l: '#555c72', r: '#41475a' }, false);
-      for (let i = 2; i < TU; i += 3) {
-        if (c.dir === 'x') P.top(i, 1, 1, TU - 2, '#636b82', 0); else P.top(1, i, TU - 2, 1, '#636b82', 0);
+      const metal = { t: '#8a92aa', l: '#555c72', r: '#41475a' };
+      // Stringer along the open side, sloping with the treads.
+      for (const [u, z1] of treads) {
+        if (c.dir === 'x') P.box(u, TU - 2, z1 - 6, D, 2, 5, '#3a3f50', false);
+        else P.box(TU - 2, u, z1 - 6, 2, D, 5, '#3a3f50', false);
       }
+      for (const [u, z1] of treads) at(u, z1 - 2, 2, metal, true);
+      // Handrail: a post at the middle and a bar that follows the climb.
+      const mid = treads[TREADS / 2][1];
       if (c.dir === 'y') {
-        P.box(TU - 2, 0, -7, 2, TU, 4, '#3a3f50', false);
-        P.box(TU - 2, 7, 0, 2, 2, 18, '#5a6075', false);
-        P.box(TU - 2, 0, 17, 2, TU, 2, '#8a92aa', false);
+        P.box(TU - 2, 7, mid, 2, 2, 18, '#5a6075', false);
+        for (const [u, z1] of treads) P.box(TU - 2, u, z1 + 17, 2, D, 2, '#8a92aa', false);
       } else {
-        P.box(0, TU - 2, -7, TU, 2, 4, '#3a3f50', false);
-        P.box(7, TU - 2, 0, 2, 2, 18, '#5a6075', false);
-        P.box(0, TU - 2, 17, TU, 2, 2, '#8a92aa', false);
+        P.box(7, TU - 2, mid, 2, 2, 18, '#5a6075', false);
+        for (const [u, z1] of treads) P.box(u, TU - 2, z1 + 17, D, 2, 2, '#8a92aa', false);
       }
-    }, false, h + 4));
+    }, false, h + 8));
   }
 
   // A run of railing along one edge of a tile: posts and a top bar, maybe hung with fairy lights.
@@ -2058,7 +2081,7 @@
     for (const c of cells(room).list) {
       if (c.kind !== 'stair') continue;
       const z0 = c.style === 'solid' ? c.base : c.z - c.rise;
-      items.push({ x0: c.x, y0: c.y, x1: c.x + 1 - e, y1: c.y + 1 - e, z0, z1: c.z, sprite: () => stairSprite(c, room), wx: c.x * TU, wy: c.y * TU, wz: c.z });
+      items.push({ x0: c.x, y0: c.y, x1: c.x + 1 - e, y1: c.y + 1 - e, z0, z1: c.z + c.rise / 2, sprite: () => stairSprite(c, room), wx: c.x * TU, wy: c.y * TU, wz: c.z });
     }
     room.objects.forEach((o, i) => {
       const def = OBJECTS[o.type];

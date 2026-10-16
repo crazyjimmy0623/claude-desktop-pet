@@ -1,4 +1,4 @@
-// All Deskmates windows: the taskbar strip, the room, settings and the guild book.
+// All Deskmates windows: the taskbar strip and the room. Settings and the guild book open in their drawer.
 const { app, BrowserWindow, screen } = require('electron');
 const { buildIcon } = require('./icon');
 const path = require('path');
@@ -22,8 +22,6 @@ class Windows {
     this.store = store;
     this.strip = null;
     this.room = null;
-    this.settings = null;
-    this.guild = null;
     this.fullscreen = false;
     this.hiddenByUser = false;
     // Windows sometimes pushes topmost windows down (e.g. after clicking the taskbar); keep reclaiming the top.
@@ -31,11 +29,16 @@ class Windows {
   }
 
   all() {
-    return [this.strip, this.room, this.settings, this.guild].filter((w) => w && !w.isDestroyed());
+    return [this.strip, this.room].filter((w) => w && !w.isDestroyed());
   }
 
+  // To every frame, so the guild and settings pages inside a drawer hear it too.
   broadcast(channel, data) {
-    for (const w of this.all()) w.webContents.send(channel, data);
+    for (const w of this.all()) {
+      for (const f of w.webContents.mainFrame.framesInSubtree) {
+        try { f.send(channel, data); } catch { /* frame going away */ }
+      }
+    }
   }
 
   // ---- Mode & visibility ----------------------------------------------------
@@ -63,7 +66,7 @@ class Windows {
     const w = new BrowserWindow({
       show: false, transparent: true, backgroundColor: '#00000000', frame: false, resizable: false, movable: false,
       minimizable: true, maximizable: false, fullscreenable: false, hasShadow: false, alwaysOnTop: this.store.settings.alwaysOnTop,
-      title: 'Deskmates', icon: buildIcon(4), webPreferences: { preload: PRELOAD }, ...opts,
+      title: 'Deskmates', icon: buildIcon(4), webPreferences: { preload: PRELOAD, nodeIntegrationInSubFrames: true }, ...opts,
     });
     w.on('close', () => { if (this.strip === w || this.room === w) app.quit(); });
     return w;
@@ -145,16 +148,22 @@ class Windows {
   // ---- Room -----------------------------------------------------------------
 
   // The room floats above the taskbar, bottom right unless the user dragged it somewhere.
-  // Its size comes from the renderer; the bottom-right corner stays put when it grows.
+  // Its size comes from the renderer; the bottom-right corner stays put when it grows. With the
+  // drawer open the window reaches down to the taskbar, so the drawer sits on it wherever the room
+  // is; the gap under the room is returned for the renderer to keep the room where it was.
   placeRoom() {
-    if (!this.room || this.room.isDestroyed()) return;
+    if (!this.room || this.room.isDestroyed()) return 0;
     const width = this.roomWidth || 680;
-    const height = this.roomHeight || 560;
+    const roomH = this.roomHeight || 560;
     const pos = this.store.settings.roomPos;
     const area = pos ? screen.getDisplayNearestPoint({ x: pos.right, y: pos.bottom }).workArea : screen.getPrimaryDisplay().workArea;
     const right = pos ? Math.min(pos.right, area.x + area.width) : area.x + area.width - 8;
     const bottom = pos ? Math.min(pos.bottom, area.y + area.height) : area.y + area.height;
-    this.room.setBounds({ x: Math.max(area.x, right - width), y: Math.max(area.y, bottom - height), width, height });
+    const gap = this.drawerH ? area.y + area.height - bottom : 0;
+    const height = Math.max(roomH + gap, this.drawerH || 0);
+    this.gap = gap;
+    this.room.setBounds({ x: Math.max(area.x, right - width), y: Math.max(area.y, bottom + gap - height), width, height });
+    return gap;
   }
 
   // Drag the room window with the cursor until the renderer reports the mouse is up.
@@ -163,7 +172,7 @@ class Windows {
     if (!this.room || this.room.isDestroyed()) return;
     if (!on) {
       const b = this.room.getBounds();
-      this.store.updateSettings({ roomPos: { right: b.x + b.width, bottom: b.y + b.height } });
+      this.store.updateSettings({ roomPos: { right: b.x + b.width, bottom: b.y + b.height - (this.gap || 0) } });
       return;
     }
     const start = screen.getCursorScreenPoint();
@@ -194,48 +203,43 @@ class Windows {
         const url = await w.webContents.executeJavaScript('document.getElementById("room").toDataURL("image/png")').catch((e) => String(e));
         if (url.startsWith('data:')) require('fs').writeFileSync(out, Buffer.from(url.split(',')[1], 'base64'));
         console.log(`[room] canvas dump -> ${url.startsWith('data:') ? out : url}`);
+        // And the whole window as composed, drawer included.
+        const shot = require('path').join(require('os').tmpdir(), 'deskmates-window.png');
+        require('fs').writeFileSync(shot, (await w.webContents.capturePage()).toPNG());
+        console.log(`[room] window dump -> ${shot}`);
       }, 6000);
     }
   }
 
-  resizeRoom(width, height) {
-    if (DEBUG) console.log(`[deskmates] room ${width}x${height}`);
+  resizeRoom(width, height, drawerH = 0) {
+    if (DEBUG) console.log(`[deskmates] room ${width}x${height} drawer ${drawerH}`);
     this.roomWidth = Math.ceil(width);
     this.roomHeight = Math.ceil(height);
-    this.placeRoom();
+    this.drawerH = drawerH;
+    return this.placeRoom();
   }
 
-  // ---- Normal windows -------------------------------------------------------
+  // ---- Drawer ---------------------------------------------------------------
 
-  openPanel(name, file, opts) {
-    const existing = this[name];
-    if (existing && !existing.isDestroyed()) {
-      existing.show();
-      existing.focus();
-      return existing;
-    }
-    const w = new BrowserWindow({
-      show: false, autoHideMenuBar: true, backgroundColor: '#f6f2ea', title: 'Deskmates', icon: buildIcon(4),
-      webPreferences: { preload: PRELOAD }, ...opts,
-    });
-    this[name] = w;
-    wireDebug(w, name);
-    w.loadFile(page(file, 'index.html'));
-    w.once('ready-to-show', () => w.show());
-    w.on('closed', () => { if (this[name] === w) this[name] = null; });
-    return w;
+  // Settings and the guild book open in the strip's or room's drawer, never a window of their own.
+  openDrawer(pane, tab) {
+    this.bringUp();
+    const w = this.overlays[0];
+    if (!w) return;
+    const send = () => {
+      w.webContents.send('dock:open', { pane, tab });
+      w.focus();
+    };
+    if (w.webContents.isLoading()) w.webContents.once('did-finish-load', send);
+    else send();
   }
 
   openSettings() {
-    return this.openPanel('settings', 'settings', { width: 820, height: 720, minWidth: 640, minHeight: 480 });
+    this.openDrawer('settings');
   }
 
   openGuild(tab) {
-    const fresh = !this.guild || this.guild.isDestroyed();
-    const w = this.openPanel('guild', 'guild', { width: 960, height: 720, minWidth: 720, minHeight: 520 });
-    if (tab && fresh) w.webContents.once('did-finish-load', () => w.webContents.send('guild:tab', tab));
-    else if (tab) w.webContents.send('guild:tab', tab);
-    return w;
+    this.openDrawer('guild', tab);
   }
 }
 

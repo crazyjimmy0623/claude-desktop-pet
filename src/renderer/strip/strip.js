@@ -474,8 +474,9 @@ window.addEventListener('mouseup', () => {
   drag = null;
 });
 
-document.addEventListener('mouseleave', () => {
-  if (!drag) setMouseIgnored(true);
+// Moving into one of the drawer's frames also counts as leaving this document.
+document.addEventListener('mouseleave', (e) => {
+  if (!drag && !drawer.contains(e.clientX, e.clientY)) setMouseIgnored(true);
 });
 
 // ---- Wiring ----------------------------------------------------------------------
@@ -488,12 +489,23 @@ function applySettings(s) {
   }
 }
 
+// Guild book and settings open in a drawer along the taskbar, above the buttons.
+const drawer = Drawer.create({ onChange: placeDrawer });
+drawer.el.classList.add('hit', 'strip-drawer');
+document.body.append(drawer.el);
+function placeDrawer() {
+  drawer.el.style.width = `${Math.min(Drawer.widthBeside(0), window.innerWidth - 12)}px`;
+  drawer.el.style.height = `${Math.min(290, window.innerHeight - 40)}px`;
+}
+window.addEventListener('resize', placeDrawer);
+desk.on('dock:open', ({ pane, tab }) => drawer.open(pane, tab));
+
 document.querySelectorAll('#dock button').forEach((b) => b.addEventListener('click', () => {
   const action = b.dataset.action;
   if (action === 'room') desk.invoke('settings:set', { mode: 'room' });
   else if (action === 'focus') desk.invoke('focus:toggle');
   else if (action === 'quit') desk.invoke('app:quit');
-  else desk.invoke('window:open', action);
+  else drawer.toggle(action);
 }));
 
 desk.on('actors', syncActors);

@@ -437,17 +437,19 @@
 
   // ---- Toggle -------------------------------------------------------------------------
 
-  btnEdit.addEventListener('click', () => {
-    state.editing = !state.editing;
-    if (!state.editing) cancelMove();
+  // The edit button opens the editor in the drawer; the drawer tells us when editing starts or stops.
+  btnEdit.addEventListener('click', () => RoomApp.drawer.toggle('edit'));
+  function setEditing(on) {
+    if (state.editing === on) return;
+    state.editing = on;
+    if (!on) cancelMove();
     tool = null;
-    editorEl.classList.toggle('hidden', !state.editing);
-    btnEdit.classList.toggle('on', state.editing);
-    document.getElementById('toolbar').classList.toggle('pinned', state.editing);
-    if (!state.editing) save();
-    RoomApp.layout();
+    build.hover = null;
+    btnEdit.classList.toggle('on', on);
+    document.getElementById('toolbar').classList.toggle('pinned', on);
+    if (!on) save();
     refresh();
-  });
+  }
 
   tabButtons.forEach((b) => b.addEventListener('click', () => {
     tab = b.dataset.tab;
@@ -456,5 +458,5 @@
     refresh();
   }));
 
-  window.RoomEditor = { refresh };
+  window.RoomEditor = { refresh, setEditing };
 })();

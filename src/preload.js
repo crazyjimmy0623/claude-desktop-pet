@@ -8,7 +8,7 @@ const INVOKE = new Set([
   'autostart:get', 'autostart:set', 'actors:clear', 'actors:regroup', 'app:quit', 'focus:toggle',
 ]);
 const SEND = new Set(['mouse:ignore', 'room:hide', 'room:drag', 'actor:pat', 'actor:menu']);
-const LISTEN = new Set(['actors', 'progress', 'settings', 'room', 'fx', 'assets', 'command', 'guild:tab']);
+const LISTEN = new Set(['actors', 'progress', 'settings', 'room', 'fx', 'assets', 'command', 'guild:tab', 'dock:open']);
 
 contextBridge.exposeInMainWorld('desk', {
   invoke: (channel, ...args) => (INVOKE.has(channel) ? ipcRenderer.invoke(channel, ...args) : Promise.reject(new Error(`blocked: ${channel}`))),

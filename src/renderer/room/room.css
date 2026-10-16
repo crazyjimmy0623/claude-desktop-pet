@@ -2,14 +2,27 @@ html, body {
   background: transparent;
 }
 
+/* The drawer sits on the taskbar to the left of the room; the room keeps its corner. */
 #frame {
   position: absolute;
   inset: 0;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-end;
+  justify-content: flex-end;
+  gap: 6px;
   overflow: hidden;
 }
+
+#roomcol {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* The toolbar runs under the room, along the taskbar. */
+#roomcol #toolbar { order: 2; }
 
 #toolbar {
   flex: none;
@@ -119,17 +132,9 @@ html, body {
 }
 
 #editor {
-  flex: none;
-  align-self: stretch;
-  height: 170px;
-  border-radius: 8px 8px 0 0;
   display: flex;
   flex-direction: column;
-  background: #322d3d;
-  color: #fff;
-  font-size: 12px;
-  border: 2px solid var(--ink);
-  border-bottom: none;
+  min-height: 0;
 }
 
 .tabs {

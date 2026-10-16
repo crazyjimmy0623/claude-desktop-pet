@@ -246,3 +246,41 @@ canvas.pixel { image-rendering: pixelated; }
 }
 
 .segmented button.active small { color: var(--accent-ink); }
+
+/* In the drawer: no header, cards side by side in one row that scrolls sideways. */
+html.docked, html.docked body { height: 100%; overflow: hidden; }
+html.docked body { display: flex; flex-direction: column; font-size: 12px; }
+html.docked header.top { display: none; }
+html.docked nav.tabs { position: static; flex: none; padding: 4px 10px 0; }
+html.docked nav.tabs button { padding: 3px 12px; }
+html.docked main {
+  flex: 1;
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+  padding: 8px 10px;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+html.docked main > .tab { display: flex; gap: 10px; height: 100%; }
+html.docked main > .tab.hidden { display: none !important; }
+html.docked section.card {
+  flex: none;
+  width: 340px;
+  height: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  overflow-y: auto;
+}
+html.docked section.card h2 { font-size: 13px; margin-bottom: 6px; }
+html.docked .field { flex-wrap: wrap; gap: 4px 8px; padding: 4px 0; }
+html.docked .field label.name { width: 120px; }
+html.docked .segmented button { min-width: 0; padding: 4px 8px; }
+html.docked .equip-panel { width: 900px; }
+html.docked .equip-lists { min-width: 0; }
+html.docked .card.gacha { width: 620px; }
+html.docked #tab-book .card { width: 820px; }
+html.docked #tab-achievements .card { width: 640px; }
+html.docked #tab-stats .card { width: 560px; }
