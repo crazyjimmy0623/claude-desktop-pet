@@ -159,6 +159,11 @@ class Windows {
     const area = pos ? screen.getDisplayNearestPoint({ x: pos.right, y: pos.bottom }).workArea : screen.getPrimaryDisplay().workArea;
     const right = pos ? Math.min(pos.right, area.x + area.width) : area.x + area.width - 8;
     const bottom = pos ? Math.min(pos.bottom, area.y + area.height) : area.y + area.height;
+    // Taller than the screen means the toolbar is out of reach: step the zoom down instead.
+    if (roomH > area.height && this.store.settings.roomZoom > 1) {
+      this.store.updateSettings({ roomZoom: this.store.settings.roomZoom - 1 });
+      return 0;
+    }
     const gap = this.drawerH ? area.y + area.height - bottom : 0;
     const height = Math.max(roomH + gap, this.drawerH || 0);
     this.gap = gap;

@@ -52,7 +52,15 @@ const state = {
   orbs: [],
 };
 // Device pixels per fine pixel; characters take device pixels per logical pixel (2 fine).
-const Z = () => clamp(Math.round(state.zoom) || 2, 1, 4);
+// Never bigger than the screen can hold: a room taller than the screen would hang under the
+// taskbar and sit over everything behind it.
+function maxZoom() {
+  const S = Iso.size(state.room);
+  const fitH = Math.floor(((window.screen.availHeight || 800) - TOOLBAR_H - 12) * DPR / S.h);
+  const fitW = Math.floor(((window.screen.availWidth || 1280) * 0.6) * DPR / S.w);
+  return clamp(Math.min(fitH, fitW), 1, 4);
+}
+const Z = () => clamp(Math.round(state.zoom) || 2, 1, maxZoom());
 const spotKey = (s) => s.cell;
 const cellOf = (id) => Iso.cells(state.room).list[id];
 
@@ -571,19 +579,25 @@ function drawOrbs(now, z) {
       state.orbs.push({ x: Math.random() * S.w, y: 20 + Math.random() * (S.h - 60), r: 1.5 + Math.random() * 2.5, c: cols[i % cols.length], p: Math.random() * 6.28, sp: 0.3 + Math.random() * 0.5 });
     }
   }
+  // After dark they are fireflies, warm and blinking; by day the neon colours dim to drifting motes.
+  const hour = { day: 13, dusk: 18, night: 22 }[state.settings?.timeOfDay] ?? new Date(now).getHours();
+  const night = hour >= 18 || hour < 6;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  for (const o of state.orbs) {
+  for (const [i, o] of state.orbs.entries()) {
     const t = now / 1000 * o.sp + o.p;
     const x = (o.x + Math.sin(t) * 10) * z;
     const y = (o.y + Math.cos(t * 0.7) * 8) * z;
+    const c = night ? ['255,226,120', '196,255,140'][i % 2] : o.c;
+    const k = night ? Math.max(0, Math.sin(t * 2.3 + i)) : 0.6;
+    if (k < 0.05) continue;
     const g = ctx.createRadialGradient(x, y, 0, x, y, o.r * 4 * z);
-    g.addColorStop(0, `rgba(${o.c},0.55)`);
-    g.addColorStop(0.35, `rgba(${o.c},0.18)`);
-    g.addColorStop(1, `rgba(${o.c},0)`);
+    g.addColorStop(0, `rgba(${c},${0.55 * k})`);
+    g.addColorStop(0.35, `rgba(${c},${0.18 * k})`);
+    g.addColorStop(1, `rgba(${c},0)`);
     ctx.fillStyle = g;
     ctx.fillRect(x - o.r * 4 * z, y - o.r * 4 * z, o.r * 8 * z, o.r * 8 * z);
-    ctx.fillStyle = `rgba(${o.c},0.9)`;
+    ctx.fillStyle = `rgba(${c},${0.9 * k})`;
     ctx.fillRect(Math.round(x - z), Math.round(y - z), 2 * z, 2 * z);
   }
   ctx.restore();
@@ -717,7 +731,9 @@ window.addEventListener('mouseup', () => {
 // ---- Toolbar & wiring ---------------------------------------------------------------
 
 function setZoom(z) {
-  desk.invoke('settings:set', { roomZoom: clamp(z, 1, 4) });
+  const top = maxZoom();
+  if (z > top) showToast('已經是螢幕放得下的最大尺寸了');
+  desk.invoke('settings:set', { roomZoom: clamp(z, 1, top) });
 }
 
 document.getElementById('btn-zoom-in').addEventListener('click', () => setZoom(state.zoom + 1));

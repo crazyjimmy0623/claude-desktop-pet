@@ -252,6 +252,14 @@
       for (let i = 0; i < TU; i += 4) P.top(x * TU + i, y * TU, 1, TU, '#8f5f36', z);
       if ((x + y * 3) % 3 === 0) P.top(x * TU + 6, y * TU + ((x * 5) % 10) + 2, 2, 1, '#6e4628', z);
     } },
+    sand: { base: '#e8d29a', draw: (P, x, y, z) => {
+      const n = (k) => { const v = Math.sin((x + 7) * 12.9898 + (y + 3) * 78.233 + k * 37.719) * 43758.5453; return v - Math.floor(v); };
+      P.top(x * TU, y * TU, TU, TU, (x * 5 + y) % 3 ? '#e8d29a' : '#eed9a6', z);
+      for (let i = 0; i < 6; i++) P.top(x * TU + Math.floor(n(i) * 15), y * TU + Math.floor(n(i + 9) * 15), 1, 1, i % 2 ? '#d9bf82' : '#f6e8c0', z);
+      // Ripples left by the wind, and now and then a shell.
+      if (n(20) < 0.5) P.top(x * TU + 2, y * TU + 4 + Math.floor(n(21) * 8), 10, 1, '#dcc58c', z);
+      if (n(30) < 0.15) { const [sx, sy] = P.p(x * TU + 4 + Math.floor(n(31) * 8), y * TU + 4 + Math.floor(n(32) * 8), z); P.set(sx, sy, '#f4c8c0'); P.set(sx + 1, sy, '#e8a8a0'); P.set(sx, sy - 1, '#fbe0dc'); }
+    } },
     grass: { base: '#5f9a4e', draw: (P, x, y, z) => {
       const n = (k) => { const v = Math.sin((x + 3) * 12.9898 + (y + 5) * 78.233 + k * 37.719) * 43758.5453; return v - Math.floor(v); };
       P.top(x * TU, y * TU, TU, TU, (x * 3 + y) % 4 ? '#5f9a4e' : '#6aa857', z);
@@ -307,6 +315,23 @@
     wood: { base: '#8a5a36', trim: '#5c3a22', cap: '#4a2e1a', paint: (F, len, h = WALL_H) => {
       for (let u = 0; u < len; u += 5) F(u, 6, 1, h - 8, '#7a4e2e');
       F(0, h - 12, len, 1, '#6e4628');
+    } },
+    bamboo: { base: '#cfae6e', trim: '#8a6a3a', cap: '#7a5a30', paint: (F, len, h = WALL_H) => {
+      for (let u = 0; u < len; u += 4) {
+        F(u, 6, 1, h - 16, '#b08f52');
+        for (let v = 10 + (u % 8); v < h - 12; v += 14) F(u, v, 3, 1, '#8a6a3a');
+      }
+      // A band of thatch along the top.
+      F(0, h - 10, len, 8, '#b8954f');
+      for (let u = 1; u < len; u += 3) F(u, h - 10, 1, 6 + (u % 3), '#9a7a3e');
+    } },
+    log: { base: '#8f5e38', trim: '#5c3a22', cap: '#4a2e1a', paint: (F, len, h = WALL_H) => {
+      // Round logs laid one on another: a dark seam under each, a lit edge on top.
+      for (let v = 6; v < h - 2; v += 8) {
+        F(0, v, len, 1, '#5c3a22');
+        F(0, v + 6, len, 1, '#a8744a');
+        for (let u = (v * 7) % 13; u < len; u += 17) F(u, v + 3, 3, 1, '#7a4c2c');
+      }
     } },
     stone: { base: '#6f6c78', trim: '#4c4a55', paint: (F, len, h = WALL_H) => {
       for (let v = 6, row = 0; v < h - 4; v += 9, row++) {
@@ -689,7 +714,114 @@
       for (let i = 0; i < 5; i++) P.box(4 + (i % 2), 5 - (i % 2), i * 2.4, 8, 6, 2.4, c[i], false);
       P.box(11, 9, 0, 3, 3, 6, '#e8e4d8', false);
     } },
+    palm: { w: 1, d: 1, h: 96, draw: (P, s) => {
+      // A ringed trunk leaning out, a crown of drooping fronds and coconuts.
+      for (let i = 0; i < 14; i++) {
+        const lean = i * i * 0.03;
+        P.box(6 + lean, 6, i * 5, 4, 4, 5, i % 2 ? { t: '#a8865a', l: '#8a6a44', r: '#6e5236' } : { t: '#bf9c6c', l: '#a07e54', r: '#7e6040' }, false);
+      }
+      const cx = 6 + 13 * 13 * 0.03 + 2;
+      for (let k = 0; k < 7; k++) {
+        const a = (k / 7) * Math.PI * 2 + 0.3;
+        for (let j = 1; j < 11; j++) P.disc(cx + Math.cos(a) * j * 1.5, 8 + Math.sin(a) * j * 1.1, 72 - j * j * 0.18, Math.max(0.8, 2.4 - j * 0.15), k % 2 ? '#3f8a3a' : j % 3 ? '#56a64a' : '#6fbf5a');
+      }
+      for (const [dx, dy] of [[-1, 1], [1, 2], [0, -1]]) P.disc(cx + dx, 8 + dy, 68, 1.6, '#6e4a2a');
+      if (s.weather === 'snow') P.disc(cx, 8, 74, 3, '#eef3fa');
+    } },
+    umbrella: { w: 1, d: 1, h: 46, draw: (P) => {
+      P.box(7, 7, 0, 2, 2, 36, '#e8e4d8', false);
+      // A canopy rising to a point, in eight panels of red and white.
+      for (let r = 10; r >= 0; r -= 0.5) {
+        for (let a = 0; a < Math.PI * 2; a += 0.6 / Math.max(1, r)) {
+          const panel = Math.floor(((a + 0.2) / (Math.PI * 2)) * 8) % 2;
+          P.disc(8 + Math.cos(a) * r, 8 + Math.sin(a) * r, 34 + (10 - r) * 0.7, 0.9, panel ? '#f4efe4' : '#e24a4a');
+        }
+      }
+      P.disc(8, 8, 41.5, 1.2, '#e8e4d8');
+    } },
+    lounger: { w: 1, d: 1, h: 18, station: 'rest', stations: front(1, 1), draw: (P) => {
+      for (const [x, y] of [[3, 3], [12, 3], [3, 13], [12, 13]]) P.box(x, y, 0, 1, 1, 4, '#6e4a2a', false);
+      P.box(2, 4, 4, 12, 10, 2, { t: '#4fb3d9', l: '#3a8fb0', r: '#2e7290' }, false);
+      for (let y = 5; y < 14; y += 3) P.top(2, y, 12, 1, '#f4efe4', 6);
+      P.box(2, 2, 6, 12, 3, 9, { t: '#4fb3d9', l: '#3a8fb0', r: '#2e7290' }, false);
+      P.box(4, 8, 6, 5, 3, 2, '#f4efe4', false);
+    } },
+    surfboard: { w: 1, d: 1, h: 40, draw: (P) => {
+      // Stood on its tail against the wall behind it.
+      for (let v = 0; v < 34; v++) {
+        const half = v < 4 ? 1 + v * 0.6 : v > 26 ? Math.max(0.5, (34 - v) * 0.45) : 3.5;
+        P.left(8 - half, v, half * 2, 1, v % 9 === 4 ? '#ffd65a' : '#4fb3d9', 3);
+      }
+      P.left(7, 2, 2, 30, 'rgba(255,255,255,0.35)', 3.1);
+    } },
+    tiki: { anim: true, w: 1, d: 1, h: 46, draw: (P, s) => {
+      P.box(7, 7, 0, 2, 2, 32, { t: '#c9a06a', l: '#a8865a', r: '#8a6a44' }, false);
+      for (const v of [8, 18, 26]) P.box(6.5, 6.5, v, 3, 3, 1, '#6e4a2a', false);
+      P.box(5.5, 5.5, 32, 5, 5, 3, '#6e4a2a', false);
+      const f = s.frame % 3;
+      P.dot(7, 7, 38 + f, '*#ffd65a', 2, 3);
+      P.dot(6 + f % 2, 7, 37, '*#ff8a3a', 3, 2);
+      P.glow(8, 8, 37, 18, 'rgba(255,170,90,0.5)');
+      P.glow(8, 8, 0, 22, 'rgba(255,170,90,0.25)', true);
+    } },
+    campfire: { anim: true, w: 1, d: 1, h: 26, draw: (P, s) => {
+      for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; P.disc(8 + Math.cos(a) * 6, 8 + Math.sin(a) * 6, 1.5, 2, k % 2 ? '#8a8478' : '#77736a'); }
+      P.box(3, 7, 1, 10, 2, 2, { t: '#8a5a36', l: '#6e4428', r: '#55331d' }, false);
+      P.box(7, 3, 1, 2, 10, 2, { t: '#8a5a36', l: '#6e4428', r: '#55331d' }, false);
+      // Flames flicker through three shapes.
+      const f = s.frame % 3;
+      P.disc(8, 8, 5, 3.5 - f * 0.4, '*#ff8a3a');
+      P.disc(8 - (f === 1 ? 1 : 0), 8, 8 + f, 2.4, '*#ffb347');
+      P.disc(8 + (f === 2 ? 1 : 0), 8, 11 + f, 1.4, '*#ffe28a');
+      P.dot(6 + f * 2, 8, 15 + f * 2, '*#ffd65a', 1, 1);
+      P.glow(8, 8, 8, 22, 'rgba(255,150,70,0.55)');
+      P.glow(8, 8, 0, 30, 'rgba(255,150,70,0.3)', true);
+    } },
+    logpile: { w: 1, d: 1, h: 16, draw: (P) => {
+      const end = { t: '#9a6a40', l: '#8a5a36', r: '#d9b07a' };
+      for (const [y, z] of [[3, 0], [8, 0], [5.5, 4.5], [10.5, 4.5], [8, 9]]) {
+        if (y > 12) continue;
+        P.box(1, y, z, 14, 4, 4, end, false);
+        P.right(y + 3, z + 1, 2, 2, '#b8875a', 15);
+      }
+    } },
+    mushroom: { w: 1, d: 1, h: 14, draw: (P) => {
+      for (const [x, y, hgt, r] of [[5, 6, 6, 3.2], [10, 9, 4, 2.4], [7, 11, 3, 1.8]]) {
+        P.box(x - 0.5, y - 0.5, 0, 1.5, 1.5, hgt, '#f4efe4', false);
+        P.disc(x, y, hgt + 1, r, '#d9413a');
+        P.dot(x - 1, y, hgt + 2, '#ffffff', 1, 1);
+        P.dot(x + 1, y - 1, hgt + 1.5, '#ffffff', 1, 1);
+      }
+    } },
+    lantern: { anim: true, w: 1, d: 1, h: 46, draw: (P, s) => {
+      P.box(7, 7, 0, 2, 2, 38, '#3a3f50', false);
+      P.box(7, 7, 38, 6, 2, 1, '#3a3f50', false);
+      P.box(10, 7, 26, 4, 4, 8, '#2e3240', false);
+      const on = s.hour >= 17 || s.hour < 7;
+      P.left(10.5, 27, 3, 6, on ? '*#ffd27a' : '#c9b48a', 11.5);
+      P.glow(12, 9, 30, on ? 22 : 10, on ? 'rgba(255,200,120,0.5)' : 'rgba(255,200,120,0.12)');
+      if (on) P.glow(12, 9, 0, 24, 'rgba(255,200,120,0.25)', true);
+    } },
+    waterfall: { anim: true, w: 1, d: 1, h: 52, onWater: true, draw: (P, s) => {
+      // Water spills over a mossy lip from the ground behind, down into the pool, and foams.
+      P.box(1, 0, 32, 14, 3, 2, { t: '#6fa85a', l: '#77736a', r: '#5a564e' }, false);
+      for (let v = 0; v < 34; v++) {
+        const k = (v + s.frame * 3) % 8;
+        P.left(2, v - 2, 12, 1, k < 2 ? 'rgba(240,252,255,0.92)' : k < 5 ? 'rgba(130,205,240,0.88)' : 'rgba(95,175,230,0.88)', 2.5);
+        if ((v + s.frame * 2) % 11 === 0) P.left(4 + (v % 5), v - 2, 1, 2, 'rgba(255,255,255,0.95)', 2.6);
+      }
+      for (let i = 0; i < 6; i++) P.disc(3 + i * 2.2, 5 + (i % 2), 0.5, 2.4, 'rgba(255,255,255,0.85)');
+      P.dot(4 + ((s.frame * 5) % 9), 6, 3 + (s.frame % 3) * 2, '#ffffff', 1, 1);
+    } },
     // Wall-mounted: mount height z, drawn on the plane y = 0; `top` is the highest point drawn.
+    hangplant: { w: 1, d: 0, h: 60, top: 58, wall: true, z: 30, draw: (P) => {
+      P.box(7, 0, 54, 2, 5, 1, '#5a4a3a', false);
+      P.box(8, 4, 42, 1, 1, 12, '#c9a06a', false);
+      P.box(5, 2, 34, 6, 5, 7, { t: '#c97a4a', l: '#b5693d', r: '#93522e' }, false);
+      P.disc(8, 5, 42, 4, '#4f8f45');
+      P.disc(6, 5, 44, 2.5, '#62a656');
+      for (const [u, len] of [[5, 12], [9, 16], [11, 9]]) for (let v = 0; v < len; v++) P.left(u + (v % 4 === 0 ? 1 : 0), 34 - v, 1, 1, v % 3 ? '#4f8f45' : '#7cbf6a', 6.5);
+    } },
     walllamp: { anim: true, w: 1, d: 0, h: 50, top: 46, wall: true, z: 28, draw: (P, s) => {
       P.box(7, 0, 34, 2, 4, 1, '#3a3f50', false);
       P.box(5, 3, 28, 6, 4, 8, '#2e3240', false);
@@ -903,35 +1035,9 @@
         [2, 'table', 5, 3], [2, 'bookshelf', 7, 1], [2, 'plant', 8, 3], [2, 'plant', 0, 0], [2, 'boxes', 0, 1],
         [2, 'lamp', 0, 2], [2, 'shelf', 0, 0, true],
         // Terrace: a sofa under the sky. Loft: a bed under the garden. Garden: a telescope.
-        [3, 'sofa', 0, 4, true], [3, 'plant', 0, 3],
+        [3, 'chair', 0, 4], [3, 'plant', 0, 3], [3, 'planter', 0, 5],
         [4, 'bed', 3, 0], [4, 'lamp', 2, 0], [4, 'poster', 2, 1, true], [4, 'window', 3, 0], [4, 'neon', 5, 0],
         [5, 'telescope', 4, 1], [5, 'plant', 3, 0], [5, 'plant', 4, 0], [5, 'catbed', 3, 1],
-      ],
-    },
-    cottage: {
-      name: '森林小屋',
-      desc: '草地上的木頭小屋，有壁爐和閣樓，旁邊一座瞭望台和一片花園',
-      zones: [
-        { name: '草地', z: 0, kind: 'outdoor', wall: 'brick', floor: 'grass', rects: [[0, 5, 7, 3]] },
-        { name: '小屋', z: 32, kind: 'room', wall: 'cream', floor: 'wood', rects: [[0, 0, 5, 5], [5, 0, 1, 3]] },
-        { name: '瞭望台', z: 96, kind: 'outdoor', rails: true, lights: true, wall: 'navy', floor: 'stone', rects: [[5, 3, 2, 2]] },
-        { name: '閣樓', z: 96, kind: 'room', thin: true, rails: true, wall: 'plum', floor: 'carpet', rects: [[0, 0, 5, 2]] },
-        { name: '花園', z: 0, kind: 'outdoor', wall: 'brick', floor: 'grass', rects: [[7, 0, 2, 8]] },
-      ],
-      flights: [
-        { from: 0, to: 1, style: 'solid', cells: [[2, 5]], bottom: [2, 6], top: [2, 4] },
-        { from: 1, to: 2, style: 'open', cells: [[5, 1], [5, 2]], bottom: [5, 0], top: [5, 3] },
-        { from: 1, to: 3, style: 'open', cells: [[4, 2]], bottom: [4, 3], top: [4, 1] },
-      ],
-      door: [6, 7],
-      objects: [
-        [0, 'meter', 4, 5], [1, 'walllamp', 5, 0], [3, 'walllamp', 0, 1, true], [4, 'crate', 8, 7], [4, 'barrel', 8, 6],
-        [0, 'plant', 0, 5], [0, 'sofa', 0, 6, true], [0, 'bell', 4, 5], [0, 'streetlamp', 6, 5],
-        [1, 'lamp', 0, 0], [1, 'fireplace', 1, 0], [1, 'desk', 0, 1, true], [1, 'bookshelf', 0, 3, true], [1, 'table', 2, 2],
-        [1, 'coffee', 3, 0], [1, 'clock', 1, 0], [1, 'window', 3, 0], [1, 'poster', 0, 1, true],
-        [2, 'telescope', 6, 3],
-        [3, 'sofa', 0, 0], [3, 'catbed', 2, 0], [3, 'plant', 3, 0], [3, 'window', 1, 0],
-        [4, 'easel', 7, 1], [4, 'plant', 7, 0], [4, 'streetlamp', 8, 5], [4, 'catbed', 8, 3],
       ],
     },
     cyber: {
@@ -947,7 +1053,7 @@
       ],
       flights: [
         { from: 0, to: 2, style: 'solid', cells: [[6, 6], [6, 5]], bottom: [6, 7], top: [6, 4] },
-        { from: 1, to: 3, style: 'open', cells: [[2, 3], [2, 2]], bottom: [2, 4], top: [2, 1] },
+        { from: 1, to: 4, style: 'open', cells: [[3, 3], [3, 2]], bottom: [3, 4], top: [3, 1] },
       ],
       door: [1, 7],
       objects: [
@@ -963,6 +1069,7 @@
     },
     lake: {
       name: '湖畔溫室',
+      backdrop: 'forest',
       desc: '湖面上的高腳木平台，兩間玻璃溫室種滿植物，還有釣魚碼頭和屋頂露台',
       zones: [
         { name: '湖', z: 0, kind: 'water', depth: 40, wall: 'brick', floor: 'stone', rects: [[0, 0, 9, 9]] },
@@ -989,80 +1096,69 @@
         [6, 'telescope', 0, 0], [6, 'plant', 2, 0],
       ],
     },
-    tower: {
-      name: '魔法塔',
-      desc: '一層疊一層的小塔：底下是發光的實驗室，往上是臥室、書房和觀星台',
+    beach: {
+      name: '熱帶海邊小屋',
+      backdrop: 'beach',
+      desc: '白沙灘上的竹子高腳屋，椰子樹、陽傘和躺椅，木棧橋一路伸進藍綠色的淺海',
       zones: [
-        { name: '門廊', z: 0, kind: 'outdoor', wall: 'wood', floor: 'plank', rects: [[0, 5, 5, 2]] },
-        { name: '實驗室', z: 0, kind: 'room', wall: 'stone', floor: 'stone', rects: [[0, 0, 5, 5]] },
-        { name: '臥室', z: 80, kind: 'room', thin: true, rails: true, wall: 'plum', floor: 'carpet', rects: [[0, 0, 4, 4]] },
-        { name: '書房', z: 160, kind: 'room', thin: true, rails: true, wall: 'wood', floor: 'stone', rects: [[0, 0, 3, 3]] },
-        { name: '觀星台', z: 160, kind: 'outdoor', thin: true, rails: true, lights: true, wall: 'wood', floor: 'plank', rects: [[3, 0, 2, 2]] },
+        { name: '沙灘', z: 16, kind: 'outdoor', base: 'earth', wall: 'bamboo', floor: 'sand', rects: [[0, 0, 5, 6]] },
+        { name: '海', z: 0, kind: 'water', depth: 40, wall: 'bamboo', floor: 'sand', rects: [[5, 0, 4, 9], [0, 6, 5, 3]] },
+        { name: '竹屋', z: 48, kind: 'room', thin: true, base: 'stilts', wall: 'bamboo', floor: 'plank', rects: [[5, 0, 4, 3]] },
+        { name: '露台', z: 48, kind: 'outdoor', thin: true, base: 'stilts', rails: true, lights: true, wall: 'bamboo', floor: 'plank', rects: [[5, 3, 4, 3]] },
+        { name: '棧橋', z: 24, kind: 'outdoor', thin: true, base: 'stilts', rails: true, wall: 'bamboo', floor: 'plank', rects: [[5, 6, 2, 3]] },
       ],
       flights: [
-        { from: 1, to: 2, style: 'open', cells: [[4, 3], [4, 2], [4, 1], [4, 0]], bottom: [4, 4], top: [3, 0] },
-        { from: 2, to: 3, style: 'open', cells: [[2, 3], [1, 3], [0, 3]], bottom: [3, 3], top: [0, 2] },
+        { from: 0, to: 3, style: 'open', cells: [[4, 4]], bottom: [3, 4], top: [5, 4] },
+        { from: 4, to: 3, style: 'open', cells: [[5, 6]], bottom: [5, 7], top: [5, 5] },
       ],
-      door: [4, 6, 0],
+      door: [0, 5],
       objects: [
-        [1, 'walllamp', 0, 4, true], [1, 'meter', 4, 0], [2, 'walllamp', 0, 1, true], [3, 'books', 2, 2], [0, 'barrel', 0, 5],
-        [0, 'streetlamp', 0, 6], [0, 'plant', 1, 6], [0, 'bell', 2, 5],
-        [1, 'workstation', 1, 0], [1, 'server', 3, 0], [1, 'screens', 1, 0], [1, 'potions', 0, 2, true],
-        [1, 'holo', 0, 3, true], [1, 'cauldron', 2, 3], [1, 'plant', 0, 0],
-        [2, 'bed', 0, 0], [2, 'window', 1, 0], [2, 'poster', 0, 2, true],
-        [3, 'bookshelf', 0, 0], [3, 'globe', 2, 0], [3, 'clock', 2, 0], [3, 'shelf', 0, 1, true],
-        [4, 'telescope', 4, 0],
+        // Beach: palms, a parasol over two loungers, a board and torches.
+        [0, 'palm', 0, 0], [0, 'palm', 2, 5], [0, 'umbrella', 1, 2], [0, 'lounger', 1, 3], [0, 'lounger', 2, 3],
+        [0, 'surfboard', 0, 2], [0, 'tiki', 2, 1], [0, 'tiki', 4, 5],
+        // Sea: a little boat.
+        [1, 'boat', 1, 7],
+        // Hut: desk and coffee on the back wall, a sofa looking out.
+        [2, 'desk', 5, 0], [2, 'coffee', 7, 0], [2, 'books', 8, 0], [2, 'sofa', 7, 2], [2, 'window', 6, 0],
+        [2, 'walllamp', 5, 1, true],
+        // Deck: a table in the breeze, a torch at the corner. Pier: a lantern at the end.
+        [3, 'table', 7, 4], [3, 'tiki', 8, 3],
+        [4, 'lantern', 6, 8],
       ],
     },
-    treehouse: {
-      name: '樹屋',
-      desc: '樹林裡高腳木平台上的小屋，有側平台、二樓和陽台',
+    cabin: {
+      name: '森林溫馨木屋',
+      backdrop: 'forest',
+      desc: '森林裡的圓木小屋，屋前有營火和門廊，後面的小山丘有瀑布流進池塘',
       zones: [
-        { name: '草地', z: 0, kind: 'outdoor', base: 'earth', wall: 'brick', floor: 'grass', rects: [[0, 0, 8, 8]] },
-        { name: '平台', z: 48, kind: 'outdoor', thin: true, base: 'stilts', rails: true, wall: 'wood', floor: 'plank', rects: [[2, 2, 5, 5]] },
-        { name: '房間', z: 48, kind: 'room', thin: true, base: 'stilts', wall: 'cream', floor: 'plank', rects: [[2, 0, 5, 2]] },
-        { name: '側平台', z: 48, kind: 'outdoor', thin: true, base: 'stilts', rails: true, wall: 'wood', floor: 'plank', rects: [[7, 2, 2, 4]] },
-        { name: '二樓', z: 112, kind: 'room', thin: true, rails: true, wall: 'cream', floor: 'wood', rects: [[2, 0, 3, 2]] },
-        { name: '陽台', z: 112, kind: 'outdoor', thin: true, rails: true, lights: true, wall: 'wood', floor: 'plank', rects: [[2, 2, 3, 2]] },
+        { name: '草地', z: 0, kind: 'outdoor', base: 'earth', wall: 'stone', floor: 'grass', rects: [[0, 0, 1, 9], [1, 5, 5, 4], [6, 6, 3, 3]] },
+        { name: '木屋', z: 16, kind: 'room', wall: 'log', floor: 'wood', rects: [[1, 0, 5, 4]] },
+        { name: '門廊', z: 16, kind: 'outdoor', rails: true, lights: true, wall: 'log', floor: 'plank', rects: [[1, 4, 5, 1]] },
+        { name: '閣樓', z: 80, kind: 'room', thin: true, rails: true, wall: 'log', floor: 'carpet', rects: [[1, 0, 4, 2]] },
+        { name: '山丘', z: 32, kind: 'outdoor', base: 'earth', wall: 'stone', floor: 'grass', rects: [[6, 0, 3, 3]] },
+        { name: '池塘', z: 0, kind: 'water', depth: 32, wall: 'stone', floor: 'stone', rects: [[6, 3, 3, 3]] },
       ],
       flights: [
-        { from: 0, to: 1, style: 'open', cells: [[1, 6], [1, 5], [1, 4]], bottom: [1, 7], top: [2, 4] },
-        { from: 1, to: 4, style: 'open', cells: [[5, 2], [5, 1], [5, 0]], bottom: [5, 3], top: [4, 0] },
+        { from: 0, to: 2, style: 'solid', cells: [[3, 5]], bottom: [3, 6], top: [3, 4] },
+        { from: 1, to: 3, style: 'open', cells: [[4, 2]], bottom: [4, 3], top: [4, 1] },
+        { from: 1, to: 4, style: 'solid', cells: [[5, 1]], bottom: [4, 1], top: [6, 1] },
       ],
-      door: [6, 7, 0],
+      door: [0, 8],
       objects: [
-        [2, 'walllamp', 6, 0], [2, 'banner', 2, 1, true], [2, 'barrel', 6, 1], [4, 'walllamp', 2, 1, true], [5, 'antenna', 2, 3], [0, 'barrel', 7, 6], [0, 'crate', 6, 0],
-        [0, 'tree', 0, 0], [0, 'tree', 0, 1], [0, 'bush', 0, 2], [0, 'tree', 7, 7], [0, 'bush', 2, 7], [0, 'streetlamp', 4, 7], [0, 'bush', 7, 0],
-        [2, 'workstation', 2, 0], [2, 'server', 4, 0], [2, 'plant', 6, 0], [2, 'window', 3, 0],
-        [1, 'table', 3, 4], [1, 'coffee', 6, 5], [1, 'plant', 2, 6],
-        [3, 'bookshelf', 7, 2], [3, 'plant', 8, 5],
-        [4, 'sofa', 2, 0], [4, 'window', 3, 0],
-        [5, 'telescope', 3, 2], [5, 'plant', 2, 2],
-      ],
-    },
-    witch: {
-      name: '魔女小屋',
-      desc: '圍著小燈籠籬笆的魔女小屋，有魔藥鍋、星星地毯、閣樓、藥草園和前院',
-      zones: [
-        { name: '庭院', z: 0, kind: 'outdoor', base: 'earth', rails: true, lights: true, wall: 'brick', floor: 'stone', rects: [[0, 0, 7, 1], [0, 1, 1, 6], [6, 1, 1, 6], [1, 5, 5, 2]] },
-        { name: '小屋', z: 32, kind: 'room', wall: 'brick', floor: 'magic', rects: [[1, 1, 5, 4]] },
-        { name: '閣樓', z: 96, kind: 'room', thin: true, rails: true, wall: 'wood', floor: 'carpet', rects: [[1, 1, 3, 2]] },
-        { name: '藥草園', z: 0, kind: 'outdoor', base: 'earth', rails: true, wall: 'brick', floor: 'grass', rects: [[7, 0, 2, 7]] },
-        { name: '前院', z: 0, kind: 'outdoor', base: 'earth', rails: true, lights: true, wall: 'brick', floor: 'grass', rects: [[0, 7, 9, 2]] },
-      ],
-      flights: [
-        { from: 0, to: 1, style: 'solid', cells: [[3, 5]], bottom: [3, 6], top: [3, 4] },
-        { from: 1, to: 2, style: 'open', cells: [[4, 2], [4, 1]], bottom: [4, 3], top: [3, 1] },
-      ],
-      door: [5, 6, 0],
-      objects: [
-        [0, 'meter', 5, 5], [0, 'windowbox', 2, 5], [1, 'walllamp', 1, 2, true], [2, 'walllamp', 2, 1], [4, 'signboard', 7, 8],
-        [0, 'streetlamp', 0, 6], [0, 'streetlamp', 6, 6], [0, 'plant', 4, 0], [0, 'catbed', 3, 0],
-        [1, 'bookshelf', 1, 1], [1, 'potions', 3, 1], [1, 'fireplace', 1, 3, true], [1, 'desk', 2, 3, true], [1, 'cauldron', 5, 1],
-        [1, 'window', 4, 1],
-        [2, 'sofa', 1, 1],
-        [3, 'planter', 7, 0], [3, 'planter', 7, 3], [3, 'bush', 8, 6],
-        [4, 'tree', 0, 8], [4, 'streetlamp', 2, 8], [4, 'bush', 4, 8], [4, 'plant', 6, 7],
+        // Yard: trees and mushrooms at the edge, a campfire with stools, the woodpile, a lantern.
+        [0, 'tree', 0, 0], [0, 'mushroom', 8, 6], [0, 'bush', 0, 6], [0, 'campfire', 2, 7],
+        [0, 'stool', 1, 7], [0, 'stool', 3, 7], [0, 'logpile', 5, 5], [0, 'lantern', 6, 6], [0, 'tree', 8, 8],
+        [0, 'bush', 7, 8], [0, 'mushroom', 6, 8],
+        // Cabin: the fire on the back wall, books, a desk under the loft, a table by the window.
+        [1, 'fireplace', 1, 0], [1, 'desk', 3, 0], [1, 'bookshelf', 1, 2, true], [1, 'coffee', 5, 2],
+        [1, 'lamp', 5, 0], [1, 'catbed', 2, 3], [1, 'window', 3, 0], [1, 'walllamp', 1, 1, true], [1, 'hangplant', 5, 0],
+        // Porch: a chair, a plant and a lantern.
+        [2, 'chair', 1, 4], [2, 'plant', 2, 4], [2, 'lantern', 5, 4],
+        // Loft: the sofa under the roof.
+        [3, 'sofa', 1, 0], [3, 'catbed', 3, 0], [3, 'window', 2, 0], [3, 'walllamp', 1, 1, true],
+        // Hill: a tree and the telescope. Pond: the waterfall and lily pads.
+        [4, 'tree', 8, 0], [4, 'bush', 8, 2], [4, 'telescope', 7, 0], [4, 'mushroom', 6, 0],
+        [5, 'waterfall', 7, 3], [5, 'lilypad', 6, 5], [5, 'lilypad', 8, 4],
       ],
     },
   };
@@ -1246,7 +1342,10 @@
       const up = Math.sign(dir === 'x' ? c1[0] - c0[0] : c1[1] - c0[1]) || -1;
       fl.cells.forEach(([x, y], k) => {
         // Solid steps stand on the ground; open treads hang one rise deep.
-        const c = add({ x, y, z: z0 + rise * (k + 1), f: fl.from, kind: 'stair', rise, dir, up, style: fl.style, base: fl.style === 'solid' ? 0 : z0 });
+        // The treads drawn on this tile run from `span[0]` to `span[1]`: the whole flight climbs from
+        // the floor at its foot to the floor at its head with no step missing at either end.
+        const span = [z0 + ((z1 - z0) * k) / fl.cells.length, z0 + ((z1 - z0) * (k + 1)) / fl.cells.length];
+        const c = add({ x, y, z: z0 + rise * (k + 1), f: fl.from, kind: 'stair', rise, dir, up, span, style: fl.style, base: fl.style === 'solid' ? 0 : z0, from: fl.bottom, to: fl.top });
         link(prev, c);
         prev = c;
       });
@@ -1312,8 +1411,27 @@
   }
 
   // Walkable cells (ids), with furniture taken out.
+  // Tiles under a deck where one of its posts stands (matching stiltPosts), by height of the deck.
+  function postTiles(room) {
+    const out = [];
+    layoutOf(room).areas.forEach((a) => {
+      if (!a.thin || a.base !== 'stilts') return;
+      for (const [x0, y0, w, d] of a.rects) {
+        const cols = [];
+        for (let x = 0; x <= w; x += 2) cols.push(Math.min(x, w - 1));
+        cols.push(w - 1);
+        for (const x of cols) out.push([x0 + x, y0 + d - 1, a.z]);
+        for (let y = 0; y < d; y += 2) out.push([x0 + w - 1, y0 + y, a.z]);
+      }
+    });
+    return out;
+  }
+
   function walkable(room) {
     const blocked = new Set();
+    for (const [x, y, z] of postTiles(room)) {
+      for (const c of cells(room).at.get(`${x},${y}`) || []) if (c.kind === 'floor' && c.z < z) blocked.add(c.id);
+    }
     for (const o of room.objects) {
       const def = OBJECTS[o.type];
       if (!def || def.wall || def.flat) continue;
@@ -1350,7 +1468,7 @@
   // A fresh room from a blueprint, furnished on every layer; locked layers keep their furniture.
   function generateRoom(id = 'shop') {
     const bp = BLUEPRINTS[id] || BLUEPRINTS.shop;
-    const room = { iso: 5, blueprint: BLUEPRINTS[id] ? id : 'shop', ...fromSpec(bp), objects: [] };
+    const room = { iso: 5, blueprint: BLUEPRINTS[id] ? id : 'shop', backdrop: bp.backdrop || null, ...fromSpec(bp), objects: [] };
     for (const [f, type, x, y, flip = false] of bp.objects) {
       if (canPlace(room, type, x, y, flip, f)) room.objects.push({ type, x, y, flip, f });
     }
@@ -1455,7 +1573,7 @@
     resetCells(room);
     const has = (x, y, f) => tileIndex(room, x, y, f) >= 0;
     room.flights = room.flights.filter((fl) => has(fl.bottom[0], fl.bottom[1], fl.from) && has(fl.top[0], fl.top[1], fl.to)
-      && Math.abs(room.zones[fl.to].z - room.zones[fl.from].z) / (fl.cells.length + 1) <= STEP_Z + 1);
+      && Math.abs(room.zones[fl.to].z - room.zones[fl.from].z) / (fl.style === 'spiral' ? 5 : fl.cells.length + 1) <= STEP_Z + 1);
     resetCells(room);
     room.objects = room.objects.filter((o, i) => canPlace(room, o.type, o.x, o.y, o.flip, o.f || 0, i));
     if (!has(room.door[0], room.door[1], 0)) {
@@ -1596,6 +1714,37 @@
     }
     return why;
   }
+  // A spiral stair fits in one tile beside higher ground and climbs up to five storeys; it is entered
+  // from a floor tile next to it at its own height.
+  function spiralPlan(room, hit) {
+    if (!hit || hit.stair) return '這裡已經有樓梯了';
+    if (hit.ground || hit.face !== 'top') return '旋轉樓梯要放在地板頂面上，旁邊要有比較高的地方';
+    const T = { x: hit.x, y: hit.y, f: hit.f, z: hit.z };
+    const zAt = (x, y, pred) => room.tiles.filter((t) => t[0] === x && t[1] === y && room.zones[t[2]].kind !== 'water' && pred(room.zones[t[2]].z));
+    const dirs = [[-1, 0], [0, -1], [1, 0], [0, 1]];
+    let hi = null;
+    let hd = null;
+    for (const [dx, dy] of dirs) {
+      const t = zAt(T.x + dx, T.y + dy, (z) => z > T.z && z - T.z <= 5 * STEP_Z).sort((p, q) => room.zones[p[2]].z - room.zones[q[2]].z)[0];
+      if (t && (!hi || room.zones[t[2]].z < room.zones[hi[2]].z)) { hi = t; hd = [dx, dy]; }
+    }
+    if (!hi) return '旁邊要有比較高的地方（最多五層）';
+    // The way in: the opposite side first, then either side.
+    const order = [[-hd[0], -hd[1]], [hd[1], hd[0]], [-hd[1], -hd[0]]];
+    for (const [dx, dy] of order) {
+      const lo = zAt(T.x + dx, T.y + dy, (z) => z === T.z)[0];
+      if (lo) return { lo: { x: lo[0], y: lo[1], f: lo[2] }, hi: { x: hi[0], y: hi[1], f: hi[2] }, cell: [T.x, T.y], from: T.f };
+    }
+    return '旋轉樓梯旁邊要有同高的地板可以走進去';
+  }
+  function placeSpiral(room, hit) {
+    const plan = spiralPlan(room, hit);
+    if (typeof plan === 'string') return plan;
+    if (room.flights.some((fl) => fl.cells.some(([x, y]) => x === plan.cell[0] && y === plan.cell[1]))) return '這裡已經有樓梯了';
+    room.flights.push({ from: plan.from, to: plan.hi.f, style: 'spiral', cells: [plan.cell], bottom: [plan.lo.x, plan.lo.y], top: [plan.hi.x, plan.hi.y] });
+    tidy(room);
+    return null;
+  }
   function placeStairs(room, hit) {
     const plan = stairPlan(room, hit);
     return typeof plan === 'string' ? plan : addFlight(room, plan.lo, plan.hi);
@@ -1624,9 +1773,123 @@
   // ---- Rendering --------------------------------------------------------------------
 
   // Room canvas in fine pixels: world (0, 0, 0) lands at origin().
+  // Scenery behind the room: two rows of trees (or palms) along the back edges on a strip of ground,
+  // hazed into the distance. It is only painted - nothing walks there and clicks pass through it.
+  const BACKDROPS = { forest: '森林', beach: '海灘椰林' };
+  const backdropOf = (room) => (room.backdrop !== undefined ? room.backdrop : BLUEPRINTS[room.blueprint]?.backdrop) || null;
+  function backdropItems(room) {
+    const kind = backdropOf(room);
+    if (!BACKDROPS[kind]) return [];
+    let mx = 1;
+    let my = 1;
+    for (const [x, y] of room.tiles) { mx = Math.max(mx, x + 1); my = Math.max(my, y + 1); }
+    const out = [];
+    for (const row of [2, 1]) {
+      for (let k = -row; k < Math.max(mx, my) + 1; k++) {
+        for (const [x, y] of [[-row, k], [k, -row]]) {
+          if (x === -row && y === -row && k !== -row) continue;
+          if ((x >= 0 && x >= mx) || (y >= 0 && y >= my)) continue;
+          const n = hash(x * 3 + row, y * 5 + row * 11);
+          out.push({ x: x + (n - 0.5) * 0.5, y: y + (hash(y, x) - 0.5) * 0.5, gx: x, gy: y, row, n, kind });
+        }
+      }
+    }
+    return out.sort((a, b) => (a.x + a.y) - (b.x + b.y));
+  }
+  function backdropTree(kind, n, row) {
+    const far = row === 2;
+    const h = Math.round((far ? 78 : 58) + n * 34);
+    const v = Math.floor(n * 3);
+    return cached(`bd|${kind}|${h}|${v}|${row}`, () => renderSprite(1, 1, h + 12, (P) => {
+      const shade = (c) => (far ? dk(c, 0.18) : c);
+      if (kind === 'beach' && v !== 1) {
+        // A palm: ringed trunk leaning out, drooping fronds.
+        const lean = 0.02 + n * 0.03;
+        for (let i = 0; i < h / 6; i++) P.box(6 + i * i * lean, 6, i * 6, 4, 4, 6, i % 2 ? shade('#a8865a') : shade('#bf9c6c'), false);
+        const cx = 6 + (h / 6) * (h / 6) * lean + 2;
+        for (let k = 0; k < 7; k++) {
+          const a = (k / 7) * Math.PI * 2 + n;
+          for (let j = 1; j < 12; j++) P.disc(cx + Math.cos(a) * j * 1.6, 8 + Math.sin(a) * j * 1.2, h - 4 - j * j * 0.2, Math.max(0.9, 2.6 - j * 0.15), shade(k % 2 ? '#3f8a3a' : '#56a64a'));
+        }
+        return;
+      }
+      if (kind === 'beach') {
+        // Jungle undergrowth between the palms: big glossy leaves.
+        for (let i = 0; i < 9; i++) P.disc(4 + (i * 5) % 9, 4 + (i * 3) % 9, 6 + (i % 4) * 6, 5 - (i % 3), shade(i % 2 ? '#2f7a3a' : '#4f9a4a'));
+        return;
+      }
+      if (v === 0) {
+        // A round broadleaf tree.
+        P.box(6.5, 6.5, 0, 3, 3, h * 0.4, shade('#6e4428'), false);
+        for (const [x, y, zf, r, c] of [[8, 8, 0.5, 11, '#3f7a3a'], [4, 9, 0.62, 8, '#4f8f45'], [12, 6, 0.66, 8, '#4f8f45'], [8, 8, 0.78, 8, '#62a656'], [7, 9, 0.9, 5, '#7cbf6a']]) P.disc(x, y, h * zf, r, shade(c));
+        return;
+      }
+      // A pine: tiers of needles narrowing to a point.
+      P.box(7, 7, 0, 2, 2, h * 0.22, shade('#5a3a24'), false);
+      const z0 = h * 0.18;
+      for (let zz = z0; zz < h; zz += 1) {
+        const t = (zz - z0) / (h - z0);
+        const r = 9 * (1 - t) + ((zz - z0) % 12 < 4 ? 1.6 : 0);
+        P.disc(8, 8, zz, r, shade((zz - z0) % 12 < 4 ? '#2f5a3a' : '#3d6e47'));
+        P.disc(6.5, 8.5, zz, Math.max(0, r - 3), shade('#4a7d52'));
+      }
+    }, false));
+  }
+  // The ground the scenery stands on, one tile at a time.
+  function backdropGround(kind) {
+    return cached(`bdg|${kind}`, () => renderSprite(1, 1, 8, (P) => {
+      const top = kind === 'beach' ? '#e2c98e' : '#4f8a45';
+      P.box(0, 0, -6, TU, TU, 6, { t: top, l: kind === 'beach' ? '#c9a46a' : '#5e3922', r: kind === 'beach' ? '#a8844e' : '#3b2214' }, false);
+      for (let i = 0; i < 5; i++) P.top((i * 7) % 14, (i * 5) % 14, 2, 1, kind === 'beach' ? '#f0dcb0' : '#6aa857', 0);
+    }, false, 8));
+  }
+  const BACKDROP_CANVAS = { key: '', canvas: null };
+  function drawBackdrop(ctx, room, z, weather) {
+    const items = backdropItems(room);
+    if (!items.length) return;
+    const W = ctx.canvas.width;
+    const H = ctx.canvas.height;
+    const key = `${layoutOf(room).id}|${backdropOf(room)}|${z}|${W}x${H}|${JSON.stringify(ctx.getTransform())}|${weather || ''}`;
+    if (BACKDROP_CANVAS.key !== key) {
+      const c = makeCanvas(W, H);
+      const g = c.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      g.setTransform(ctx.getTransform());
+      const kind = backdropOf(room);
+      const grounds = new Set();
+      for (const it of items) {
+        const gk = `${it.gx},${it.gy}`;
+        if (grounds.has(gk)) continue;
+        grounds.add(gk);
+        blit(g, room, backdropGround(kind), it.gx * TU, it.gy * TU, 0, z);
+      }
+      // Far row first, hazed further; then the near row.
+      for (const row of [2, 1]) {
+        for (const it of items.filter((t) => t.row === row)) blit(g, room, backdropTree(it.kind, it.n, row), it.x * TU, it.y * TU, 0, z);
+        g.save();
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.globalCompositeOperation = 'source-atop';
+        g.fillStyle = kind === 'beach' ? `rgba(170,215,230,${row === 2 ? 0.34 : 0.14})` : `rgba(90,120,135,${row === 2 ? 0.34 : 0.14})`;
+        g.fillRect(0, 0, W, H);
+        g.restore();
+      }
+      Object.assign(BACKDROP_CANVAS, { key, canvas: c });
+    }
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(BACKDROP_CANVAS.canvas, 0, 0);
+    ctx.restore();
+  }
+
   function bounds(room) {
     const L = layoutOf(room);
     let top = 0; let bottom = 0; let left = 0; let right = 0;
+    // Room for the scenery behind.
+    for (const it of backdropItems(room)) {
+      top = Math.max(top, (it.row === 2 ? 112 : 92) + 12 - ((it.x + it.y) * TU) / 2);
+      left = Math.max(left, (it.y + 1 - it.x) * TU + 8);
+      right = Math.max(right, (it.x + 1 - it.y) * TU + 8);
+    }
     for (const [f, a] of L.areas.entries()) {
       const walls = a.walls.filter((w) => !w[5]);
       const tall = walls.length ? Math.max(...walls.map((w) => w[4])) + 3 : a.rails ? 16 : 4;
@@ -1736,14 +1999,14 @@
   }
 
   // A cliff of earth: dark soil in layers with stones, under a lip of turf when the top is grass.
-  function earthFaces(P, w, d, h, grass) {
+  function earthFaces(P, w, d, h, grass, sand = false) {
     const L = w * TU;
     const D = d * TU;
-    P.left(0, -h, L, h, '#6e4429', D);
-    P.right(D, -h, D, h, '#4a2b1a', L);
+    P.left(0, -h, L, h, sand ? '#d9b77a' : '#6e4429', D);
+    P.right(D, -h, D, h, sand ? '#b08d56' : '#4a2b1a', L);
     for (let v = 10; v < h; v += 11) {
-      P.left(0, -v, L, 2, '#5e3922', D);
-      P.right(D, -v, D, 2, '#3b2214', L);
+      P.left(0, -v, L, 2, sand ? '#c9a46a' : '#5e3922', D);
+      P.right(D, -v, D, 2, sand ? '#9a7a48' : '#3b2214', L);
     }
     for (let i = 0; i < (L + D) / 9; i++) {
       const u = (i * 37) % L;
@@ -1773,10 +2036,11 @@
   }
 
   // A tank of water seen through its glass sides: sand and stones below, a lit surface above.
-  function waterBox(P, w, d, depth, r) {
+  // A tropical sea is shallow turquoise over white sand.
+  function waterBox(P, w, d, depth, r, tropic = false) {
     const L = w * TU;
     const D = d * TU;
-    P.box(0, 0, -depth - SLAB, L, D, SLAB, { t: '#d8c48e', l: '#7a5a3a', r: '#5e4430' }, false);
+    P.box(0, 0, -depth - SLAB, L, D, SLAB, { t: tropic ? '#f0dca8' : '#d8c48e', l: '#7a5a3a', r: '#5e4430' }, false);
     for (let i = 0; i < w * d * 2; i++) {
       const x = (i * 29 + r[0] * 7) % L;
       const y = (i * 17 + r[1] * 5) % D;
@@ -1795,15 +2059,35 @@
       const y = ((k * 37 + r[1] * 11) % (D - 4)) + 2;
       for (let x = 0; x < L; x++) if (Math.sin(x / 2.3 + k * 1.7) + Math.sin(x / 5.1 + k) > 1.3) P.top(x, y + Math.round(Math.sin(x / 3 + k) * 1.5), 1, 1, 'rgba(255,250,210,0.45)', -depth);
     }
-    P.left(0, -depth, L, depth, 'rgba(30,110,190,0.62)', D);
+    P.left(0, -depth, L, depth, tropic ? 'rgba(30,185,195,0.5)' : 'rgba(30,110,190,0.62)', D);
     // Shafts of light slanting down through the water.
     for (let u = 6; u < L; u += 19) for (let v = 0; v < depth; v++) P.left(u + Math.floor(v / 3), -v - 1, 3, 1, 'rgba(210,245,255,0.10)', D + 0.1);
-    P.right(D, -depth, D, depth, 'rgba(20,85,160,0.68)', L);
-    P.top(0, 0, L, D, 'rgba(50,150,215,0.62)', 0);
-    for (let i = 0; i < w * d; i++) P.top((i * 31) % (L - 6), (i * 13) % (D - 2), 5, 1, 'rgba(235,250,255,0.55)', 0);
+    P.right(D, -depth, D, depth, tropic ? 'rgba(20,150,170,0.56)' : 'rgba(20,85,160,0.68)', L);
+    P.top(0, 0, L, D, tropic ? 'rgba(70,215,210,0.5)' : 'rgba(50,150,215,0.62)', 0);
     P.left(0, -1, L, 1, 'rgba(235,250,255,0.85)', D);
     P.right(D, -1, D, 1, 'rgba(235,250,255,0.85)', L);
     P.right(1, -depth, 1, depth, 'rgba(235,250,255,0.45)', L);
+  }
+
+  // The surface of a pool, one of eight frames: glints drifting across and sparkles winking.
+  function waterSurface(room, f, r, frame) {
+    const [, , w, d] = r;
+    return cached(`surf|${layoutOf(room).id}|${f}|${r}|${frame}`, () => renderSprite(w, d, 4, (P) => {
+      const L = w * TU;
+      const D = d * TU;
+      for (let i = 0; i < w * d * 2; i++) {
+        const x = ((i * 31 + frame * (1 + (i % 3))) % (L + 6)) - 3;
+        const y = (i * 13 + r[1] * 7) % (D - 2);
+        if (x >= 0 && x < L - 5) P.top(x, y, 4 + (i % 3), 1, 'rgba(235,250,255,0.5)', 0);
+      }
+      for (let i = 0; i < w * d; i++) {
+        if ((i * 7 + frame) % 8 > 1) continue;
+        const [sx, sy] = P.p((i * 23 + 5) % L, (i * 17 + 3) % D, 0);
+        P.set(sx, sy, 'rgba(255,255,255,0.95)');
+        P.set(sx - 1, sy, 'rgba(255,255,255,0.5)');
+        P.set(sx + 1, sy, 'rgba(255,255,255,0.5)');
+      }
+    }, false));
   }
 
   // City clutter on a tall brick base, so a plain wall reads as lived-in: a drainpipe, an aircon
@@ -1933,12 +2217,22 @@
     const lay = layoutOf(room);
     const wet = a.kind !== 'room' && a.kind !== 'water' ? weather || '' : '';
     return cached(`slab|${lay.id}|${f}|${r}|${floor}|${base}|${wet}`, () => renderSprite(w, d, 8, (P) => {
-      if (a.kind === 'water') { waterBox(P, w, d, depth, r); return; }
+      if (a.kind === 'water') { waterBox(P, w, d, depth, r, floor === 'sand'); return; }
       if (a.thin) { // a floor on joists: a timber edge with a beam showing underneath
         if (stilts) stiltPosts(P, w, d, a.z);
         P.box(0, 0, -SLAB, w * TU, d * TU, SLAB, { t: fl.base, l: '#5a3a2a', r: '#432a1e' }, false);
         P.left(0, -SLAB, w * TU, 2, '#3a2418', d * TU);
         P.right(d * TU, -SLAB, d * TU, 2, '#2e1c13', w * TU);
+        // Little lanterns hung under the front edge of a high outdoor deck.
+        if (a.kind !== 'room' && a.z >= 40) {
+          for (let u = 8; u < w * TU - 4; u += 22) {
+            if (hash(r[0] * 13 + u, r[1] * 7) > 0.6) continue;
+            P.left(u, -SLAB - 6, 1, 6, '#3a2a20', d * TU + 0.5);
+            P.left(u - 2, -SLAB - 12, 5, 6, '#7a3a2a', d * TU + 0.6);
+            P.left(u - 1, -SLAB - 11, 3, 4, '*#ffd27a', d * TU + 0.7);
+            P.glow(u, d * TU + 1, -SLAB - 9, 12, 'rgba(255,200,120,0.4)');
+          }
+        }
         // Vines trailing off the front edges of a low outdoor deck (a high one would hang them over
         // the rooms below).
         if (a.kind !== 'room' && a.z <= 64) {
@@ -1953,12 +2247,12 @@
           for (let u = 3; u < w * TU - 3; u += 7) if (hash(r[0] * 31 + u, r[1]) < 0.4) vine(u, 6 + Math.floor(hash(u, r[1] + 3) * 14), true);
           for (let u = 3; u < d * TU - 3; u += 7) if (hash(r[1] * 31 + u, r[0]) < 0.4) vine(u, 6 + Math.floor(hash(u, r[0] + 5) * 14), false);
         }
-      } else if (a.z > 0 && a.base === 'earth') earthFaces(P, w, d, h, floor === 'grass');
+      } else if (a.z > 0 && a.base === 'earth') earthFaces(P, w, d, h, floor === 'grass', floor === 'sand');
       else if (a.z > 0) {
         brickFaces(P, w, d, h, base);
         facadeDetail(P, w, d, h - SLAB, r[0] * 7 + r[1] * 13 + f);
       }
-      else if (a.base === 'earth') earthFaces(P, w, d, SLAB + 6, floor === 'grass');
+      else if (a.base === 'earth') earthFaces(P, w, d, SLAB + 6, floor === 'grass', floor === 'sand');
       else P.box(0, 0, -SLAB, w * TU, d * TU, SLAB, { t: fl.base, l: dk(fl.base, 0.3), r: dk(fl.base, 0.45) }, false);
       for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) fl.draw(P, x, y, 0);
       shadeFloor(P, room, f, r);
@@ -2031,17 +2325,18 @@
   // tile's height to half a rise above, so neighbouring tiles and the floors at each end meet in an
   // even run of steps. Solid steps are stone built up from the ground; open ones are metal treads
   // on a stringer.
-  const TREADS = 4;
   function stairSprite(c, room) {
+    if (c.style === 'spiral') return spiralSprite(c);
     const h = c.z - c.base;
     const fl = FLOORS[floorOf(room, c.f).floor] || FLOORS.stone;
     const base = (WALLS[floorOf(room, 0).wall] || WALLS.brick).base;
     const up = c.up || -1;
-    const top = c.rise / 2;
-    return cached(`stair|${c.style}|${c.dir}|${up}|${h}|${c.rise}|${fl.base}|${base}`, () => renderSprite(1, 1, 16 + top, (P) => {
+    const [lo, hi] = (c.span || [c.z - c.rise / 2, c.z + c.rise / 2]).map((v) => v - c.z);
+    const TREADS = Math.max(3, Math.min(6, Math.round((hi - lo) / 7)));
+    return cached(`stair|${c.style}|${c.dir}|${up}|${h}|${lo}|${hi}|${fl.base}|${base}`, () => renderSprite(1, 1, 16 + hi, (P) => {
       const D = TU / TREADS;
       // Tread i (0 = lowest) as [u, height]: u is its start along the climb axis.
-      const treads = Array.from({ length: TREADS }, (_, i) => [up > 0 ? i * D : TU - (i + 1) * D, -c.rise / 2 + (c.rise * (i + 1)) / TREADS]);
+      const treads = Array.from({ length: TREADS }, (_, i) => [up > 0 ? i * D : TU - (i + 1) * D, lo + ((hi - lo) * (i + 1)) / TREADS]);
       // Back to front, so nearer treads paint over the ones behind.
       treads.sort((a, b) => a[0] - b[0]);
       const at = (u, z0, hh, col, rim) => (c.dir === 'x' ? P.box(u, 0, z0, D, TU, hh, col, rim) : P.box(0, u, z0, TU, D, hh, col, rim));
@@ -2062,7 +2357,41 @@
         else P.box(TU - 2, u, z1 - 6, 2, D, 5, '#3a3f50', false);
       }
       for (const [u, z1] of treads) at(u, z1 - 2, 2, metal, true);
-    }, false, h + 8));
+    }, false, Math.max(h, -lo) + 8));
+  }
+
+  // A spiral stair in one tile: wooden treads winding round an iron pole from the bottom landing's
+  // side up to the top landing's side, with a rail following them round.
+  function spiralSprite(c) {
+    const total = c.rise * 2;
+    const [fx, fy] = c.from;
+    const [tx, ty] = c.to;
+    return cached(`spiral|${c.rise}|${fx - c.x},${fy - c.y}|${tx - c.x},${ty - c.y}`, () => renderSprite(1, 1, 24 + c.rise, (P) => {
+      const a0 = Math.atan2(fy - c.y, fx - c.x);
+      const a1 = Math.atan2(ty - c.y, tx - c.x);
+      let sweep = (((a1 - a0) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      if (sweep < Math.PI / 2) sweep += Math.PI * 2;
+      if (total > 80) sweep += Math.PI * 2;
+      const n = Math.max(6, Math.round(total / 6));
+      const treads = Array.from({ length: n }, (_, i) => {
+        const a = a0 + (sweep * (i + 0.5)) / n;
+        return { a, z: -c.rise + (total * (i + 1)) / n, x: 8 + Math.cos(a) * 4.5, y: 8 + Math.sin(a) * 4.5 };
+      });
+      const wood = { t: '#b07a4a', l: '#8a5a36', r: '#6e4428' };
+      const tread = (t) => {
+        P.box(t.x - 3, t.y - 3, t.z - 2, 6, 6, 2, wood, false);
+        const rx = 8 + Math.cos(t.a) * 7;
+        const ry = 8 + Math.sin(t.a) * 7;
+        P.box(rx - 0.5, ry - 0.5, t.z, 1, 1, 11, '#5a6075', false);
+        P.box(rx - 1, ry - 1, t.z + 11, 2, 2, 1, '#8a92aa', false);
+      };
+      const behind = treads.filter((t) => t.x + t.y < 16).sort((p, q) => (p.x + p.y) - (q.x + q.y) || p.z - q.z);
+      const before = treads.filter((t) => t.x + t.y >= 16).sort((p, q) => (p.x + p.y) - (q.x + q.y) || p.z - q.z);
+      behind.forEach(tread);
+      P.box(7, 7, -c.rise, 2, 2, total + 14, { t: '#9aa3b2', l: '#5a6075', r: '#41475a' }, false);
+      P.box(6.5, 6.5, c.rise + 13, 3, 3, 2, '#e8b13a', false);
+      before.forEach(tread);
+    }, false, c.rise + 8));
   }
 
   // A run of railing along one edge of a tile: posts and a top bar, maybe hung with fairy lights.
@@ -2101,6 +2430,7 @@
         const [x, y, w, d] = r;
         const z0 = a.kind === 'water' ? a.z - (a.depth || 40) - SLAB : a.thin ? a.z - SLAB : -SLAB;
         items.push({ x0: x, y0: y, x1: x + w - e, y1: y + d - e, z0, z1: a.z, sprite: () => slabSprite(room, f, r, s(-1).weather), wx: x * TU, wy: y * TU, wz: a.z });
+        if (a.kind === 'water') items.push({ x0: x, y0: y, x1: x + w - e, y1: y + d - e, z0: a.z - 0.02, z1: a.z - 0.001, sprite: () => waterSurface(room, f, r, (s(-1).frame || 0) % 8), wx: x * TU, wy: y * TU, wz: a.z });
       }
       for (const wall of a.walls) {
         if (wall[5]) continue;
@@ -2136,7 +2466,7 @@
     for (const c of cells(room).list) {
       if (c.kind !== 'stair') continue;
       const z0 = c.style === 'solid' ? c.base : c.z - c.rise;
-      items.push({ x0: c.x, y0: c.y, x1: c.x + 1 - e, y1: c.y + 1 - e, z0, z1: c.z + c.rise / 2, sprite: () => stairSprite(c, room), wx: c.x * TU, wy: c.y * TU, wz: c.z });
+      items.push({ x0: c.x, y0: c.y, x1: c.x + 1 - e, y1: c.y + 1 - e, z0, z1: c.span ? c.span[1] : c.z + c.rise / 2, sprite: () => stairSprite(c, room), wx: c.x * TU, wy: c.y * TU, wz: c.z });
     }
     room.objects.forEach((o, i) => {
       const def = OBJECTS[o.type];
@@ -2209,11 +2539,11 @@
     let L;
     if (hour >= 20 || hour < 5) L = { ambient: [62, 70, 128], glow: 0.9, indoor: 1, vignette: 0.45, reach: 1 };
     else if (hour >= 18 || hour < 6) L = { ambient: [205, 150, 170], glow: 0.8, indoor: 0.5, vignette: 0.25, reach: 0.7, warm: 'rgba(255,130,70,0.08)' };
-    else if (hour >= 16) L = { warm: 'rgba(255,170,90,0.09)', glow: 0.9 };
-    else L = { glow: 0.75 };
+    else if (hour >= 16) L = { warm: 'rgba(255,170,90,0.08)', sun: 'rgba(255,236,200,0.12)', glow: 0.9 };
+    else L = { sun: 'rgba(255,250,232,0.16)', glow: 0.6 };
     if (weather === 'rain') {
-      const a = L.ambient || [196, 204, 222];
-      L = { ...L, ambient: [a[0] * 0.82, a[1] * 0.86, a[2] * 0.92], indoor: Math.max(L.indoor || 0, 0.45), vignette: Math.max(L.vignette || 0, 0.3), reach: L.reach || 0.6, glow: (L.glow || 0.75) + 0.2 };
+      const a = L.ambient ? L.ambient.map((v, i) => v * [0.82, 0.86, 0.92][i]) : [222, 228, 240];
+      L = { ...L, sun: null, ambient: a, indoor: Math.max(L.indoor || 0, 0.35), vignette: Math.max(L.vignette || 0, L.ambient ? 0.3 : 0.12), reach: L.reach || 0.5, glow: (L.glow || 0.75) + 0.2 };
     }
     if (weather === 'snow') {
       if (L.ambient) L = { ...L, ambient: L.ambient.map((v) => Math.min(255, v + 18)) };
@@ -2224,6 +2554,25 @@
 
   const rgbaParts = (c) => (c.match(/[\d.]+/g) || []).map(Number);
   const mix = (a, k) => `rgb(${a.map((v) => Math.round(Math.min(255, v * k))).join(',')})`;
+  // Brighten what is drawn (and only that) by screening a colour over it.
+  let SUNMAP = null;
+  function screenOver(ctx, color) {
+    const W = ctx.canvas.width;
+    const H = ctx.canvas.height;
+    if (!SUNMAP || SUNMAP.width !== W || SUNMAP.height !== H) SUNMAP = makeCanvas(W, H);
+    const g = SUNMAP.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'copy';
+    g.fillStyle = color;
+    g.fillRect(0, 0, W, H);
+    g.globalCompositeOperation = 'destination-in';
+    g.drawImage(ctx.canvas, 0, 0);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'screen';
+    ctx.drawImage(SUNMAP, 0, 0);
+    ctx.restore();
+  }
   let LIGHTMAP = null;
   function applyLightmap(ctx, room, z, lights, light) {
     const W = ctx.canvas.width;
@@ -2404,6 +2753,7 @@
     const st = objState(-1);
     light = light || lightFor(st.hour ?? 12, st.weather);
     const lights = [];
+    drawBackdrop(ctx, room, z, st.weather);
     for (const it of sortItems([...sceneItems(room, objState), ...extra])) {
       if (it.draw) { it.draw(ctx); continue; }
       const sp = it.sprite();
@@ -2413,6 +2763,7 @@
     // The light map when it is dark enough to need one; washes of colour otherwise. The canvas must
     // hold only this room: the light map is cut to what is drawn there.
     if (light.ambient) applyLightmap(ctx, room, z, lights, light);
+    if (light.sun) screenOver(ctx, light.sun);
     ctx.save();
     for (const c of [light.sky, light.warm]) wash(ctx, c, 'source-atop');
     ctx.restore();
@@ -2420,6 +2771,45 @@
       for (const [sp, it] of lights) glows(ctx, room, sp, it.wx, it.wy, it.wz, z, Math.min(1, pass));
     }
     drawWeather(ctx, room, z, st.now ?? Date.now(), st.weather);
+    postFx(ctx, light);
+  }
+
+  // Grade the picture a touch richer, then bloom: the bright parts, blurred, added back on top -
+  // lamps, screens, neon and fire spill soft light round themselves, most of all after dark.
+  let POST = null;
+  let BLOOM = null;
+  function postFx(ctx, light) {
+    const W = ctx.canvas.width;
+    const H = ctx.canvas.height;
+    if (typeof ctx.filter !== 'string') return;
+    if (!POST || POST.width !== W || POST.height !== H) { POST = makeCanvas(W, H); BLOOM = makeCanvas(W, H); }
+    const p = POST.getContext('2d');
+    p.setTransform(1, 0, 0, 1, 0, 0);
+    p.globalCompositeOperation = 'copy';
+    p.filter = light.ambient ? 'saturate(1.15) contrast(1.06)' : 'saturate(1.12) contrast(1.05)';
+    p.drawImage(ctx.canvas, 0, 0);
+    p.filter = 'none';
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'copy';
+    ctx.drawImage(POST, 0, 0);
+    ctx.restore();
+    const strength = light.ambient ? (light.indoor >= 1 ? 0.55 : 0.4) : 0.18;
+    const b = BLOOM.getContext('2d');
+    b.setTransform(1, 0, 0, 1, 0, 0);
+    b.globalCompositeOperation = 'copy';
+    // Keep only what is bright (contrast pushes the rest to black), then spread it.
+    b.filter = `brightness(0.7) contrast(2.6) blur(${Math.max(2, Math.round(W / 160))}px)`;
+    b.drawImage(POST, 0, 0);
+    b.filter = 'none';
+    b.globalCompositeOperation = 'destination-in';
+    b.drawImage(POST, 0, 0);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = strength;
+    ctx.drawImage(BLOOM, 0, 0);
+    ctx.restore();
   }
 
   // Screen point (fine px) to the topmost area tile under it.
@@ -2521,9 +2911,9 @@
   }
 
   return {
-    TU, SLAB, STEP_Z, LAND, WEATHERS, weatherFor, ZONE_KINDS, FLOORS, WALLS, OBJECTS, BLUEPRINTS, migrate, derive,
+    TU, SLAB, STEP_Z, LAND, WEATHERS, weatherFor, BACKDROPS, ZONE_KINDS, FLOORS, WALLS, OBJECTS, BLUEPRINTS, migrate, derive,
     pick, addZone, addTile, removeTile, addFlight, removeFlightAt, setZoneZ,
-    BLOCKS, pickBlock, blockTarget, placeBlock, removeBlock, stairPlan, placeStairs, stairSprite, blockSprite,
+    BLOCKS, pickBlock, blockTarget, placeBlock, removeBlock, stairPlan, placeStairs, placeSpiral, stairSprite, blockSprite,
     size, origin, project, floorZ, levels, cells, resetCells, cellAt, neighbours, door, walkable, footprint, canPlace, stationSpots,
     generateRoom, objectSprite, drawRoom, blit, tileAt, wallAt, solidAt, preview,
   };
