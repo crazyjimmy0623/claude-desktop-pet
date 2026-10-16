@@ -49,10 +49,13 @@
     droid: { head: 'droid', body: 'mech', item: 'none', spikes: true,
       c: { head: '#34373f', headShade: '#25272e', body: '#34373f', bodyShade: '#25272e', plate: '#4a4e59', face: '#16171c', glow: '#d8f1ff',
         leg: '#2c2e36', boot: '#1b1c22', hand: '#4a4e59' } },
-    platypus: { head: 'platypus', body: 'fur', item: 'none', tail: 'flat',
-      c: { body: '#f4f2ee', bodyShade: '#d6d2cc', belly: '#ffffff', bill: '#9aa0aa', billDark: '#767c88', leg: '#f4f2ee', boot: '#9aa0aa', hand: '#ffffff' } },
-    whitecat: { head: 'cat', body: 'fur', item: 'none', tail: true,
-      c: { body: '#f3f1ec', bodyShade: '#d3cfc7', belly: '#ffffff', leg: '#f3f1ec', boot: '#d3cfc7', hand: '#ffffff' } },
+    // Bru: a fluffy white plush with a round head as tall as it is wide, a broad flat bill, happy
+    // closed eyes, and a checked blanket hugged to its tummy.
+    platypus: { head: 'plush', body: 'blanket', item: 'none', tail: 'flat', mitts: true, torsoAt: [5, 21],
+      c: { body: '#f6f4f0', bodyShade: '#d8d3cc', belly: '#ffffff', bill: '#f8f6f2', leg: '#f6f4f0', boot: '#ebe7e1', hand: '#ffffff' } },
+    // Okai: a short, round white cat with bean eyes, a bead of sweat and a little crescent moon.
+    whitecat: { head: 'okai', body: 'chubby', item: 'none', tail: true, drop: 4, torsoAt: [4, 23],
+      c: { body: '#f6f4f0', bodyShade: '#d6d1ca', belly: '#ffffff', leg: '#f6f4f0', boot: '#d6d1ca', hand: '#ffffff' } },
     astronaut: { head: 'astronaut', body: 'suit', item: 'none', backpack: true,
       c: { head: '#f4f6fa', body: '#f4f6fa', bodyShade: '#c3c9d6', leg: '#e6e9f0', boot: '#8a93a6', hand: '#c3c9d6' } },
   };
@@ -223,11 +226,46 @@
     '..WWwwwwwwwwwwwwwwwwwwWW..',
     '...WWWWWWWWWWWWWWWWWWWW...',
   ];
-  const BILL = [
-    '.bbbbbbb.',
-    'bbbbbbbbb',
-    'bbbbbbbbB',
-    '.BBBBBBB.',
+  // Bru's head: round, as tall as it is wide (24x23 at box (2, -1)).
+  const PLUSH_HEAD = [
+    '.......kkkkkkkkkk.......',
+    '....kkkkkkkkkkkkkkkk....',
+    '...kkkkkkkkkkkkkkkkkk...',
+    '..kkkkkkkkkkkkkkkkkkkk..',
+    '.kkkkkkkkkkkkkkkkkkkkkk.',
+    '.kkkkkkkkkkkkkkkkkkkkkk.',
+    ...Array(11).fill('kkkkkkkkkkkkkkkkkkkkkkkk'),
+    '.kkkkkkkkkkkkkkkkkkkkkk.',
+    '.Kkkkkkkkkkkkkkkkkkkkkk.',
+    '..KKkkkkkkkkkkkkkkkkkK..',
+    '...KKKkkkkkkkkkkkkkKK...',
+    '....KKKKkkkkkkkkkKKK....',
+    '.......KKKKKKKKKK.......',
+  ];
+  // A broad, flat duck bill.
+  const PLUSH_BILL = [
+    '..bbbbbbbbb.',
+    '.bbbbbbbbbbb',
+    'bbbbbbbbbbbb',
+    'bBbbbbbbbbbB',
+    '.BBBBBBBBBB.',
+  ];
+  // Okai's head: wide and round, all white, shaded at the sides (26x19 at box (1, 1)).
+  const OKAI_HEAD = [
+    '.......kkkkkkkkkkkk.......',
+    '....kkkkkkkkkkkkkkkkkk....',
+    '..hhkkkkkkkkkkkkkkkkkkhh..',
+    '.hhhhkkkkkkkkkkkkkkkkkhhh.',
+    '.hhhhkkkkkkkkkkkkkkkkkkhh.',
+    'hhhhhkkkkkkkkkkkkkkkkkkhhh',
+    'hhhhkkkkkkkkkkkkkkkkkkkhhh',
+    ...Array(6).fill('hhhhkkkkkkkkkkkkkkkkkkkkhh'),
+    'hhhhhkkkkkkkkkkkkkkkkkkhhh',
+    'Hhhhhkkkkkkkkkkkkkkkkkkhhh',
+    '.Hhhhhkkkkkkkkkkkkkkkkhhh.',
+    '.HHhhh.KKkkkkkkkkkkKK.hhh.',
+    '..HHhh..KKKKKKKKKKKK..hh..',
+    '...HH..................h..',
   ];
   const EAR_L = ['.a...', '.aa..', '.apa.', 'aappa'];
   const EAR_R = ['...a.', '..aa.', '.apa.', 'appaa'];
@@ -262,6 +300,32 @@
   };
   // Outfits drawn whole on the 18x13 torso, shape included.
   const OUTFIT_FULL = {
+    // Bru's round little body with a red-and-yellow checked blanket hugged in front (18x11).
+    blanket: [
+      '...aaaaaaaaaaaa...',
+      '..aaaaaaaaaaaaaa..',
+      '.AAaaaaaaaaaaaaaa.',
+      '.AAaaccqqccqqccaa.',
+      'AAAaaccqqccqqccaaa',
+      'AAAqqccqqccqqccqqa',
+      'AAAccqqccqqccqqcca',
+      'AAAccqqccqqccqqcca',
+      'AAAqqccqqccqqccqqa',
+      '.AAaqqccqqccqqccq.',
+      '..AAAaaaaaaaaaaa..',
+    ],
+    // Okai's short, chubby body: a collar with a bell, a round white tummy (20x10).
+    chubby: [
+      '....aaaaaaaaaaaa....',
+      '..AAAcccccccccccaa..',
+      '.AAAaaaaaaagaaaaaaa.',
+      'AAAaaaaabbbbbbbaaaaa',
+      'AAAaaaabbbbbbbbbaaaa',
+      'AAAaaaabbbbbbbbbaaaa',
+      'AAAaaaaabbbbbbbaaaaa',
+      '.AAAaaaaaaaaaaaaaaa.',
+      '..AAAaaaaaaaaaaaaa..',
+    ],
     // Steel plate over black cloth: a mail collar under the helm, broad pauldrons, a ridged
     // breastplate, a buckled belt and a ragged skirt.
     armor: [
@@ -335,7 +399,8 @@
     if (sk.tail === 'flat') g([[-1, 29, 9, 4, c.bodyShade]], [[0, 29, 7, 1, lite(c.bodyShade)], [2, 31, 1, 1, dark(c.bodyShade)], [5, 30, 1, 1, dark(c.bodyShade)]]);
     else if (sk.tail) {
       const tip = pose === 'walk' ? WALK_SWAY[step % 4] : frame;
-      g([[1 + tip, 13 + B, 2, 4, c.body], [1, 16 + B, 2, 9, c.body], [2, 24 + B, 6, 2, c.body]], [[1 + tip, 13 + B, 2, 2, c.bodyShade], [1, 19 + B, 2, 1, c.bodyShade]]);
+      const td = sk.drop || 0;
+      g([[1 + tip, 13 + B + td, 2, 4, c.body], [1, 16 + B + td, 2, 9 - td, c.body], [2, 24 + B, 6, 2, c.body]], [[1 + tip, 13 + B + td, 2, 2, c.bodyShade], [1, 19 + B + td, 2, 1, c.bodyShade]]);
     }
     if (sk.backpack) g([[2, 20 + B, 6, 9, c.body]], [[2, 21 + B, 1, 7, c.bodyShade], [4, 23 + B, 2, 3, '#8a93a6'], [4, 24 + B, 1, 1, glow('#3dffb0')]]);
 
@@ -369,10 +434,25 @@
     tp.T = dark(tp.t);
     tp.D = dark(tp.d);
     tp['+'] = lite(tp.b);
-    L(torsoRows(sk.body), tp, 5, 19 + B);
+    tp.q = '#f2c64a';
+    tp.Q = dark(tp.q);
+    // Bru's blanket is always red and yellow, whatever the session's colour.
+    if (sk.body === 'blanket') {
+      tp.c = '#d8402e';
+      tp.C = dark(tp.c);
+    }
+    const [tx, ty] = sk.torsoAt || [5, 19];
+    L(torsoRows(sk.body), tp, tx, ty + B);
+    // Bru's white mitts, hugging the blanket when its hands are free.
+    if (sk.mitts && !['type', 'read', 'game', 'paint', 'command'].includes(pose)) {
+      const mitt = ['.mmmm.', 'mmmmmm', 'mmmmmm', 'mmmmmm', '.mmmm.'];
+      L(mitt, { m: c.hand }, 8, 22 + B);
+      L(mitt, { m: c.hand }, 15, 22 + B);
+      g([], [[10, 23 + B, 1, 2, c.bodyShade], [12, 23 + B, 1, 2, c.bodyShade], [17, 23 + B, 1, 2, c.bodyShade], [19, 23 + B, 1, 2, c.bodyShade]]);
+    }
 
     // --- Head.
-    const H = B;
+    const H = B + (sk.drop || 0);
     const eyeDots = (color = PAL.eye, at = [[11, 10], [20, 10]]) => at.map(([x, y]) => (sleeping ? [x - 1, y + 1 + H, 4, 1, color] : [x, y + H, 2, 2, color]));
     const blush = [[7, 12 + H, 3, 2, PAL.blush], [22, 12 + H, 3, 2, PAL.blush]];
     const face = (skin) => {
@@ -399,14 +479,33 @@
         ]);
         break;
       }
-      case 'platypus':
-        L(FACE, { k: c.body, K: c.bodyShade }, 2, 1 + H);
-        // Happy closed eyes, little arches.
-        g([], [...[[10, 9], [18, 9]].flatMap(([x, y]) => [[x - 1, y + 1 + H, 1, 1, PAL.eye], [x, y + H, 2, 1, PAL.eye], [x + 2, y + 1 + H, 1, 1, PAL.eye]]),
-          [6, 11 + H, 3, 2, PAL.blush], [5, 3 + H, 6, 1, lite(c.body)]]);
-        L(BILL, { b: c.bill, B: c.billDark }, 19, 10 + H);
-        g([], [[21, 10 + H, 5, 1, lite(c.bill)], [24, 11 + H, 1, 1, c.billDark], [26, 11 + H, 1, 1, c.billDark]]);
+      case 'plush': {
+        L(PLUSH_HEAD, { k: c.body, K: c.bodyShade }, 2, -1 + H);
+        // Happy closed eyes (soft arches), striped pink cheeks, a fluffy shine up top.
+        const arch = ([x, y]) => (sleeping
+          ? [[x, y + 1 + H, 4, 1, PAL.eye]]
+          : [[x, y + 1 + H, 1, 2, PAL.eye], [x + 1, y + H, 2, 1, PAL.eye], [x + 3, y + 1 + H, 1, 2, PAL.eye]]);
+        g([], [...arch([8, 8]), ...arch([15, 8]),
+          [7, 12 + H, 4, 2, PAL.blush], [14, 12 + H, 4, 2, PAL.blush], [8, 12 + H, 1, 2, '#e88a8a'], [15, 12 + H, 1, 2, '#e88a8a'],
+          [6, 1 + H, 6, 1, PAL.shine], [5, 2 + H, 2, 1, PAL.shine]]);
+        L(PLUSH_BILL, { b: c.bill, B: c.bodyShade }, 17, 12 + H);
+        g([], [[19, 14 + H, 9, 1, '#d2ccc4'], [25, 13 + H, 1, 1, '#c2bbb2'], [27, 13 + H, 1, 1, '#c2bbb2'], [20, 12 + H, 6, 1, PAL.shine]]);
         break;
+      }
+      case 'okai': {
+        const ear = { a: c.body, p: '#f4c4c4' };
+        L(['.a....', '.aa...', '.aaa..', '.apaa.', 'aappaa'], ear, 3, -4 + H);
+        L(['....a.', '...aa.', '..aaa.', '.aapa.', 'aappaa'], ear, 18, -4 + H);
+        L(OKAI_HEAD, { k: c.body, K: c.bodyShade, h: c.body, H: c.bodyShade }, 1, 1 + H);
+        // Bean eyes like everyone else's, a bead of sweat, a small open mouth, a crescent moon.
+        const lid = '#3a2a36';
+        g([], [...eyeDots(PAL.eye, [[10, 9], [18, 9]]),
+          [14, 13 + H, 3, 1, lid], [14, 14 + H, 1, 1, lid], [16, 14 + H, 1, 1, lid], [15, 14 + H, 1, 1, '#f08a6a'], [15, 15 + H, 1, 1, lid],
+          [6, 3 + H, 1, 1, '#7cc0ee'], [6, 4 + H, 2, 1, '#8fcdf5'], [5, 5 + H, 4, 2, '#8fcdf5'], [6, 7 + H, 2, 1, '#6fb2e0'], [6, 5 + H, 1, 1, PAL.shine],
+          [9, 13 + H, 2, 1, 'rgba(245,163,163,0.7)'], [19, 13 + H, 2, 1, 'rgba(245,163,163,0.7)']]);
+        g([], [[23, 15 + H, 2, 1, '#ffd84a'], [22, 16 + H, 2, 2, '#ffd84a'], [23, 18 + H, 2, 1, '#ffd84a'], [22, 16 + H, 1, 1, '#fff2a8'], [24, 18 + H, 1, 1, '#d9a62a']]);
+        break;
+      }
       case 'robot':
         g([[14, -4 + H, 2, 4, c.bodyShade]], []);
         g([[13, -7 + H, 4, 3, col.main]], [[14, -6 + H, 2, 1, glow(col.main)]]);

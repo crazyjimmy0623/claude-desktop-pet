@@ -97,8 +97,8 @@
     { id: 'obj:streetlamp', type: 'furniture', rarity: 'starter', name: '路燈' },
     { id: 'obj:aircon', type: 'furniture', rarity: 'starter', name: '冷氣室外機' },
     { id: 'obj:telescope', type: 'furniture', rarity: 'common', name: '望遠鏡' },
-    { id: 'obj:tree', type: 'furniture', rarity: 'starter', name: '樹' },
-    { id: 'obj:bush', type: 'furniture', rarity: 'starter', name: '灌木' },
+    { id: 'obj:tree', type: 'plant', rarity: 'starter', name: '樹' },
+    { id: 'obj:bush', type: 'plant', rarity: 'starter', name: '灌木' },
     { id: 'obj:lilypad', type: 'furniture', rarity: 'starter', name: '荷葉' },
     { id: 'obj:boat', type: 'furniture', rarity: 'common', name: '小船' },
     { id: 'obj:planter', type: 'furniture', rarity: 'starter', name: '花台' },
@@ -113,14 +113,14 @@
     { id: 'obj:watertank', type: 'furniture', rarity: 'common', name: '水塔' },
     { id: 'obj:antenna', type: 'furniture', rarity: 'common', name: '天線' },
     { id: 'obj:walllamp', type: 'furniture', rarity: 'starter', name: '壁燈' },
-    { id: 'obj:palm', type: 'furniture', rarity: 'starter', name: '椰子樹' },
+    { id: 'obj:palm', type: 'plant', rarity: 'starter', name: '椰子樹' },
     { id: 'obj:umbrella', type: 'furniture', rarity: 'starter', name: '海灘陽傘' },
     { id: 'obj:lounger', type: 'furniture', rarity: 'starter', name: '躺椅' },
     { id: 'obj:surfboard', type: 'furniture', rarity: 'common', name: '衝浪板' },
     { id: 'obj:tiki', type: 'furniture', rarity: 'starter', name: '火把' },
     { id: 'obj:campfire', type: 'furniture', rarity: 'starter', name: '營火' },
     { id: 'obj:logpile', type: 'furniture', rarity: 'starter', name: '柴堆' },
-    { id: 'obj:mushroom', type: 'furniture', rarity: 'starter', name: '蘑菇' },
+    { id: 'obj:mushroom', type: 'plant', rarity: 'starter', name: '蘑菇' },
     { id: 'obj:lantern', type: 'furniture', rarity: 'starter', name: '提燈' },
     { id: 'obj:waterfall', type: 'furniture', rarity: 'common', name: '瀑布' },
     { id: 'obj:hangplant', type: 'furniture', rarity: 'starter', name: '吊盆' },
@@ -143,7 +143,42 @@
     { id: 'obj:trophy', type: 'furniture', rarity: 'rare', name: '獎盃櫃' },
     { id: 'obj:fireplace', type: 'furniture', rarity: 'epic', name: '壁爐' },
     { id: 'obj:neon', type: 'furniture', rarity: 'epic', name: '霓虹燈' },
+    // Plants: trees and greenery to plant on the lawn
+    { id: 'obj:pine', type: 'plant', rarity: 'starter', name: '松樹' },
+    { id: 'obj:rock', type: 'plant', rarity: 'starter', name: '岩石' },
+    { id: 'obj:birch', type: 'plant', rarity: 'common', name: '白樺' },
+    { id: 'obj:bamboo', type: 'plant', rarity: 'common', name: '竹子' },
+    { id: 'obj:jungle', type: 'plant', rarity: 'common', name: '熱帶灌木' },
+    { id: 'obj:maple', type: 'plant', rarity: 'rare', name: '楓樹' },
+    { id: 'obj:sakura', type: 'plant', rarity: 'rare', name: '櫻花樹' },
+    // Building blocks and stairs
+    { id: 'block:brick', type: 'block', rarity: 'starter', name: '磚地基' },
+    { id: 'block:grass', type: 'block', rarity: 'starter', name: '草地方塊' },
+    { id: 'block:room', type: 'block', rarity: 'starter', name: '室內地板' },
+    { id: 'block:stairs', type: 'block', rarity: 'starter', name: '樓梯' },
+    { id: 'block:deck', type: 'block', rarity: 'common', name: '木平台' },
+    { id: 'block:loft', type: 'block', rarity: 'common', name: '閣樓' },
+    { id: 'block:water', type: 'block', rarity: 'common', name: '水池' },
+    { id: 'block:glass', type: 'block', rarity: 'rare', name: '玻璃屋' },
+    { id: 'block:spiral', type: 'block', rarity: 'rare', name: '旋轉樓梯' },
+    // Land: the size of the plot
+    { id: 'land:8', type: 'land', rarity: 'starter', name: '8×8 空地' },
+    { id: 'land:10', type: 'land', rarity: 'rare', name: '10×10 空地', desc: '更大的地，設計好的藍圖也蓋得下了' },
+    { id: 'land:12', type: 'land', rarity: 'epic', name: '12×12 空地', desc: '最大的一塊地' },
   ];
+
+  // What building costs, in coins: blocks and stairs by the piece, furniture and plants by
+  // rarity. Taking something away gives half back.
+  const BUILD_PRICE = { starter: 3, common: 5, rare: 8, epic: 12, legend: 20 };
+  const BLOCK_PRICE = { starter: 2, common: 3, rare: 4 };
+  function priceOf(id) {
+    if (id === 'block:stairs') return 2;
+    if (id === 'block:spiral') return 8;
+    const item = ITEMS.find((i) => i.id === id);
+    if (!item) return id.startsWith('block:') ? 2 : 3;
+    if (item.type === 'block') return BLOCK_PRICE[item.rarity] || 2;
+    return BUILD_PRICE[item.rarity] || 3;
+  }
 
   const ACHIEVEMENTS = [
     { id: 'first_turn', name: '第一個任務', desc: 'AI 夥伴完成第一個回合', reward: 5, test: (s) => s.turns >= 1 },
@@ -169,5 +204,5 @@
   const PULL_COST = 10;
   const DUPLICATE_REFUND = 3;
 
-  return { STATIONS, RARITY, ITEMS, ACHIEVEMENTS, PULL_COST, DUPLICATE_REFUND };
+  return { STATIONS, RARITY, ITEMS, ACHIEVEMENTS, PULL_COST, DUPLICATE_REFUND, priceOf };
 });

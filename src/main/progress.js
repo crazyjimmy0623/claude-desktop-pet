@@ -157,6 +157,18 @@ class Progress extends EventEmitter {
     this.commit();
   }
 
+  // ---- Building --------------------------------------------------------------
+
+  // Coins spent on building (positive) or given back for taking things away (negative).
+  spend(amount) {
+    const p = this.p;
+    const n = Math.round(Number(amount) || 0);
+    if (n > 0 && p.coins < n) return { error: `金幣不足（需要 ${n} 🪙，現在有 ${p.coins} 🪙）` };
+    p.coins -= n;
+    this.commit();
+    return { coins: p.coins };
+  }
+
   // ---- Recruiting ------------------------------------------------------------
 
   pull(count = 1) {

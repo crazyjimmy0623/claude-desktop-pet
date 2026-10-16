@@ -37,7 +37,7 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 const state = {
-  room: Iso.generateRoom('shop'),
+  room: Iso.starterRoom(),
   zoom: 2,
   settings: null,
   progress: null,

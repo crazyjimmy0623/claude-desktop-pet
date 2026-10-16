@@ -621,19 +621,27 @@
       for (let i = 0; i < 7; i++) P.box(4 + i, 9 - i * 0.6, 18 + i * 1.6, 3, 3, 3, i === 6 ? '#c9a24a' : '#3f6fb0', false);
       if (s.active && s.frame % 3 === 0) P.dot(14, 3, 32, '*#ffffff', 1, 1);
     } },
-    tree: { w: 1, d: 1, h: 84, draw: (P, s) => {
+    tree: { w: 1, d: 1, h: 84, plant: true, draw: (P, s) => {
       P.box(6, 6, 0, 4, 4, 30, { t: '#6e4428', l: '#6e4428', r: '#55331d' }, false);
       for (const [x, y, z, r, c] of [[8, 8, 40, 11, '#3f7a3a'], [4, 9, 50, 8, '#4f8f45'], [12, 6, 54, 8, '#4f8f45'], [8, 8, 62, 8, '#62a656'], [7, 9, 70, 5, '#7cbf6a']]) P.disc(x, y, z, r, c);
       P.dot(3, 9, 54, '#9fd88a', 2, 1);
       P.dot(10, 7, 66, '#9fd88a', 2, 1);
       if (s.weather === 'snow') for (const [x, y, z, r] of [[8, 8, 46, 7], [4, 9, 55, 5], [12, 6, 59, 5], [8, 8, 67, 5], [7, 9, 73, 3]]) P.disc(x, y, z, r, '#eef3fa');
     } },
-    bush: { w: 1, d: 1, h: 22, draw: (P, s) => {
+    bush: { w: 1, d: 1, h: 22, plant: true, draw: (P, s) => {
       for (const [x, y, z, r, c] of [[8, 8, 7, 7, '#3f7a3a'], [5, 9, 10, 5, '#4f8f45'], [11, 7, 11, 5, '#4f8f45'], [8, 8, 14, 4, '#62a656']]) P.disc(x, y, z, r, c);
       if (s.weather === 'snow') for (const [x, y, z, r] of [[8, 8, 17, 3.5], [5, 9, 13, 3], [11, 7, 14, 3]]) P.disc(x, y, z, r, '#eef3fa');
       P.dot(6, 9, 15, '#ff8fb1', 1, 1);
       P.dot(11, 7, 16, '#ffd65a', 1, 1);
     } },
+    // Trees and greenery to plant anywhere, the same ones as the scenery behind.
+    pine: { w: 1, d: 1, h: 92, plant: true, draw: (P, s) => paintPlant(P, 'pine', 88, 0.5, s.weather === 'snow') },
+    birch: { w: 1, d: 1, h: 80, plant: true, draw: (P) => paintPlant(P, 'birch', 76, 0.5) },
+    maple: { w: 1, d: 1, h: 78, plant: true, draw: (P) => paintPlant(P, 'maple', 74, 0.4) },
+    sakura: { w: 1, d: 1, h: 78, plant: true, draw: (P) => paintPlant(P, 'sakura', 74, 0.6) },
+    bamboo: { w: 1, d: 1, h: 88, plant: true, draw: (P) => paintPlant(P, 'bamboo', 84, 0.5) },
+    jungle: { w: 1, d: 1, h: 30, plant: true, draw: (P) => paintPlant(P, 'jungle', 30, 0.5) },
+    rock: { w: 1, d: 1, h: 20, plant: true, draw: (P) => paintPlant(P, 'rock', 20, 0.5) },
     lilypad: { w: 1, d: 1, h: 4, flat: true, onWater: true, draw: (P) => {
       P.top(3, 4, 9, 8, '#5aa85a', 0.5);
       P.top(7, 4, 2, 4, '#4f8f45', 0.6);
@@ -714,7 +722,7 @@
       for (let i = 0; i < 5; i++) P.box(4 + (i % 2), 5 - (i % 2), i * 2.4, 8, 6, 2.4, c[i], false);
       P.box(11, 9, 0, 3, 3, 6, '#e8e4d8', false);
     } },
-    palm: { w: 1, d: 1, h: 96, draw: (P, s) => {
+    palm: { w: 1, d: 1, h: 96, plant: true, draw: (P, s) => {
       // A ringed trunk leaning out, a crown of drooping fronds and coconuts.
       for (let i = 0; i < 14; i++) {
         const lean = i * i * 0.03;
@@ -785,7 +793,7 @@
         P.right(y + 3, z + 1, 2, 2, '#b8875a', 15);
       }
     } },
-    mushroom: { w: 1, d: 1, h: 14, draw: (P) => {
+    mushroom: { w: 1, d: 1, h: 14, plant: true, draw: (P) => {
       for (const [x, y, hgt, r] of [[5, 6, 6, 3.2], [10, 9, 4, 2.4], [7, 11, 3, 1.8]]) {
         P.box(x - 0.5, y - 0.5, 0, 1.5, 1.5, hgt, '#f4efe4', false);
         P.disc(x, y, hgt + 1, r, '#d9413a');
@@ -1476,6 +1484,102 @@
     return room;
   }
 
+  // ---- Land and costs ---------------------------------------------------------------------
+  // Everyone builds on the same kind of plot: a square lawn, 8x8 to start, bigger ones unlocked
+  // from the recruit machine. The lawn itself is free; every block, flight of stairs and piece of
+  // furniture on it has a price (see Catalog.priceOf), and taking something away gives half back.
+  const LAND_SIZES = [8, 10, 12];
+  function extentOf(room) {
+    let w = 0;
+    let d = 0;
+    for (const [x, y] of room.tiles) { w = Math.max(w, x + 1); d = Math.max(d, y + 1); }
+    return { w, d };
+  }
+  // A room's plot: its own, or for rooms built before plots the smallest one it fits on.
+  function landOf(room) {
+    if (room.land) return room.land;
+    const e = extentOf(room);
+    return LAND_SIZES.find((n) => n >= Math.max(e.w, e.d)) || Math.max(e.w, e.d, LAND_SIZES[0]);
+  }
+  const isLawn = (zn) => zn && zn.z === 0 && zn.base === 'earth' && zn.kind === 'outdoor' && !zn.thin;
+  // Lawn on every free column of the plot.
+  function fillLawn(room, n) {
+    const f = zoneFor(room, 'grass', 0);
+    const used = new Set(room.tiles.map(([x, y]) => `${x},${y}`));
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (!used.has(`${x},${y}`)) room.tiles.push([x, y, f]);
+  }
+  // Move to a plot of n x n: a bigger one grows lawn; a smaller one only when nothing but lawn is
+  // left outside it.
+  function setLand(room, n) {
+    const out = (x, y) => x >= n || y >= n;
+    if (room.tiles.some(([x, y, f]) => out(x, y) && !isLawn(room.zones[f]))) return '外圍還有蓋好的東西，先拆掉才能換小塊的地';
+    if (room.objects.some((o) => { const fp = footprint(o); return out(fp.x + fp.w - 1, fp.y + fp.d - 1); })) return '外圍還有家具或植物，先收起來才能換小塊的地';
+    room.tiles = room.tiles.filter(([x, y]) => !out(x, y));
+    room.land = n;
+    fillLawn(room, n);
+    tidy(room);
+    return null;
+  }
+  // Which block a layer is made of, for its price.
+  function blockOf(zn) {
+    if (zn.block) return zn.block;
+    if (zn.kind === 'water') return 'water';
+    if (zn.thin) return zn.kind === 'room' ? 'loft' : 'deck';
+    if (zn.kind === 'room') return zn.wall === 'glass' ? 'glass' : 'room';
+    return zn.base === 'earth' ? 'grass' : 'brick';
+  }
+  // What everything built in a room is worth: each tile by its block and height (a solid stack is
+  // one block per half storey), each flight by its steps, each object by its price.
+  function roomCost(room, priceOf) {
+    let total = 0;
+    for (const [, , f] of room.tiles) {
+      const zn = room.zones[f];
+      if (!zn || isLawn(zn)) continue;
+      const blocks = zn.thin || zn.kind === 'water' ? 1 : Math.max(1, Math.round(zn.z / STEP_Z) + 1);
+      total += priceOf(`block:${blockOf(zn)}`) * blocks;
+    }
+    for (const fl of room.flights) total += fl.style === 'spiral' ? priceOf('block:spiral') : priceOf('block:stairs') * fl.cells.length;
+    for (const o of room.objects) total += priceOf(`obj:${o.type}`);
+    return total;
+  }
+  // Everything a room needs unlocked: its blocks, stairs, furniture, floors and walls.
+  function needsOf(room) {
+    const need = new Set();
+    for (const [, , f] of room.tiles) {
+      const zn = room.zones[f];
+      if (!zn || isLawn(zn)) continue;
+      need.add(`block:${blockOf(zn)}`);
+      need.add(`floor:${zn.floor}`);
+      if (zn.wall) need.add(`wall:${zn.wall}`);
+    }
+    for (const fl of room.flights) need.add(fl.style === 'spiral' ? 'block:spiral' : 'block:stairs');
+    for (const o of room.objects) need.add(`obj:${o.type}`);
+    return [...need];
+  }
+  // A blueprint built on a plot of n: the design, and lawn on the rest.
+  function blueprintRoom(id, n) {
+    const room = generateRoom(id);
+    room.backdrop = null;
+    room.land = n;
+    fillLawn(room, n);
+    tidy(room);
+    return room;
+  }
+  // A new player's plot: an 8x8 lawn with a desk, a server, books, a counter bell, a sofa and a
+  // coffee machine out under a tree, so the team has somewhere to work from the start.
+  function starterRoom() {
+    const room = { iso: 5, blueprint: null, backdrop: null, land: 8, zones: [], tiles: [], flights: [], door: [7, 7], objects: [] };
+    fillLawn(room, 8);
+    room.zones[0].name = '草地';
+    resetCells(room);
+    for (const [type, x, y, flip = false] of [['desk', 1, 1], ['server', 3, 1], ['bookshelf', 5, 1], ['table', 2, 4],
+      ['bell', 5, 4], ['sofa', 1, 6], ['coffee', 4, 6], ['plant', 0, 3], ['tree', 7, 0], ['bush', 6, 6], ['pine', 0, 0]]) {
+      if (canPlace(room, type, x, y, flip, 0)) room.objects.push({ type, x, y, flip, f: 0 });
+    }
+    resetCells(room);
+    return room;
+  }
+
   // ---- Building -----------------------------------------------------------------------
   // Terrain edits for the editor. Each returns an error message, or null when it worked.
   const LAND = 12; // tiles each way the room may spread over
@@ -1508,7 +1612,7 @@
   function addTile(room, x, y, f) {
     const zn = room.zones[f];
     if (!zn) return '沒有這一層';
-    if (x < 0 || y < 0 || x >= LAND || y >= LAND) return '超出土地範圍';
+    if (x < 0 || y < 0 || x >= landOf(room) || y >= landOf(room)) return '超出這塊地的範圍（可以到「房間」換大塊的地）';
     if (tileIndex(room, x, y, f) >= 0) return null;
     const column = room.tiles.filter((t) => t[0] === x && t[1] === y);
     if (column.some((t) => room.zones[t[2]].z > zn.z && !room.zones[t[2]].thin)) return '上面有實心的地基，蓋不進去';
@@ -1852,78 +1956,80 @@
     const low = BACKDROP_PLANTS[kind]?.low;
     const h = Math.round((rowHeight(row) + n * 34) * (low ? (kind === 'jungle' ? 0.45 : 0.32) : 1));
     const v = Math.floor(n * 3);
-    return cached(`bd|${kind}|${h}|${v}|${row}|${snowy ? 1 : 0}`, () => renderSprite(1, 1, h + 12, (P) => {
-      const shade = (c) => (far ? dk(c, 0.06 + fade) : c);
-      const crown = (h0, parts) => {
-        for (const [x, y, zf, r, c] of parts) P.disc(x, y, h0 * zf, r, shade(c));
-      };
-      if (kind === 'palm') {
-        // A palm: ringed trunk leaning out, drooping fronds.
-        const lean = 0.02 + n * 0.03;
-        for (let i = 0; i < h / 6; i++) P.box(6 + i * i * lean, 6, i * 6, 4, 4, 6, i % 2 ? shade('#a8865a') : shade('#bf9c6c'), false);
-        const cx = 6 + (h / 6) * (h / 6) * lean + 2;
-        for (let k = 0; k < 7; k++) {
-          const a = (k / 7) * Math.PI * 2 + n;
-          for (let j = 1; j < 12; j++) P.disc(cx + Math.cos(a) * j * 1.6, 8 + Math.sin(a) * j * 1.2, h - 4 - j * j * 0.2, Math.max(0.9, 2.6 - j * 0.15), shade(k % 2 ? '#3f8a3a' : '#56a64a'));
+    return cached(`bd|${kind}|${h}|${v}|${row}|${snowy ? 1 : 0}`, () => renderSprite(1, 1, h + 12, (P) => paintPlant(P, kind, h, n, snowy, (c) => (far ? dk(c, 0.06 + fade) : c)), false));
+  }
+  // One plant of the scenery, h tall: shared by the backdrop rows and the plants you place.
+  function paintPlant(P, kind, h, n, snowy, shade = (c) => c) {
+    const v = Math.floor(n * 3);
+    const crown = (h0, parts) => {
+      for (const [x, y, zf, r, c] of parts) P.disc(x, y, h0 * zf, r, shade(c));
+    };
+    if (kind === 'palm') {
+      // A palm: ringed trunk leaning out, drooping fronds.
+      const lean = 0.02 + n * 0.03;
+      for (let i = 0; i < h / 6; i++) P.box(6 + i * i * lean, 6, i * 6, 4, 4, 6, i % 2 ? shade('#a8865a') : shade('#bf9c6c'), false);
+      const cx = 6 + (h / 6) * (h / 6) * lean + 2;
+      for (let k = 0; k < 7; k++) {
+        const a = (k / 7) * Math.PI * 2 + n;
+        for (let j = 1; j < 12; j++) P.disc(cx + Math.cos(a) * j * 1.6, 8 + Math.sin(a) * j * 1.2, h - 4 - j * j * 0.2, Math.max(0.9, 2.6 - j * 0.15), shade(k % 2 ? '#3f8a3a' : '#56a64a'));
+      }
+      return;
+    }
+    if (kind === 'jungle') {
+      // Jungle undergrowth: big glossy leaves.
+      for (let i = 0; i < 9; i++) P.disc(4 + (i * 5) % 9, 4 + (i * 3) % 9, (6 + (i % 4) * 6) * (h / 30), 5 - (i % 3), shade(i % 2 ? '#2f7a3a' : '#4f9a4a'));
+      return;
+    }
+    if (kind === 'bush') {
+      crown(h, [[8, 8, 0.35, 7, '#3f7a3a'], [5, 9, 0.5, 5, '#4f8f45'], [11, 7, 0.55, 5, '#4f8f45'], [8, 8, 0.75, 5, '#62a656'], [7, 9, 0.9, 3, '#7cbf6a']]);
+      if (v === 2) for (const [x, y, zf] of [[5, 11, 0.6], [11, 10, 0.7], [8, 12, 0.85]]) P.disc(x, y, h * zf, 1, shade('#f2d0e0'));
+      return;
+    }
+    if (kind === 'rock') {
+      // A mossy boulder.
+      crown(h, [[8, 8, 0.2, 7, '#6e7280'], [6, 9, 0.45, 6, '#858a98'], [10, 7, 0.5, 5, '#7a7e8c'], [7, 8, 0.75, 4, '#9aa0ae']]);
+      P.disc(9, 7, h * 0.9, 2.5, shade('#6f9a52'));
+      return;
+    }
+    if (kind === 'bamboo') {
+      // A clump of stalks with joints, leaves at the tips.
+      for (const [x, y, hk] of [[4, 6, 1], [9, 4, 0.85], [7, 10, 0.92], [12, 9, 0.75]]) {
+        const top = h * hk;
+        for (let zz = 0; zz < top; zz += 7) P.box(x, y, zz, 2, 2, 6, shade(zz % 14 ? '#7fae4a' : '#6a9a3c'), false);
+        for (let zz = 7; zz < top; zz += 7) P.box(x - 0.5, y - 0.5, zz - 1, 3, 3, 1, shade('#a6c86a'), false);
+        for (let k = 0; k < 5; k++) {
+          const a = k * 1.3 + x;
+          P.disc(x + 1 + Math.cos(a) * 3, y + 1 + Math.sin(a) * 2, top - 6 + k * 2.5, 2.2, shade(k % 2 ? '#4f8a3a' : '#6aa64a'));
         }
-        return;
       }
-      if (kind === 'jungle') {
-        // Jungle undergrowth: big glossy leaves.
-        for (let i = 0; i < 9; i++) P.disc(4 + (i * 5) % 9, 4 + (i * 3) % 9, (6 + (i % 4) * 6) * (h / 30), 5 - (i % 3), shade(i % 2 ? '#2f7a3a' : '#4f9a4a'));
-        return;
-      }
-      if (kind === 'bush') {
-        crown(h, [[8, 8, 0.35, 7, '#3f7a3a'], [5, 9, 0.5, 5, '#4f8f45'], [11, 7, 0.55, 5, '#4f8f45'], [8, 8, 0.75, 5, '#62a656'], [7, 9, 0.9, 3, '#7cbf6a']]);
-        if (v === 2) for (const [x, y, zf] of [[5, 11, 0.6], [11, 10, 0.7], [8, 12, 0.85]]) P.disc(x, y, h * zf, 1, shade('#f2d0e0'));
-        return;
-      }
-      if (kind === 'rock') {
-        // A mossy boulder.
-        crown(h, [[8, 8, 0.2, 7, '#6e7280'], [6, 9, 0.45, 6, '#858a98'], [10, 7, 0.5, 5, '#7a7e8c'], [7, 8, 0.75, 4, '#9aa0ae']]);
-        P.disc(9, 7, h * 0.9, 2.5, shade('#6f9a52'));
-        return;
-      }
-      if (kind === 'bamboo') {
-        // A clump of stalks with joints, leaves at the tips.
-        for (const [x, y, hk] of [[4, 6, 1], [9, 4, 0.85], [7, 10, 0.92], [12, 9, 0.75]]) {
-          const top = h * hk;
-          for (let zz = 0; zz < top; zz += 7) P.box(x, y, zz, 2, 2, 6, shade(zz % 14 ? '#7fae4a' : '#6a9a3c'), false);
-          for (let zz = 7; zz < top; zz += 7) P.box(x - 0.5, y - 0.5, zz - 1, 3, 3, 1, shade('#a6c86a'), false);
-          for (let k = 0; k < 5; k++) {
-            const a = k * 1.3 + x;
-            P.disc(x + 1 + Math.cos(a) * 3, y + 1 + Math.sin(a) * 2, top - 6 + k * 2.5, 2.2, shade(k % 2 ? '#4f8a3a' : '#6aa64a'));
-          }
-        }
-        return;
-      }
-      if (kind === 'birch') {
-        // A white trunk with dark marks, a light airy crown.
-        for (let zz = 0; zz < h * 0.62; zz += 3) P.box(7, 7, zz, 2, 2, 3, shade((zz / 3) % 4 === 1 ? '#3a3a40' : '#ecebe4'), false);
-        crown(h, [[8, 8, 0.55, 7, '#8aa64a'], [5, 9, 0.66, 5, '#a6bf5a'], [11, 7, 0.7, 5, '#a6bf5a'], [8, 8, 0.82, 5, '#c8d86a'], [8, 8, 0.94, 3, '#e0e08a']]);
-        return;
-      }
-      if (kind === 'broadleaf' || kind === 'maple' || kind === 'sakura') {
-        const C = {
-          broadleaf: ['#3f7a3a', '#4f8f45', '#62a656', '#7cbf6a'],
-          maple: ['#a8402a', '#c85a2a', '#e07a30', '#f0a648'],
-          sakura: ['#d88aa8', '#e8a2bc', '#f4bcd0', '#fcdce6'],
-        }[kind];
-        P.box(6.5, 6.5, 0, 3, 3, h * 0.4, shade(kind === 'sakura' ? '#5a3a3a' : '#6e4428'), false);
-        crown(h, [[8, 8, 0.5, 11, C[0]], [4, 9, 0.62, 8, C[1]], [12, 6, 0.66, 8, C[1]], [8, 8, 0.78, 8, C[2]], [7, 9, 0.9, 5, C[3]]]);
-        return;
-      }
-      // A pine: tiers of needles narrowing to a point, snow on each tier on snowy ground.
-      P.box(7, 7, 0, 2, 2, h * 0.22, shade('#5a3a24'), false);
-      const z0 = h * 0.18;
-      for (let zz = z0; zz < h; zz += 1) {
-        const t = (zz - z0) / (h - z0);
-        const r = 9 * (1 - t) + ((zz - z0) % 12 < 4 ? 1.6 : 0);
-        const cap = snowy && (zz - z0) % 12 >= 2 && (zz - z0) % 12 < 4;
-        P.disc(8, 8, zz, r, shade(cap ? '#e8eef8' : (zz - z0) % 12 < 4 ? '#2f5a3a' : '#3d6e47'));
-        P.disc(6.5, 8.5, zz, Math.max(0, r - 3), shade(cap ? '#ffffff' : '#4a7d52'));
-      }
-    }, false));
+      return;
+    }
+    if (kind === 'birch') {
+      // A white trunk with dark marks, a light airy crown.
+      for (let zz = 0; zz < h * 0.62; zz += 3) P.box(7, 7, zz, 2, 2, 3, shade((zz / 3) % 4 === 1 ? '#3a3a40' : '#ecebe4'), false);
+      crown(h, [[8, 8, 0.55, 7, '#8aa64a'], [5, 9, 0.66, 5, '#a6bf5a'], [11, 7, 0.7, 5, '#a6bf5a'], [8, 8, 0.82, 5, '#c8d86a'], [8, 8, 0.94, 3, '#e0e08a']]);
+      return;
+    }
+    if (kind === 'broadleaf' || kind === 'maple' || kind === 'sakura') {
+      const C = {
+        broadleaf: ['#3f7a3a', '#4f8f45', '#62a656', '#7cbf6a'],
+        maple: ['#a8402a', '#c85a2a', '#e07a30', '#f0a648'],
+        sakura: ['#d88aa8', '#e8a2bc', '#f4bcd0', '#fcdce6'],
+      }[kind];
+      P.box(6.5, 6.5, 0, 3, 3, h * 0.4, shade(kind === 'sakura' ? '#5a3a3a' : '#6e4428'), false);
+      crown(h, [[8, 8, 0.5, 11, C[0]], [4, 9, 0.62, 8, C[1]], [12, 6, 0.66, 8, C[1]], [8, 8, 0.78, 8, C[2]], [7, 9, 0.9, 5, C[3]]]);
+      return;
+    }
+    // A pine: tiers of needles narrowing to a point, snow on each tier on snowy ground.
+    P.box(7, 7, 0, 2, 2, h * 0.22, shade('#5a3a24'), false);
+    const z0 = h * 0.18;
+    for (let zz = z0; zz < h; zz += 1) {
+      const t = (zz - z0) / (h - z0);
+      const r = 9 * (1 - t) + ((zz - z0) % 12 < 4 ? 1.6 : 0);
+      const cap = snowy && (zz - z0) % 12 >= 2 && (zz - z0) % 12 < 4;
+      P.disc(8, 8, zz, r, shade(cap ? '#e8eef8' : (zz - z0) % 12 < 4 ? '#2f5a3a' : '#3d6e47'));
+      P.disc(6.5, 8.5, zz, Math.max(0, r - 3), shade(cap ? '#ffffff' : '#4a7d52'));
+    }
   }
   // The ground the scenery stands on, one tile at a time.
   const GROUND_COLORS = {
@@ -3060,6 +3166,7 @@
 
   return {
     TU, SLAB, STEP_Z, LAND, WEATHERS, weatherFor, pickAt, tinted, BACKDROPS, BACKDROP_PRESETS, BACKDROP_PLANTS, BACKDROP_GROUNDS, backdropOf, backdropThumb, ZONE_KINDS, FLOORS, WALLS, OBJECTS, BLUEPRINTS, migrate, derive,
+    LAND_SIZES, landOf, setLand, roomCost, needsOf, blueprintRoom, starterRoom, extentOf,
     pick, addZone, addTile, removeTile, addFlight, removeFlightAt, setZoneZ,
     BLOCKS, pickBlock, blockTarget, placeBlock, removeBlock, stairPlan, placeStairs, placeSpiral, stairSprite, blockSprite,
     size, origin, project, floorZ, levels, cells, resetCells, cellAt, neighbours, door, walkable, footprint, canPlace, stationSpots,

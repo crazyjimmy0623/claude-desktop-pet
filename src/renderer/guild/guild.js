@@ -71,6 +71,22 @@ function itemPreview(id, size = 2) {
       x.drawImage(sp.canvas, 0, 0, sp.canvas.width * s, sp.canvas.height * s);
     });
   }
+  if (type === 'block' && Iso.BLOCKS[key]) {
+    const sp = Iso.blockSprite(key);
+    return canvasOf((sp.canvas.width * 2) / DPR, (sp.canvas.height * 2) / DPR, (x) => {
+      x.imageSmoothingEnabled = false;
+      x.drawImage(sp.canvas, 0, 0, sp.canvas.width * 2, sp.canvas.height * 2);
+    });
+  }
+  if (type === 'block' || type === 'land') {
+    // Stairs and plots: a big emoji is enough.
+    return canvasOf(40, 40, (x) => {
+      x.font = `${26 * DPR}px sans-serif`;
+      x.textAlign = 'center';
+      x.textBaseline = 'middle';
+      x.fillText(type === 'land' ? '🟩' : key === 'spiral' ? '🌀' : '🪜', 20 * DPR, 21 * DPR);
+    });
+  }
   return canvasOf(32, 32, () => {});
 }
 
@@ -218,7 +234,7 @@ function renderRates() {
 function renderBook() {
   const book = $('book');
   book.replaceChildren();
-  const groups = [['skin', '角色'], ['accessory', '配件'], ['furniture', '家具'], ['floor', '地板'], ['wall', '牆面']];
+  const groups = [['skin', '角色'], ['accessory', '配件'], ['furniture', '家具'], ['plant', '植物'], ['block', '建材'], ['land', '土地'], ['floor', '地板'], ['wall', '牆面']];
   for (const [type, label] of groups) {
     const h = document.createElement('h3');
     const items = ITEMS.filter((i) => i.type === type);

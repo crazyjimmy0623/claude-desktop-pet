@@ -101,6 +101,7 @@ function boot() {
   handle('room:set', (room) => store.setRoom(room));
   handle('room:resize', (size) => windows.resizeRoom(size.width, size.height, size.drawerH || 0));
   handle('gacha:pull', (count) => progress.pull(count === 10 ? 10 : 1));
+  handle('coins:spend', (amount) => progress.spend(amount));
   handle('equip', ({ target, skin, accessory }) => {
     const chars = JSON.parse(JSON.stringify(store.settings.characters));
     let slot;

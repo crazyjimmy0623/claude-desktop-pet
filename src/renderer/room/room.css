@@ -225,3 +225,9 @@ html, body {
   font-size: 12px;
   padding: 10px 4px;
 }
+
+.modes .coins {
+  color: #ffd65a;
+  font-weight: bold;
+  margin-left: 6px;
+}

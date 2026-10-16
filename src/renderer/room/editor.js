@@ -1,5 +1,6 @@
 /* global desk, Iso, Catalog, RoomApp */
-// Room editor: place, turn, move and delete furniture; swap the floor, walls and theme.
+// Room editor: build on your plot - furniture, plants, blocks and stairs, floors and walls - and
+// take things away again. Building costs coins; taking something away gives half back.
 (function () {
   const { state } = RoomApp;
   const DPR = window.devicePixelRatio || 1;
@@ -12,6 +13,7 @@
   const tabButtons = [...document.querySelectorAll('.tabs button[data-tab]')];
   const modeButtons = [...document.querySelectorAll('.modes button[data-mode]')];
   const buildTabs = document.getElementById('build-tabs');
+  const coinsEl = document.getElementById('editor-coins');
 
   // Two modes: building (furniture, blocks, floors, walls, scenery, blueprints by category) and
   // deleting, where whatever is under the mouse turns see-through red and a click takes it away.
@@ -33,15 +35,56 @@
     erase: '刪除模式：指到的東西會變成紅色透明，點一下就刪掉。家具、樓梯、方塊、地板都可以（疊高的方塊一次拆一層）',
     floor: '選樓層，再點一下換那層的地板',
     wall: '選樓層，再點一下換那層的牆面',
-    room: '套用設計好的藍圖，或換時間和天氣',
-    scenery: '房間後面的風景：先挑一組預設，再自己加減植物、換地面、層數和密度',
+    room: '換一塊地、付費施工藍圖，或換時間和天氣',
+    plants: '點植物種在草地上（外圍種一圈就是背景）；點房間裡的植物可以搬動',
   };
 
   const itemName = (id) => Catalog.ITEMS.find((i) => i.id === id)?.name || id;
   const owned = (type) => (state.progress?.owned || []).filter((id) => id.startsWith(`${type}:`)).map((id) => id.split(':')[1]);
+  const owns = (id) => (state.progress?.owned || []).includes(id);
+  const price = (id) => Catalog.priceOf(id);
+  const coins = () => state.progress?.coins ?? 0;
+  const worth = (r) => Iso.roomCost(r, price);
+  const bare = (r) => JSON.stringify(r, (k, v) => (k.startsWith('_') ? undefined : v));
   const room = () => state.room;
   const save = () => RoomApp.setRoom(room(), { save: true, relayout: false });
   const still = { frame: 0, active: false, now: Date.now(), hour: 14, meeting: false };
+
+  // ---- Coins ------------------------------------------------------------------------
+
+  // Every change that builds or takes away goes through here. `change(room)` edits the room and
+  // returns an error message or nothing. What was added costs its price; what was taken away gives
+  // half back (`bill` can say otherwise); `free` for moving furniture about. Without the coins the
+  // room goes back as it was.
+  function charged(change, { free = false, relayout = true, ok = '', bill = null } = {}) {
+    const r = room();
+    const before = worth(r);
+    const snapshot = bare(r);
+    const err = change(r);
+    if (err) {
+      hint.textContent = err;
+      return false;
+    }
+    const after = worth(r);
+    const amount = free ? 0 : bill ? bill(before, after) : after > before ? after - before : -Math.floor((before - after) / 2);
+    if (amount > coins()) {
+      for (const k of Object.keys(r)) delete r[k];
+      Object.assign(r, JSON.parse(snapshot));
+      RoomApp.setRoom(r, { relayout });
+      hint.textContent = `金幣不足：要 ${amount} 🪙，現在有 ${coins()} 🪙。讓夥伴多工作一下再來蓋吧`;
+      return false;
+    }
+    if (amount) {
+      state.progress.coins -= amount;
+      desk.invoke('coins:spend', amount);
+    }
+    RoomApp.setRoom(r, { save: true, relayout });
+    refresh();
+    const note = amount > 0 ? `（花了 ${amount} 🪙）` : amount < 0 ? `（退回 ${-amount} 🪙）` : '';
+    if (ok || note) hint.textContent = `${ok}${note}`;
+    return true;
+  }
+  const locked = (id) => `還沒解鎖「${itemName(id)}」，到招募機抽抽看`;
 
   // ---- Palette ----------------------------------------------------------------------
 
@@ -79,6 +122,7 @@
 
   function refresh() {
     if (!state.editing) return;
+    if (coinsEl) coinsEl.textContent = `🪙 ${coins()}`;
     modeButtons.forEach((b) => b.classList.toggle('active', b.dataset.mode === mode));
     buildTabs.classList.toggle('hidden', mode === 'erase');
     tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
@@ -92,11 +136,11 @@
       return;
     }
     hint.textContent = tab === 'terrain' && build.tool !== 'block' ? HINTS[build.tool] : HINTS[tab];
-    if (tab === 'furniture') {
+    if (tab === 'furniture' || tab === 'plants') {
       for (const type of owned('obj')) {
-        if (!Iso.OBJECTS[type]) continue;
+        if (!Iso.OBJECTS[type] || !!Iso.OBJECTS[type].plant !== (tab === 'plants')) continue;
         const sp = Iso.objectSprite(type, false, still);
-        palette.append(button(itemName(`obj:${type}`), swatch(sp.canvas, 1), tool?.type === type && !tool.moving, () => {
+        palette.append(button(`${itemName(`obj:${type}`)} ${price(`obj:${type}`)}🪙`, swatch(sp.canvas, 1), tool?.type === type && !tool.moving, () => {
           tool = { type, flip: false };
           refresh();
         }));
@@ -126,23 +170,8 @@
           refresh();
         }));
       }
-    } else if (tab === 'scenery') {
-      refreshScenery();
     } else if (tab === 'room') {
-      // Blueprints: designed rooms to move into and then make your own.
-      const plans = document.createElement('div');
-      plans.className = 'row';
-      for (const [id, bp] of Object.entries(Iso.BLUEPRINTS)) {
-        const b = button(`藍圖：${bp.name}`, blueprintThumb(id), room().blueprint === id, () => {
-          if (!window.confirm(`套用「${bp.name}」會取代目前的房間（家具和地形），確定嗎？`)) return;
-          RoomApp.setRoom(Iso.generateRoom(id), { save: true });
-          refresh();
-          hint.textContent = `已套用「${bp.name}」，可以再用地形和家具分頁慢慢改`;
-        });
-        b.title = bp.desc;
-        plans.append(b);
-      }
-      palette.append(plans);
+      refreshRoomTab();
       // Time of day and weather, the same switches as in the settings.
       const sky = document.createElement('div');
       sky.className = 'row';
@@ -158,106 +187,96 @@
     }
   }
 
-  // Scenery: a preset, or a mix of plants of your own on a ground of your choosing.
-  function refreshScenery() {
-    const bd = Iso.backdropOf(room());
-    const raw = room().backdrop !== undefined ? room().backdrop : Iso.BLUEPRINTS[room().blueprint]?.backdrop || null;
-    const custom = raw && typeof raw === 'object';
-    const apply = (b) => {
-      room().backdrop = b;
-      RoomApp.setRoom(room(), { save: true });
-      refresh();
-    };
-    // Any change turns the scenery into the room's own mix.
-    const change = (patch) => apply({ ...(bd || { plants: [], ground: 'grass', rows: 2, density: 1, seed: 0 }), preset: null, ...patch });
+  // The plot, the blueprints and (for rooms from before plots) the old painted scenery.
+  function refreshRoomTab() {
+    const r = room();
+    const land = Iso.landOf(r);
     const row = (label) => {
-      const r = document.createElement('div');
-      r.className = 'row';
+      const el = document.createElement('div');
+      el.className = 'row';
       const b = document.createElement('b');
       b.textContent = label;
-      r.append(b);
-      palette.append(r);
-      return r;
+      el.append(b);
+      palette.append(el);
+      return el;
     };
-    const presets = row('預設');
-    presets.append(button('無', null, !bd, () => apply(null)));
-    for (const [id, name] of Object.entries(Iso.BACKDROPS)) presets.append(button(name, null, raw === id, () => apply(id)));
-    if (custom && bd) presets.append(button('✎ 自訂', null, true, () => {}));
-    const plants = row('植物');
-    for (const [id, pl] of Object.entries(Iso.BACKDROP_PLANTS)) {
-      const on = !!bd && bd.plants.includes(id);
-      plants.append(button(pl.name, plantThumb(id), on, () => {
-        const list = bd ? bd.plants.filter((k) => k !== id) : [];
-        change({ plants: on ? list : [...list, id] });
+    const lands = row('土地');
+    for (const n of Iso.LAND_SIZES) {
+      const have = owns(`land:${n}`) || n === land;
+      const b = button(`${n}×${n}`, null, n === land, () => {
+        if (!have) { hint.textContent = locked(`land:${n}`); return; }
+        if (n !== land) charged((rr) => Iso.setLand(rr, n), { ok: `換成 ${n}×${n} 的地了` });
+      });
+      if (!have) b.classList.add('locked');
+      lands.append(b);
+    }
+    // Blueprints: built for you, if every piece is unlocked and you pay for all of it (what is
+    // there now is taken down and gives half back).
+    const plans = row('藍圖');
+    for (const [id, bp] of Object.entries(Iso.BLUEPRINTS)) {
+      const e = Iso.extentOf(Iso.generateRoom(id));
+      const need = Math.max(e.w, e.d);
+      const fits = need <= land;
+      const built = fits ? Iso.blueprintRoom(id, land) : null;
+      const total = built ? worth(built) : 0;
+      const missing = built ? Iso.needsOf(built).filter((k) => Catalog.ITEMS.some((i) => i.id === k) && !owns(k)) : [];
+      const label = fits ? `${bp.name} ${total}🪙` : `${bp.name}（要 ${need}×${need} 的地）`;
+      const b = button(label, blueprintThumb(id), r.blueprint === id, () => {
+        if (!fits) { hint.textContent = `「${bp.name}」要 ${need}×${need} 以上的地才蓋得下`; return; }
+        if (missing.length) {
+          hint.textContent = `還缺：${missing.slice(0, 6).map(itemName).join('、')}${missing.length > 6 ? ` 等 ${missing.length} 樣` : ''}，抽到才能施工`;
+          return;
+        }
+        const back = Math.floor(worth(r) / 2);
+        if (!window.confirm(`施工「${bp.name}」要 ${total} 🪙，拆掉現在的房間退回 ${back} 🪙，實付 ${total - back} 🪙。確定嗎？`)) return;
+        charged((rr) => {
+          for (const k of Object.keys(rr)) delete rr[k];
+          Object.assign(rr, built);
+        }, { ok: `「${bp.name}」蓋好了`, bill: (before, after) => after - Math.floor(before / 2) });
+      });
+      b.title = `${bp.desc}${missing.length ? `（還缺 ${missing.length} 樣沒解鎖）` : ''}`;
+      if (!fits || missing.length) b.classList.add('locked');
+      plans.append(b);
+    }
+    if (r.backdrop || (r.backdrop === undefined && Iso.BLUEPRINTS[r.blueprint]?.backdrop)) {
+      const old = row('舊背景');
+      old.append(button('移除房間後面畫上去的風景（改用植物自己種）', null, false, () => {
+        r.backdrop = null;
+        RoomApp.setRoom(r, { save: true });
+        refresh();
       }));
     }
-    if (!bd) return;
-    const ground = row('地面');
-    for (const [id, name] of Object.entries(Iso.BACKDROP_GROUNDS)) ground.append(button(name, null, bd.ground === id, () => change({ ground: id })));
-    const more = row('層數');
-    for (const n of [1, 2, 3]) more.append(button(`${n} 排`, null, bd.rows === n, () => change({ rows: n })));
-    const dense = document.createElement('b');
-    dense.textContent = '密度';
-    more.append(dense);
-    for (const [d, name] of [[0.45, '稀疏'], [0.75, '普通'], [1, '茂密']]) more.append(button(name, null, Math.abs(bd.density - d) < 0.13, () => change({ density: d })));
-    more.append(button('🎲 重新排列', null, false, () => change({ seed: (bd.seed || 0) + 1 })));
-  }
-
-  // One plant, fitted into a small box.
-  function plantThumb(kind) {
-    const sp = Iso.backdropThumb(kind).canvas;
-    const c = document.createElement('canvas');
-    const W = 36;
-    const H = 44;
-    c.width = W * DPR;
-    c.height = H * DPR;
-    c.style.width = `${W}px`;
-    c.style.height = `${H}px`;
-    const x = c.getContext('2d');
-    x.imageSmoothingEnabled = false;
-    // Cropped to the drawn pixels first: the sprite canvas has room to spare.
-    const px = sp.getContext('2d').getImageData(0, 0, sp.width, sp.height).data;
-    let [x0, y0, x1, y1] = [sp.width, sp.height, 0, 0];
-    for (let y = 0; y < sp.height; y++) {
-      for (let i = 0; i < sp.width; i++) {
-        if (px[(y * sp.width + i) * 4 + 3] < 8) continue;
-        x0 = Math.min(x0, i); x1 = Math.max(x1, i + 1); y0 = Math.min(y0, y); y1 = Math.max(y1, y + 1);
-      }
-    }
-    if (x1 <= x0) return c;
-    const w = x1 - x0;
-    const h = y1 - y0;
-    const k = Math.min((W * DPR) / w, (H * DPR) / h, 2 * DPR);
-    x.drawImage(sp, x0, y0, w, h, (W * DPR - w * k) / 2, H * DPR - h * k, w * k, h * k);
-    return c;
   }
 
   function refreshTerrain() {
     const row = document.createElement('div');
     row.className = 'row';
+    // Locked pieces show greyed out, with where to get them.
+    const piece = (id, label, preview, selected, pick) => {
+      const have = owns(id);
+      const b = button(label, preview, selected, () => { if (have) pick(); else hint.textContent = locked(id); });
+      if (!have) b.classList.add('locked');
+      row.append(b);
+    };
     for (const [id, b] of Object.entries(Iso.BLOCKS)) {
-      row.append(button(b.name, swatch(Iso.blockSprite(id).canvas, 2), build.tool === 'block' && build.block === id, () => {
+      piece(`block:${id}`, `${b.name} ${price(`block:${id}`)}🪙`, swatch(Iso.blockSprite(id).canvas, 2), build.tool === 'block' && build.block === id, () => {
         Object.assign(build, { block: id, tool: 'block' });
         refresh();
-      }));
+      });
     }
-    row.append(button('🪜 樓梯', null, build.tool === 'stairs', () => {
+    piece('block:stairs', `🪜 樓梯 每階${price('block:stairs')}🪙`, null, build.tool === 'stairs', () => {
       build.tool = build.tool === 'stairs' ? 'block' : 'stairs';
       refresh();
-    }));
-    row.append(button('🌀 旋轉樓梯', null, build.tool === 'spiral', () => {
+    });
+    piece('block:spiral', `🌀 旋轉樓梯 ${price('block:spiral')}🪙`, null, build.tool === 'spiral', () => {
       build.tool = build.tool === 'spiral' ? 'block' : 'spiral';
       refresh();
-    }));
+    });
     palette.append(row);
   }
 
-  // Apply a terrain edit: save, re-lay the room (its size may change) and report.
-  function terrain(err, ok) {
-    RoomApp.setRoom(room(), { save: true });
-    refresh();
-    if (err || ok) hint.textContent = err || ok;
-  }
+  // A terrain edit, paid for: the room is re-laid (its size may change) and the result reported.
+  const terrain = (edit, ok) => charged(edit, { ok });
 
   // A small picture of a blueprint, fully built, for its button.
   const thumbs = new Map();
@@ -351,9 +370,10 @@
     const r = room();
     const hit = buildHit(e);
     if (e.button !== 0) return;
-    if (build.tool === 'stairs') terrain(Iso.placeStairs(r, hit), '樓梯蓋好了');
-    else if (build.tool === 'spiral') terrain(Iso.placeSpiral(r, hit), '旋轉樓梯蓋好了');
-    else terrain(Iso.placeBlock(r, build.block, targetOf(hit)));
+    void r;
+    if (build.tool === 'stairs') terrain((rr) => Iso.placeStairs(rr, hit), '樓梯蓋好了');
+    else if (build.tool === 'spiral') terrain((rr) => Iso.placeSpiral(rr, hit), '旋轉樓梯蓋好了');
+    else terrain((rr) => Iso.placeBlock(rr, build.block, targetOf(hit)), '');
   }
 
   // Erase mode: what a click would take away, and taking it.
@@ -362,20 +382,25 @@
     return Iso.pickAt(room(), p.x, p.y, () => still);
   }
   let eraseMove = null;
+  let eraseKey = '';
+  // What deleting it would give back: tried out on a copy of the room.
+  function refundOf(d) {
+    const copy = JSON.parse(bare(room()));
+    if (d.object !== undefined) copy.objects.splice(d.object, 1);
+    else if (d.stair) Iso.removeFlightAt(copy, d.stair.x, d.stair.y);
+    else Iso.removeBlock(copy, d.block);
+    return Math.floor(Math.max(0, worth(room()) - worth(copy)) / 2);
+  }
   function eraseDown(e) {
     const d = eraseHit(e);
     if (!d) return;
-    const r = room();
     if (d.object !== undefined) {
-      const [o] = r.objects.splice(d.object, 1);
-      save();
-      hint.textContent = `已刪除：${itemName(`obj:${o.type}`)}（還在背包裡，可以再放回來）`;
+      const name = itemName(`obj:${room().objects[d.object]?.type}`);
+      charged((rr) => { rr.objects.splice(d.object, 1); }, { relayout: false, ok: `已刪除：${name}` });
     } else if (d.stair) {
-      Iso.removeFlightAt(r, d.stair.x, d.stair.y);
-      terrain(null, '已刪除樓梯');
+      terrain((rr) => { Iso.removeFlightAt(rr, d.stair.x, d.stair.y); }, '已刪除樓梯');
     } else {
-      Iso.removeBlock(r, d.block);
-      terrain(null, '已拆掉一格');
+      terrain((rr) => Iso.removeBlock(rr, d.block), '已拆掉一格');
     }
     doomed = eraseHit(e);
   }
@@ -388,7 +413,14 @@
       eraseMove = e;
       if (pending) {
         requestAnimationFrame(() => {
-          if (eraseMove && mode === 'erase') doomed = eraseHit(eraseMove);
+          if (eraseMove && mode === 'erase') {
+            doomed = eraseHit(eraseMove);
+            const key = JSON.stringify(doomed && { o: doomed.object, s: doomed.stair && [doomed.stair.x, doomed.stair.y], b: doomed.block && [doomed.block.x, doomed.block.y, doomed.block.f] });
+            if (key !== eraseKey) {
+              eraseKey = key;
+              hint.textContent = doomed ? `點一下刪掉，退回 ${refundOf(doomed)} 🪙` : HINTS.erase;
+            }
+          }
           canvas.style.cursor = doomed ? 'pointer' : '';
           eraseMove = null;
         });
@@ -420,10 +452,7 @@
         save();
       } else {
         const i = objectAt(e);
-        if (i >= 0) {
-          r.objects.splice(i, 1);
-          save();
-        }
+        if (i >= 0) charged((rr) => { rr.objects.splice(i, 1); }, { relayout: false, ok: '已刪除' });
       }
       refresh();
       return;
@@ -432,9 +461,9 @@
     if (tool) {
       const t = target(e);
       if (t && Iso.canPlace(r, tool.type, t.x, t.y, t.flip, t.f)) {
-        r.objects.push({ type: tool.type, x: t.x, y: t.y, flip: t.flip, f: t.f });
-        if (tool.moving) tool = null;
-        save();
+        const moving = tool.moving;
+        const placed = charged((rr) => { rr.objects.push({ type: tool.type, x: t.x, y: t.y, flip: t.flip, f: t.f }); }, { free: moving, relayout: false });
+        if (placed && moving) tool = null;
         refresh();
       }
       return;
