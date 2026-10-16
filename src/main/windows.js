@@ -204,7 +204,12 @@ class Windows {
       // Dump what the room canvas actually contains, for debugging without looking at the screen.
       setTimeout(async () => {
         if (w.isDestroyed()) return;
-        const out = require('path').join(require('os').tmpdir(), 'deskmates-room.png');
+        // DESKMATES_DEBUG_JS: a script to run in the room first (open the editor, pick a tab...).
+        if (process.env.DESKMATES_DEBUG_JS) {
+          await w.webContents.executeJavaScript(process.env.DESKMATES_DEBUG_JS).catch((e) => console.log(`[room] debug js: ${e}`));
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+        const out =require('path').join(require('os').tmpdir(), 'deskmates-room.png');
         const url = await w.webContents.executeJavaScript('document.getElementById("room").toDataURL("image/png")').catch((e) => String(e));
         if (url.startsWith('data:')) require('fs').writeFileSync(out, Buffer.from(url.split(',')[1], 'base64'));
         console.log(`[room] canvas dump -> ${url.startsWith('data:') ? out : url}`);

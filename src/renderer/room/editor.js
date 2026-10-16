@@ -27,7 +27,8 @@
     erase: '刪除：指到的方塊會變紅，點一下拆掉一顆（實心的變矮一層），也可以拆樓梯',
     floor: '選樓層，再點一下換那層的地板',
     wall: '選樓層，再點一下換那層的牆面',
-    room: '換整體風格，或重設成預設房間',
+    room: '套用設計好的藍圖，或換時間和天氣',
+    scenery: '房間後面的風景：先挑一組預設，再自己加減植物、換地面、層數和密度',
   };
 
   const itemName = (id) => Catalog.ITEMS.find((i) => i.id === id)?.name || id;
@@ -109,6 +110,8 @@
           refresh();
         }));
       }
+    } else if (tab === 'scenery') {
+      refreshScenery();
     } else if (tab === 'room') {
       // Blueprints: designed rooms to move into and then make your own.
       const plans = document.createElement('div');
@@ -124,18 +127,6 @@
         plans.append(b);
       }
       palette.append(plans);
-      // Scenery behind the room.
-      const scene = document.createElement('div');
-      scene.className = 'row';
-      const current = room().backdrop !== undefined ? room().backdrop : Iso.BLUEPRINTS[room().blueprint]?.backdrop || null;
-      for (const [id, name] of [[null, '無'], ...Object.entries(Iso.BACKDROPS)]) {
-        scene.append(button(`背景：${name}`, null, (current || null) === id, () => {
-          room().backdrop = id;
-          RoomApp.setRoom(room(), { save: true });
-          refresh();
-        }));
-      }
-      palette.append(scene);
       // Time of day and weather, the same switches as in the settings.
       const sky = document.createElement('div');
       sky.className = 'row';
@@ -149,6 +140,80 @@
       }
       palette.append(sky);
     }
+  }
+
+  // Scenery: a preset, or a mix of plants of your own on a ground of your choosing.
+  function refreshScenery() {
+    const bd = Iso.backdropOf(room());
+    const raw = room().backdrop !== undefined ? room().backdrop : Iso.BLUEPRINTS[room().blueprint]?.backdrop || null;
+    const custom = raw && typeof raw === 'object';
+    const apply = (b) => {
+      room().backdrop = b;
+      RoomApp.setRoom(room(), { save: true });
+      refresh();
+    };
+    // Any change turns the scenery into the room's own mix.
+    const change = (patch) => apply({ ...(bd || { plants: [], ground: 'grass', rows: 2, density: 1, seed: 0 }), preset: null, ...patch });
+    const row = (label) => {
+      const r = document.createElement('div');
+      r.className = 'row';
+      const b = document.createElement('b');
+      b.textContent = label;
+      r.append(b);
+      palette.append(r);
+      return r;
+    };
+    const presets = row('預設');
+    presets.append(button('無', null, !bd, () => apply(null)));
+    for (const [id, name] of Object.entries(Iso.BACKDROPS)) presets.append(button(name, null, raw === id, () => apply(id)));
+    if (custom && bd) presets.append(button('✎ 自訂', null, true, () => {}));
+    const plants = row('植物');
+    for (const [id, pl] of Object.entries(Iso.BACKDROP_PLANTS)) {
+      const on = !!bd && bd.plants.includes(id);
+      plants.append(button(pl.name, plantThumb(id), on, () => {
+        const list = bd ? bd.plants.filter((k) => k !== id) : [];
+        change({ plants: on ? list : [...list, id] });
+      }));
+    }
+    if (!bd) return;
+    const ground = row('地面');
+    for (const [id, name] of Object.entries(Iso.BACKDROP_GROUNDS)) ground.append(button(name, null, bd.ground === id, () => change({ ground: id })));
+    const more = row('層數');
+    for (const n of [1, 2, 3]) more.append(button(`${n} 排`, null, bd.rows === n, () => change({ rows: n })));
+    const dense = document.createElement('b');
+    dense.textContent = '密度';
+    more.append(dense);
+    for (const [d, name] of [[0.45, '稀疏'], [0.75, '普通'], [1, '茂密']]) more.append(button(name, null, Math.abs(bd.density - d) < 0.13, () => change({ density: d })));
+    more.append(button('🎲 重新排列', null, false, () => change({ seed: (bd.seed || 0) + 1 })));
+  }
+
+  // One plant, fitted into a small box.
+  function plantThumb(kind) {
+    const sp = Iso.backdropThumb(kind).canvas;
+    const c = document.createElement('canvas');
+    const W = 36;
+    const H = 44;
+    c.width = W * DPR;
+    c.height = H * DPR;
+    c.style.width = `${W}px`;
+    c.style.height = `${H}px`;
+    const x = c.getContext('2d');
+    x.imageSmoothingEnabled = false;
+    // Cropped to the drawn pixels first: the sprite canvas has room to spare.
+    const px = sp.getContext('2d').getImageData(0, 0, sp.width, sp.height).data;
+    let [x0, y0, x1, y1] = [sp.width, sp.height, 0, 0];
+    for (let y = 0; y < sp.height; y++) {
+      for (let i = 0; i < sp.width; i++) {
+        if (px[(y * sp.width + i) * 4 + 3] < 8) continue;
+        x0 = Math.min(x0, i); x1 = Math.max(x1, i + 1); y0 = Math.min(y0, y); y1 = Math.max(y1, y + 1);
+      }
+    }
+    if (x1 <= x0) return c;
+    const w = x1 - x0;
+    const h = y1 - y0;
+    const k = Math.min((W * DPR) / w, (H * DPR) / h, 2 * DPR);
+    x.drawImage(sp, x0, y0, w, h, (W * DPR - w * k) / 2, H * DPR - h * k, w * k, h * k);
+    return c;
   }
 
   function refreshTerrain() {

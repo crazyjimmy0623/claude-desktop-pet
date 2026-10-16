@@ -1773,36 +1773,91 @@
   // ---- Rendering --------------------------------------------------------------------
 
   // Room canvas in fine pixels: world (0, 0, 0) lands at origin().
-  // Scenery behind the room: two rows of trees (or palms) along the back edges on a strip of ground,
-  // hazed into the distance. It is only painted - nothing walks there and clicks pass through it.
-  const BACKDROPS = { forest: '森林', beach: '海灘椰林' };
-  const backdropOf = (room) => (room.backdrop !== undefined ? room.backdrop : BLUEPRINTS[room.blueprint]?.backdrop) || null;
+  // Scenery behind the room: rows of trees (or palms, bamboo, rocks...) along the back edges on a
+  // strip of ground, hazed into the distance. It is only painted - nothing walks there and clicks
+  // pass through it. A room keeps either a preset's id or its own mix:
+  // { plants: [...], ground, rows: 1-3, density: 0.3-1, seed }.
+  const BACKDROP_PLANTS = {
+    pine: { name: '松樹', weight: 1 },
+    broadleaf: { name: '闊葉樹', weight: 1 },
+    birch: { name: '白樺', weight: 1 },
+    maple: { name: '楓樹', weight: 1 },
+    sakura: { name: '櫻花樹', weight: 1 },
+    palm: { name: '椰子樹', weight: 2 },
+    jungle: { name: '熱帶灌木', weight: 1, low: true },
+    bamboo: { name: '竹子', weight: 1.5 },
+    bush: { name: '灌木叢', weight: 0.7, low: true },
+    rock: { name: '岩石', weight: 0.5, low: true },
+  };
+  const BACKDROP_GROUNDS = { grass: '草地', sand: '沙灘', snow: '雪地', dirt: '泥土', moss: '苔蘚' };
+  const BACKDROP_PRESETS = {
+    forest: { name: '森林', plants: ['pine', 'broadleaf'], ground: 'grass', rows: 2, density: 1 },
+    beach: { name: '海灘椰林', plants: ['palm', 'jungle'], ground: 'sand', rows: 2, density: 1 },
+    bamboo: { name: '竹林', plants: ['bamboo', 'bush'], ground: 'moss', rows: 2, density: 1 },
+    sakura: { name: '櫻花林', plants: ['sakura', 'broadleaf', 'bush'], ground: 'grass', rows: 2, density: 0.85 },
+    autumn: { name: '秋天楓林', plants: ['maple', 'birch'], ground: 'dirt', rows: 2, density: 0.9 },
+    snow: { name: '雪松林', plants: ['pine', 'rock'], ground: 'snow', rows: 3, density: 0.9 },
+  };
+  const BACKDROPS = Object.fromEntries(Object.entries(BACKDROP_PRESETS).map(([id, p]) => [id, p.name]));
+  // The scenery a room shows, as a full mix, or null.
+  function backdropOf(room) {
+    const b = room.backdrop !== undefined ? room.backdrop : BLUEPRINTS[room.blueprint]?.backdrop;
+    if (!b) return null;
+    const base = typeof b === 'string' ? BACKDROP_PRESETS[b] : b;
+    if (!base) return null;
+    const plants = (base.plants || []).filter((k) => BACKDROP_PLANTS[k]);
+    if (!plants.length) return null;
+    return {
+      plants,
+      ground: BACKDROP_GROUNDS[base.ground] ? base.ground : 'grass',
+      rows: Math.max(1, Math.min(3, Math.round(base.rows || 2))),
+      density: Math.max(0.3, Math.min(1, base.density ?? 1)),
+      seed: base.seed || 0,
+      preset: typeof b === 'string' ? b : base.preset || null,
+    };
+  }
+  const rowHeight = (row) => [0, 58, 78, 96][row];
   function backdropItems(room) {
-    const kind = backdropOf(room);
-    if (!BACKDROPS[kind]) return [];
+    const bd = backdropOf(room);
+    if (!bd) return [];
     let mx = 1;
     let my = 1;
     for (const [x, y] of room.tiles) { mx = Math.max(mx, x + 1); my = Math.max(my, y + 1); }
+    const total = bd.plants.reduce((a, k) => a + BACKDROP_PLANTS[k].weight, 0);
+    const pickPlant = (u) => {
+      let acc = 0;
+      for (const k of bd.plants) { acc += BACKDROP_PLANTS[k].weight / total; if (u < acc) return k; }
+      return bd.plants[bd.plants.length - 1];
+    };
+    const sd = bd.seed * 17.31;
     const out = [];
-    for (const row of [2, 1]) {
+    for (let row = bd.rows; row >= 1; row--) {
       for (let k = -row; k < Math.max(mx, my) + 1; k++) {
         for (const [x, y] of [[-row, k], [k, -row]]) {
           if (x === -row && y === -row && k !== -row) continue;
           if ((x >= 0 && x >= mx) || (y >= 0 && y >= my)) continue;
-          const n = hash(x * 3 + row, y * 5 + row * 11);
-          out.push({ x: x + (n - 0.5) * 0.5, y: y + (hash(y, x) - 0.5) * 0.5, gx: x, gy: y, row, n, kind });
+          const n = hash(x * 3 + row + sd, y * 5 + row * 11);
+          const plant = pickPlant(hash(x * 7 + row * 3 + sd, y * 13 - sd));
+          // Thinned out by the density, but the ground stays.
+          const gap = hash(y * 9 + sd, x * 4 + row) > bd.density;
+          out.push({ x: x + (n - 0.5) * 0.5, y: y + (hash(y + sd, x) - 0.5) * 0.5, gx: x, gy: y, row, n, kind: plant, gap });
         }
       }
     }
     return out.sort((a, b) => (a.x + a.y) - (b.x + b.y));
   }
-  function backdropTree(kind, n, row) {
-    const far = row === 2;
-    const h = Math.round((far ? 78 : 58) + n * 34);
+  function backdropTree(kind, n, row, snowy) {
+    const far = row > 1;
+    const fade = (row - 1) * 0.12;
+    const low = BACKDROP_PLANTS[kind]?.low;
+    const h = Math.round((rowHeight(row) + n * 34) * (low ? (kind === 'jungle' ? 0.45 : 0.32) : 1));
     const v = Math.floor(n * 3);
-    return cached(`bd|${kind}|${h}|${v}|${row}`, () => renderSprite(1, 1, h + 12, (P) => {
-      const shade = (c) => (far ? dk(c, 0.18) : c);
-      if (kind === 'beach' && v !== 1) {
+    return cached(`bd|${kind}|${h}|${v}|${row}|${snowy ? 1 : 0}`, () => renderSprite(1, 1, h + 12, (P) => {
+      const shade = (c) => (far ? dk(c, 0.06 + fade) : c);
+      const crown = (h0, parts) => {
+        for (const [x, y, zf, r, c] of parts) P.disc(x, y, h0 * zf, r, shade(c));
+      };
+      if (kind === 'palm') {
         // A palm: ringed trunk leaning out, drooping fronds.
         const lean = 0.02 + n * 0.03;
         for (let i = 0; i < h / 6; i++) P.box(6 + i * i * lean, 6, i * 6, 4, 4, 6, i % 2 ? shade('#a8865a') : shade('#bf9c6c'), false);
@@ -1813,63 +1868,108 @@
         }
         return;
       }
-      if (kind === 'beach') {
-        // Jungle undergrowth between the palms: big glossy leaves.
-        for (let i = 0; i < 9; i++) P.disc(4 + (i * 5) % 9, 4 + (i * 3) % 9, 6 + (i % 4) * 6, 5 - (i % 3), shade(i % 2 ? '#2f7a3a' : '#4f9a4a'));
+      if (kind === 'jungle') {
+        // Jungle undergrowth: big glossy leaves.
+        for (let i = 0; i < 9; i++) P.disc(4 + (i * 5) % 9, 4 + (i * 3) % 9, (6 + (i % 4) * 6) * (h / 30), 5 - (i % 3), shade(i % 2 ? '#2f7a3a' : '#4f9a4a'));
         return;
       }
-      if (v === 0) {
-        // A round broadleaf tree.
-        P.box(6.5, 6.5, 0, 3, 3, h * 0.4, shade('#6e4428'), false);
-        for (const [x, y, zf, r, c] of [[8, 8, 0.5, 11, '#3f7a3a'], [4, 9, 0.62, 8, '#4f8f45'], [12, 6, 0.66, 8, '#4f8f45'], [8, 8, 0.78, 8, '#62a656'], [7, 9, 0.9, 5, '#7cbf6a']]) P.disc(x, y, h * zf, r, shade(c));
+      if (kind === 'bush') {
+        crown(h, [[8, 8, 0.35, 7, '#3f7a3a'], [5, 9, 0.5, 5, '#4f8f45'], [11, 7, 0.55, 5, '#4f8f45'], [8, 8, 0.75, 5, '#62a656'], [7, 9, 0.9, 3, '#7cbf6a']]);
+        if (v === 2) for (const [x, y, zf] of [[5, 11, 0.6], [11, 10, 0.7], [8, 12, 0.85]]) P.disc(x, y, h * zf, 1, shade('#f2d0e0'));
         return;
       }
-      // A pine: tiers of needles narrowing to a point.
+      if (kind === 'rock') {
+        // A mossy boulder.
+        crown(h, [[8, 8, 0.2, 7, '#6e7280'], [6, 9, 0.45, 6, '#858a98'], [10, 7, 0.5, 5, '#7a7e8c'], [7, 8, 0.75, 4, '#9aa0ae']]);
+        P.disc(9, 7, h * 0.9, 2.5, shade('#6f9a52'));
+        return;
+      }
+      if (kind === 'bamboo') {
+        // A clump of stalks with joints, leaves at the tips.
+        for (const [x, y, hk] of [[4, 6, 1], [9, 4, 0.85], [7, 10, 0.92], [12, 9, 0.75]]) {
+          const top = h * hk;
+          for (let zz = 0; zz < top; zz += 7) P.box(x, y, zz, 2, 2, 6, shade(zz % 14 ? '#7fae4a' : '#6a9a3c'), false);
+          for (let zz = 7; zz < top; zz += 7) P.box(x - 0.5, y - 0.5, zz - 1, 3, 3, 1, shade('#a6c86a'), false);
+          for (let k = 0; k < 5; k++) {
+            const a = k * 1.3 + x;
+            P.disc(x + 1 + Math.cos(a) * 3, y + 1 + Math.sin(a) * 2, top - 6 + k * 2.5, 2.2, shade(k % 2 ? '#4f8a3a' : '#6aa64a'));
+          }
+        }
+        return;
+      }
+      if (kind === 'birch') {
+        // A white trunk with dark marks, a light airy crown.
+        for (let zz = 0; zz < h * 0.62; zz += 3) P.box(7, 7, zz, 2, 2, 3, shade((zz / 3) % 4 === 1 ? '#3a3a40' : '#ecebe4'), false);
+        crown(h, [[8, 8, 0.55, 7, '#8aa64a'], [5, 9, 0.66, 5, '#a6bf5a'], [11, 7, 0.7, 5, '#a6bf5a'], [8, 8, 0.82, 5, '#c8d86a'], [8, 8, 0.94, 3, '#e0e08a']]);
+        return;
+      }
+      if (kind === 'broadleaf' || kind === 'maple' || kind === 'sakura') {
+        const C = {
+          broadleaf: ['#3f7a3a', '#4f8f45', '#62a656', '#7cbf6a'],
+          maple: ['#a8402a', '#c85a2a', '#e07a30', '#f0a648'],
+          sakura: ['#d88aa8', '#e8a2bc', '#f4bcd0', '#fcdce6'],
+        }[kind];
+        P.box(6.5, 6.5, 0, 3, 3, h * 0.4, shade(kind === 'sakura' ? '#5a3a3a' : '#6e4428'), false);
+        crown(h, [[8, 8, 0.5, 11, C[0]], [4, 9, 0.62, 8, C[1]], [12, 6, 0.66, 8, C[1]], [8, 8, 0.78, 8, C[2]], [7, 9, 0.9, 5, C[3]]]);
+        return;
+      }
+      // A pine: tiers of needles narrowing to a point, snow on each tier on snowy ground.
       P.box(7, 7, 0, 2, 2, h * 0.22, shade('#5a3a24'), false);
       const z0 = h * 0.18;
       for (let zz = z0; zz < h; zz += 1) {
         const t = (zz - z0) / (h - z0);
         const r = 9 * (1 - t) + ((zz - z0) % 12 < 4 ? 1.6 : 0);
-        P.disc(8, 8, zz, r, shade((zz - z0) % 12 < 4 ? '#2f5a3a' : '#3d6e47'));
-        P.disc(6.5, 8.5, zz, Math.max(0, r - 3), shade('#4a7d52'));
+        const cap = snowy && (zz - z0) % 12 >= 2 && (zz - z0) % 12 < 4;
+        P.disc(8, 8, zz, r, shade(cap ? '#e8eef8' : (zz - z0) % 12 < 4 ? '#2f5a3a' : '#3d6e47'));
+        P.disc(6.5, 8.5, zz, Math.max(0, r - 3), shade(cap ? '#ffffff' : '#4a7d52'));
       }
     }, false));
   }
   // The ground the scenery stands on, one tile at a time.
+  const GROUND_COLORS = {
+    grass: { t: '#4f8a45', l: '#5e3922', r: '#3b2214', fleck: '#6aa857' },
+    sand: { t: '#e2c98e', l: '#c9a46a', r: '#a8844e', fleck: '#f0dcb0' },
+    snow: { t: '#e8eef8', l: '#8a7a6a', r: '#6a5a4a', fleck: '#ffffff' },
+    dirt: { t: '#9a6a3e', l: '#6e4428', r: '#4f2f1a', fleck: '#c8803a' },
+    moss: { t: '#5f8a3a', l: '#4a3a2a', r: '#2f2418', fleck: '#8aae4a' },
+  };
   function backdropGround(kind) {
     return cached(`bdg|${kind}`, () => renderSprite(1, 1, 8, (P) => {
-      const top = kind === 'beach' ? '#e2c98e' : '#4f8a45';
-      P.box(0, 0, -6, TU, TU, 6, { t: top, l: kind === 'beach' ? '#c9a46a' : '#5e3922', r: kind === 'beach' ? '#a8844e' : '#3b2214' }, false);
-      for (let i = 0; i < 5; i++) P.top((i * 7) % 14, (i * 5) % 14, 2, 1, kind === 'beach' ? '#f0dcb0' : '#6aa857', 0);
+      const c = GROUND_COLORS[kind] || GROUND_COLORS.grass;
+      P.box(0, 0, -6, TU, TU, 6, { t: c.t, l: c.l, r: c.r }, false);
+      for (let i = 0; i < 5; i++) P.top((i * 7) % 14, (i * 5) % 14, 2, 1, c.fleck, 0);
     }, false, 8));
   }
+  // A small picture of one plant, for the editor.
+  const backdropThumb = (kind) => backdropTree(kind, 0.5, 1);
   const BACKDROP_CANVAS = { key: '', canvas: null };
   function drawBackdrop(ctx, room, z, weather) {
     const items = backdropItems(room);
     if (!items.length) return;
     const W = ctx.canvas.width;
     const H = ctx.canvas.height;
-    const key = `${layoutOf(room).id}|${backdropOf(room)}|${z}|${W}x${H}|${JSON.stringify(ctx.getTransform())}|${weather || ''}`;
+    const bd = backdropOf(room);
+    const key = `${layoutOf(room).id}|${JSON.stringify(bd)}|${z}|${W}x${H}|${JSON.stringify(ctx.getTransform())}|${weather || ''}`;
     if (BACKDROP_CANVAS.key !== key) {
       const c = makeCanvas(W, H);
       const g = c.getContext('2d');
       g.imageSmoothingEnabled = false;
       g.setTransform(ctx.getTransform());
-      const kind = backdropOf(room);
       const grounds = new Set();
       for (const it of items) {
         const gk = `${it.gx},${it.gy}`;
         if (grounds.has(gk)) continue;
         grounds.add(gk);
-        blit(g, room, backdropGround(kind), it.gx * TU, it.gy * TU, 0, z);
+        blit(g, room, backdropGround(bd.ground), it.gx * TU, it.gy * TU, 0, z);
       }
       // Far row first, hazed further; then the near row.
-      for (const row of [2, 1]) {
-        for (const it of items.filter((t) => t.row === row)) blit(g, room, backdropTree(it.kind, it.n, row), it.x * TU, it.y * TU, 0, z);
+      const haze = { sand: '170,215,230', snow: '215,225,240' }[bd.ground] || '90,120,135';
+      for (let row = bd.rows; row >= 1; row--) {
+        for (const it of items.filter((t) => t.row === row && !t.gap)) blit(g, room, backdropTree(it.kind, it.n, row, bd.ground === 'snow'), it.x * TU, it.y * TU, 0, z);
         g.save();
         g.setTransform(1, 0, 0, 1, 0, 0);
         g.globalCompositeOperation = 'source-atop';
-        g.fillStyle = kind === 'beach' ? `rgba(170,215,230,${row === 2 ? 0.34 : 0.14})` : `rgba(90,120,135,${row === 2 ? 0.34 : 0.14})`;
+        g.fillStyle = `rgba(${haze},${[0, 0.14, 0.24, 0.2][row]})`;
         g.fillRect(0, 0, W, H);
         g.restore();
       }
@@ -1886,7 +1986,7 @@
     let top = 0; let bottom = 0; let left = 0; let right = 0;
     // Room for the scenery behind.
     for (const it of backdropItems(room)) {
-      top = Math.max(top, (it.row === 2 ? 112 : 92) + 12 - ((it.x + it.y) * TU) / 2);
+      top = Math.max(top, rowHeight(it.row) + 34 + 12 - ((it.x + it.y) * TU) / 2);
       left = Math.max(left, (it.y + 1 - it.x) * TU + 8);
       right = Math.max(right, (it.x + 1 - it.y) * TU + 8);
     }
@@ -2911,7 +3011,7 @@
   }
 
   return {
-    TU, SLAB, STEP_Z, LAND, WEATHERS, weatherFor, BACKDROPS, ZONE_KINDS, FLOORS, WALLS, OBJECTS, BLUEPRINTS, migrate, derive,
+    TU, SLAB, STEP_Z, LAND, WEATHERS, weatherFor, BACKDROPS, BACKDROP_PRESETS, BACKDROP_PLANTS, BACKDROP_GROUNDS, backdropOf, backdropThumb, ZONE_KINDS, FLOORS, WALLS, OBJECTS, BLUEPRINTS, migrate, derive,
     pick, addZone, addTile, removeTile, addFlight, removeFlightAt, setZoneZ,
     BLOCKS, pickBlock, blockTarget, placeBlock, removeBlock, stairPlan, placeStairs, placeSpiral, stairSprite, blockSprite,
     size, origin, project, floorZ, levels, cells, resetCells, cellAt, neighbours, door, walkable, footprint, canPlace, stationSpots,
