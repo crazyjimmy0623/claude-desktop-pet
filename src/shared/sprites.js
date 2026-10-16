@@ -49,7 +49,7 @@
       c: { head: '#34373f', headShade: '#25272e', body: '#34373f', bodyShade: '#25272e', plate: '#4a4e59', face: '#16171c', glow: '#d8f1ff',
         leg: '#2c2e36', boot: '#1b1c22', hand: '#4a4e59' } },
     platypus: { head: 'platypus', body: 'fur', item: 'none', tail: 'flat',
-      c: { body: '#9a6a45', bodyShade: '#7c5236', belly: '#e8c9a0', bill: '#55606c', billDark: '#3a434d', leg: '#9a6a45', boot: '#55606c', hand: '#e8c9a0' } },
+      c: { body: '#f4f2ee', bodyShade: '#d6d2cc', belly: '#ffffff', bill: '#9aa0aa', billDark: '#767c88', leg: '#f4f2ee', boot: '#9aa0aa', hand: '#ffffff' } },
     whitecat: { head: 'cat', body: 'fur', item: 'none', tail: true,
       c: { body: '#f3f1ec', bodyShade: '#d3cfc7', belly: '#ffffff', leg: '#f3f1ec', boot: '#d3cfc7', hand: '#ffffff' } },
     astronaut: { head: 'astronaut', body: 'suit', item: 'none', backpack: true,
@@ -130,10 +130,10 @@
     '..KKkkkkkkkkkkkkkkkkkk..',
     '....KKKKKKKKKKKKKKKK....',
   ];
-  // The knight's closed helm, exactly the original: T visor, shine top-left, no eyes.
+  // The knight's closed helm from the original: square top, notched chin, T visor, shine top-left, no eyes.
   const HELM = [
-    '..WWWWWWWWWWWWWWWWWWWW..',
-    '..WWWWWWWWWWWWWWWWWWWW..',
+    'WWWWWWWWWWWWWWWWWWWWWWWW',
+    'WWWWWWWWWWWWWWWWWWWWWWWW',
     'WWWWHHHHWWWWWWWWWWWWWWWW',
     'WWWWHHHHWWWWWWWWWWWWWWWW',
     'WWHHWWWWWWWWWWWWWWWWWWWW',
@@ -242,128 +242,38 @@
   const EAR_L = ['.a...', '.aa..', '.apa.', 'aappa'];
   const EAR_R = ['...a.', '..aa.', '.apa.', 'appaa'];
 
-  // --- Torsos (14x11) at box (7, 19).
-  const TORSO = {
-    armor: [
-      '..AAaaaaaaaa..',
-      '.AAabbbbbbbaa.',
-      'AAAbb+bbbbbbaa',
-      'AAAbbbbbbbbBaa',
-      'AAAbbbbbbbbBaa',
-      'AAAABbbbbbBBaa',
-      'AAAAaBBBBBBaaa',
-      'dddddddtdddddd',
-      'AAAaaaaaaaaaaa',
-      'AAAaaaaAaaaaaa',
-      'AAAaaaaAaaaaaa',
-    ],
-    shirt: [
-      '..AAaaaaaaaa..',
-      '.AAaaaaccaaaa.',
-      'AAAaaaaccaaaaa',
-      'AAAaaaaccaaaaa',
-      'AAAaaaaccaaaaa',
-      'AAAaaaaccaaaaa',
-      'AAAaaaaCCaaaaa',
-      'AAAaaaaaaaaaaa',
-      'dddddddddtdddd',
-      'LLLlllllllllll',
-      'LLLllllLllllll',
-    ],
-    labcoat: [
-      '..AAaaaaaaaa..',
-      '.AAaaaccccaaa.',
-      'AAAaaaccccaaaa',
-      'AAAaaAccccAaaa',
-      'AAAaaAccccAapa',
-      'AAAaaAccccAapa',
-      'AAAaaAccccAaaa',
-      'AAAaaACCCCAaaa',
-      'AAAaaAllllAaaa',
-      'AAAaaAllllAaaa',
-      'AAAaaALLLLAaaa',
-      'AAAaa.....aaaa',
-      'AAAa........aa',
-    ],
-    fur: [
-      '..AAaaaaaaaa..',
-      '.AAccccccccca.',
-      'AAAaaaaggaaaaa',
-      'AAAaabbbbbbaaa',
-      'AAAabbbbbbbbaa',
-      'AAAabbbbbbbbaa',
-      'AAAabbbbbbbbaa',
-      'AAAaabbbbbbaaa',
-      'AAAaaaaaaaaaaa',
-      'AAAaaaaaaaaaaa',
-      'AAAaaaaAaaaaaa',
-    ],
-    metal: [
-      '..AAaaaaaaaa..',
-      '.AAaaaaaaaaaa.',
-      'AAAassssssssaa',
-      'AAAasxsysz.saa',
-      'AAAassssssssaa',
-      'AAAaaaaaaaaaaa',
-      'AAAaAAAAAAAAaa',
-      'AAAaaaaaaaaaaa',
-      'AAAaAAAAAAAAaa',
-      'AAAaaaaaaaaaaa',
-      'AAAaaaaAaaaaaa',
-    ],
-    mech: [
-      '..AAaaaaaaaa..',
-      '.AAabbbbbbbaa.',
-      'AAAbbbffffbbaa',
-      'AAAbbfeeeefbaa',
-      'AAAbbfeEEefbaa',
-      'AAAbbfeeeefbaa',
-      'AAAbbbffffbbaa',
-      'AAAAbbbbbbbbaa',
-      'AAAffffffffffa',
-      'AAAaafaafaafaa',
-      'AAAaaaaAaaaaaa',
-    ],
-    gi: [
-      '..AAaaaaaaaa..',
-      '.AAabaaaabaaa.',
-      'AAAaabaabaaaaa',
-      'AAAaaabbaaaaaa',
-      'AAAaaabbaaaaaa',
-      'AAAaabaabaaaaa',
-      'AAAabaaaabaaaa',
-      'ccccccccCCcccc',
-      'AAAaaaaaCaaaaa',
-      'AAAaaaaaCaaaaa',
-      'AAAaaaaAaaaaaa',
-    ],
-    apron: [
-      '..AAaaaaaaaa..',
-      '.AAaaaaaaaaaa.',
-      'AAAacaaaaacaaa',
-      'AAAacaaaaacaaa',
-      'AAAaccccccccaa',
-      'AAAaccccccccaa',
-      'AAAaccCCCcccaa',
-      'AAAaccccccccaa',
-      'AAAaccccccccaa',
-      'lllLccccccccll',
-      'LLLlCCCCCCCCll',
-    ],
-    suit: [
-      '..AAaaaaaaaa..',
-      '.AAaaaaaaaaaa.',
-      'AAAaaaaaaaaaaa',
-      'AAAaccasssssaa',
-      'AAAaccasxsysaa',
-      'AAAaaaasssssaa',
-      'AAAaaaaaaaaaaa',
-      'tttttttttttttt',
-      'AAAaaaaaaaaaaa',
-      'AAAaaaaaaaaaaa',
-      'AAAaaaaAaaaaaa',
-    ],
+  // --- Torsos (16x12) at box (6, 19): narrow shoulders, round tummy and hips, like a small child.
+  const TORSO_SHAPE = [
+    '...xxxxxxxxxx...',
+    '..xxxxxxxxxxxx..',
+    '.xxxxxxxxxxxxxx.',
+    ...Array(8).fill('xxxxxxxxxxxxxxxx'),
+    '.xxxxxxxxxxxxxx.',
+  ];
+  // Outfit details as [x, y, w, h, letter] over a body of 'a'; the back three columns fall into shadow.
+  const OUTFIT = {
+    armor: [[4, 1, 9, 6, 'b'], [5, 2, 2, 1, '+'], [11, 2, 1, 5, 'B'], [4, 6, 9, 1, 'B'], [8, 2, 1, 4, 'B'], [0, 7, 16, 2, 'd'], [8, 7, 2, 2, 't'], [6, 9, 1, 3, 'A'], [11, 9, 1, 3, 'A']],
+    shirt: [[8, 1, 2, 6, 'c'], [8, 6, 2, 1, 'C'], [5, 1, 2, 1, 'A'], [11, 1, 2, 1, 'A'], [0, 8, 16, 1, 'd'], [11, 8, 2, 1, 't'], [0, 9, 16, 3, 'l'], [8, 10, 1, 2, 'L']],
+    labcoat: [[6, 1, 4, 8, 'c'], [6, 8, 4, 1, 'C'], [5, 2, 1, 10, 'A'], [10, 2, 1, 10, 'A'], [12, 4, 1, 3, 'p'], [6, 9, 4, 3, 'l']],
+    fur: [[2, 1, 12, 1, 'c'], [7, 2, 2, 1, 'g'], [5, 3, 7, 7, 'b'], [4, 4, 9, 5, 'b']],
+    metal: [[3, 2, 10, 4, 's'], [4, 3, 1, 1, 'x'], [6, 3, 1, 1, 'y'], [8, 3, 1, 1, 'z'], [3, 7, 10, 1, 'A'], [3, 9, 10, 1, 'A']],
+    mech: [[3, 1, 10, 7, 'b'], [5, 2, 6, 5, 'f'], [6, 3, 4, 3, 'e'], [7, 4, 2, 1, 'E'], [2, 9, 12, 1, 'f'], [4, 10, 1, 1, 'f'], [8, 10, 1, 1, 'f'], [12, 10, 1, 1, 'f']],
+    gi: [[5, 1, 1, 2, 'b'], [6, 2, 1, 2, 'b'], [7, 3, 2, 2, 'b'], [10, 1, 1, 2, 'b'], [9, 2, 1, 2, 'b'], [0, 7, 16, 2, 'c'], [10, 7, 2, 2, 'C'], [10, 9, 1, 3, 'C']],
+    apron: [[4, 1, 1, 3, 'c'], [11, 1, 1, 3, 'c'], [3, 4, 10, 8, 'c'], [6, 6, 4, 2, 'C'], [3, 4, 10, 1, 'C']],
+    suit: [[3, 3, 2, 2, 'c'], [7, 3, 5, 3, 's'], [8, 4, 1, 1, 'x'], [10, 4, 1, 1, 'y'], [0, 7, 16, 1, 't'], [6, 9, 1, 3, 'A']],
   };
+  const torsoCache = new Map();
+  function torsoRows(body) {
+    if (torsoCache.has(body)) return torsoCache.get(body);
+    const g = TORSO_SHAPE.map((r) => [...r].map((ch) => (ch === 'x' ? 'a' : '.')));
+    for (const [x, y, w, h, ch] of OUTFIT[body] || OUTFIT.shirt) {
+      for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (g[j]?.[i] && g[j][i] !== '.') g[j][i] = ch;
+    }
+    for (const row of g) for (let i = 0; i < 3; i++) if (/[a-z]/.test(row[i])) row[i] = row[i].toUpperCase();
+    const rows = g.map((r) => r.join(''));
+    torsoCache.set(body, rows);
+    return rows;
+  }
 
   function buildBody(skinId, pose, step, col, opts, ox, oy) {
     const sk = SKINS[skinId] || SKINS.commander;
@@ -402,23 +312,23 @@
 
     // --- Back arm.
     const backSwing = pose === 'walk' ? -WALK_ARM[step % 4] : 0;
-    if (armsUp) g([[0, 9, 3, 11, c.bodyShade], [0, 6, 3, 3, dark(c.hand)]]);
-    else g([[4 + backSwing, 20 + B, 3, 5, c.bodyShade], [4 + backSwing, 25 + B, 3, 3, dark(c.hand)]]);
+    if (armsUp) g([[0, 9, 3, 11, c.bodyShade], [-1, 5, 4, 4, dark(c.hand)]]);
+    else g([[3 + backSwing, 20 + B, 3, 6, c.bodyShade], [2 + backSwing, 25 + B, 4, 4, dark(c.hand)]]);
 
     // --- Legs: back leg in shadow, walk is a 4-step cycle with the lifted foot on passing steps.
     const legPal = (back) => (back ? { l: dark(c.leg), L: dark(dark(c.leg)), s: dark(c.boot), S: dark(dark(c.boot)) } : { l: c.leg, L: dark(c.leg), s: c.boot, S: dark(c.boot) });
-    const leg = (x, lift, back) => L([...Array(4 - lift).fill('lllL'), 'sssss', 'SSSSS'], legPal(back), x, 30);
+    const leg = (x, lift, back) => L([...Array(3 - lift).fill('llllL'), 'ssssss', 'SSSSSS'], legPal(back), x, 31);
     if (sleeping) {
       L(['llllllllllL', 'llllllllllLsss', 'LLLLLLLLLLLsss', '...........SSS'], legPal(false), 8, 32);
     } else if (pose === 'walk') {
-      const [bx, bl, fx, fl] = [[6, 0, 17, 0], [9, 2, 14, 0], [16, 0, 7, 0], [13, 0, 10, 2]][step % 4];
+      const [bx, bl, fx, fl] = [[6, 0, 16, 0], [9, 1, 13, 0], [15, 0, 7, 0], [12, 0, 10, 1]][step % 4];
       leg(bx, bl, true);
       leg(fx, fl, false);
     } else if (pose === 'dangle') {
-      L(['lllL', 'lllL', 'lllL', 'lllL', 'ssss', 'SSSS'], legPal(true), 9, 30);
-      L(['lllL', 'lllL', 'lllL', 'lllL', 'ssss', 'SSSS'], legPal(false), 15, 30);
+      L(['llllL', 'llllL', 'llllL', 'sssss', 'SSSSS'], legPal(true), 8, 31);
+      L(['llllL', 'llllL', 'llllL', 'sssss', 'SSSSS'], legPal(false), 15, 31);
     } else {
-      leg(8, 0, true);
+      leg(7, 0, true);
       leg(15, 0, false);
     }
 
@@ -430,7 +340,7 @@
     };
     tp.B = dark(tp.b);
     tp['+'] = lite(tp.b);
-    L(TORSO[sk.body] || TORSO.shirt, tp, 7, 19 + B);
+    L(torsoRows(sk.body), tp, 6, 19 + B);
 
     // --- Head.
     const H = B;
@@ -463,7 +373,9 @@
       }
       case 'platypus':
         L(FACE, { k: c.body, K: c.bodyShade }, 2, 1 + H);
-        g([], [...eyeDots(PAL.eye, [[10, 9], [18, 9]]), [6, 11 + H, 3, 2, PAL.blush], [9, 3 + H, 1, 2, c.bodyShade], [12, 2 + H, 1, 3, c.bodyShade], [5, 3 + H, 6, 1, lite(c.body)]]);
+        // Happy closed eyes, little arches.
+        g([], [...[[10, 9], [18, 9]].flatMap(([x, y]) => [[x - 1, y + 1 + H, 1, 1, PAL.eye], [x, y + H, 2, 1, PAL.eye], [x + 2, y + 1 + H, 1, 1, PAL.eye]]),
+          [6, 11 + H, 3, 2, PAL.blush], [5, 3 + H, 6, 1, lite(c.body)]]);
         L(BILL, { b: c.bill, B: c.billDark }, 19, 10 + H);
         g([], [[21, 10 + H, 5, 1, lite(c.bill)], [24, 11 + H, 1, 1, c.billDark], [26, 11 + H, 1, 1, c.billDark]]);
         break;
@@ -508,26 +420,26 @@
     const note = (x, y, color) => g([], [[x, y, 1, 6, color], [x + 1, y, 2, 1, color], [x + 2, y + 1, 1, 1, color], [x - 3, y + 5, 3, 2, color]]);
     switch (pose) {
       case 'done':
-        arm([25, 9, 3, 11], [25, 6, 3, 3]);
+        arm([24, 9, 3, 11], [24, 5, 4, 4]);
         sparks(frame ? [[16, -10, PAL.shine], [26, -6, PAL.spark], [-2, -2, PAL.spark], [28, -12, PAL.spark]]
           : [[18, -6, PAL.spark], [27, -11, PAL.shine], [0, -9, PAL.spark], [-3, 0, PAL.shine]]);
         break;
       case 'dangle':
-        arm([25, 9, 3, 11], [25, 6, 3, 3]);
+        arm([24, 9, 3, 11], [24, 5, 4, 4]);
         break;
       case 'wait':
-        arm([25, 11, 3, 9], [25 + frame, 8, 3, 3]);
+        arm([24, 11, 3, 9], [24 + frame, 7, 4, 4]);
         g([], frame ? [[30, 7, 2, 1, HL2], [30, 11, 2, 1, HL2]] : [[22, 7, 2, 1, HL2], [22, 11, 2, 1, HL2]]);
         break;
       case 'type': case 'command': case 'paint':
-        arm([19, 21 + B, 6, 3], [25, 21 + B + (pose === 'type' ? frame : pose === 'command' ? -frame * 2 : 0), 3, 3]);
+        arm([20, 21 + B, 6, 3], [25, 20 + B + (pose === 'type' ? frame : pose === 'command' ? -frame * 2 : 0), 4, 4]);
         break;
       case 'game':
-        arm([19, 22 + B, 3, 3], [19, 25 + B, 3, 2]);
+        arm([20, 22 + B, 3, 3], [19, 25 + B, 4, 3]);
         g([[13, 24 + B, 13, 5, '#3a3f4c'], [13, 28 + B, 3, 3, '#3a3f4c'], [23, 28 + B, 3, 3, '#3a3f4c']], [[15, 26 + B, 3, 1, '#c9ced8'], [16, 25 + B, 1, 3, '#c9ced8'], [21, 25 + B, 2, 2, '#5aa7ff'], [23, 27 + B, 2, 2, '#ffd65a'], [13, 24 + B, 13, 1, HL], [18, 26 + B - frame, 3, 2, c.hand]]);
         break;
       case 'read': {
-        arm([19, 22 + B, 3, 4], [19, 26 + B, 3, 2]);
+        arm([20, 22 + B, 3, 4], [19, 26 + B, 4, 3]);
         const lines = [];
         for (let i = 0; i < 4; i++) {
           lines.push([15, 23 + i * 2 + B, i === 3 ? 2 : 4, 1, PAL.ink]);
@@ -537,39 +449,39 @@
         break;
       }
       case 'dance':
-        if (frame) arm([25, 9, 3, 11], [25, 6, 3, 3]); else arm([19, 20 + B, 3, 5], [19, 25 + B, 3, 3]);
+        if (frame) arm([24, 9, 3, 11], [24, 5, 4, 4]); else arm([21, 20 + B, 3, 6], [21, 25 + B, 4, 4]);
         note(frame ? 27 : -2, frame ? -8 : -10, col.main);
         break;
       case 'sleep':
-        arm([19, 21 + B, 3, 4], [19, 25 + B, 3, 2]);
+        arm([21, 21 + B, 3, 4], [21, 25 + B, 4, 3]);
         break;
       default: { // rest / walk, holding the signature item
         const sw = pose === 'walk' ? WALK_ARM[step % 4] : 0;
-        const hx = 19 + (sk.item === 'none' ? sw : 0);
+        const hx = 21 + (sk.item === 'none' ? sw : 0);
         const y = B;
         switch (sk.item) {
           case 'mug':
-            g([[21, 22 + y, 5, 5, '#ffffff'], [26, 23 + y, 1, 3, '#ffffff']], [[21, 22 + y, 5, 1, '#8a5a30'], [21, 25 + y, 5, 1, col.main], [25, 23 + y, 1, 4, '#d9dde6']]);
-            if (frame) g([], [[22, 18 + y, 1, 2, '#e6e9f0'], [24, 17 + y, 1, 2, '#e6e9f0']]);
+            g([[23, 23 + y, 5, 5, '#ffffff'], [28, 24 + y, 1, 3, '#ffffff']], [[23, 23 + y, 5, 1, '#8a5a30'], [23, 26 + y, 5, 1, col.main], [27, 24 + y, 1, 4, '#d9dde6']]);
+            if (frame) g([], [[24, 19 + y, 1, 2, '#e6e9f0'], [26, 18 + y, 1, 2, '#e6e9f0']]);
             break;
           case 'flask':
-            g([[22, 17 + y, 2, 3, '#dceff8'], [21, 20 + y, 4, 2, '#dceff8'], [20, 22 + y, 6, 4, '#dceff8']], [[21, 22 + y, 4, 4, '#3dffb0'], [21, 22 + y, 1, 1, HL2], [23, 15 + y - frame, 1, 1, PAL.shine]]);
+            g([[24, 18 + y, 2, 3, '#dceff8'], [23, 21 + y, 4, 2, '#dceff8'], [22, 23 + y, 6, 4, '#dceff8']], [[23, 23 + y, 4, 4, '#3dffb0'], [23, 23 + y, 1, 1, HL2], [25, 16 + y - frame, 1, 1, PAL.shine]]);
             break;
           case 'wrench':
-            g([[22, 14 + y, 2, 11, PAL.steel], [21, 12 + y, 4, 3, PAL.steel]], [[22, 12 + y, 2, 1, '#5a6270'], [22, 15 + y, 1, 9, HL2]]);
+            g([[24, 15 + y, 2, 11, PAL.steel], [23, 13 + y, 4, 3, PAL.steel]], [[24, 13 + y, 2, 1, '#5a6270'], [24, 16 + y, 1, 9, HL2]]);
             break;
           case 'kunai':
-            g([[22, 17 + y, 1, 7, '#c9d1dc'], [22, 24 + y, 1, 3, PAL.grip]], [[22, 18 + y, 1, 4, HL2]]);
+            g([[24, 18 + y, 1, 7, '#c9d1dc'], [24, 25 + y, 1, 3, PAL.grip]], [[24, 19 + y, 1, 4, HL2]]);
             break;
           case 'ladle':
-            g([[22, 12 + y, 1, 13, PAL.steel], [21, 10 + y, 3, 3, PAL.steel]], [[21, 10 + y, 1, 1, HL2]]);
+            g([[24, 13 + y, 1, 13, PAL.steel], [23, 11 + y, 3, 3, PAL.steel]], [[23, 11 + y, 1, 1, HL2]]);
             break;
         }
-        arm([hx, 20 + B, 3, 5], [hx, 25 + B, 3, 3]);
+        arm([hx, 20 + B, 3, 6], [hx, 25 + B, 4, 4]);
       }
     }
-    if (sk.body === 'armor') g([[18, 19 + B, 6, 3, c.plate]], [[18, 19 + B, 6, 1, lite(c.plate)], [18, 21 + B, 6, 1, c.trim]]);
-    if (sk.spikes) g([[18, 19 + B, 6, 3, c.plate], [20, 16 + B, 2, 3, c.plate]], [[18, 21 + B, 6, 1, c.face]]);
+    if (sk.body === 'armor') g([[19, 19 + B, 6, 3, c.plate]], [[19, 19 + B, 6, 1, lite(c.plate)], [19, 21 + B, 6, 1, c.trim]]);
+    if (sk.spikes) g([[19, 19 + B, 6, 3, c.plate], [21, 16 + B, 2, 3, c.plate]], [[19, 21 + B, 6, 1, c.face]]);
 
     // --- Accessory on top of everything.
     const A = H;

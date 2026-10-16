@@ -10,11 +10,12 @@ const STARTER_ITEMS = ITEMS.filter((i) => i.rarity === 'starter').map((i) => i.i
 const DEFAULTS = {
   settings: {
     mode: 'strip', // strip | room
-    layoutVersion: 6,
+    layoutVersion: 7,
     alwaysOnTop: true,
     hideInFullscreen: true,
     scale: 3,
     roomZoom: 2,
+    roomPos: null, // { right, bottom } of the floating room window
     sources: { claude: true, activity: true },
     userName: '你',
     idleMinutes: 5,
@@ -107,8 +108,12 @@ class Store extends EventEmitter {
       s.layoutVersion = 6;
       if (s.characters.ai?.skin === 'auto') s.characters.ai.skin = 'droid';
     }
-    // Rooms from before themes existed switch to the cyberpunk look once.
-    if (this.data.room && !this.data.room.theme) Object.assign(this.data.room, { theme: 'cyber', wall: 'cyber', floor: 'cyber' });
+    // v7 replaces the long flat room with the isometric diorama.
+    if ((raw.settings?.layoutVersion || 0) < 7) {
+      s.layoutVersion = 7;
+      this.data.room = null;
+      s.roomZoom = 2;
+    }
     this.saveTimer = null;
   }
 

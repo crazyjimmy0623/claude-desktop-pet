@@ -491,6 +491,8 @@ function applySettings(s) {
 document.querySelectorAll('#dock button').forEach((b) => b.addEventListener('click', () => {
   const action = b.dataset.action;
   if (action === 'room') desk.invoke('settings:set', { mode: 'room' });
+  else if (action === 'focus') desk.invoke('focus:toggle');
+  else if (action === 'quit') desk.invoke('app:quit');
   else desk.invoke('window:open', action);
 }));
 

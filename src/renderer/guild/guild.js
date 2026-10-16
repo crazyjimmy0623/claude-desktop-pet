@@ -1,4 +1,4 @@
-/* global desk, Catalog, Sprites, Furniture, Common */
+/* global desk, Catalog, Sprites, Iso, Common */
 const $ = (id) => document.getElementById(id);
 const DPR = window.devicePixelRatio || 1;
 // Even device-pixel units so the 2x fine art grid lands on whole pixels.
@@ -42,20 +42,31 @@ function itemPreview(id, size = 2) {
     return canvasOf((Sprites.W * u) / DPR, (Sprites.H * u) / DPR, (x) => Sprites.drawCharacterAt(x, u, 0, 0, 'office', 'rest', 0, col, 1, { accessory: key }));
   }
   if (type === 'floor') {
+    const f = Iso.FLOORS[key];
     return canvasOf(32 * size / 2, 32 * size / 2, (x) => {
-      for (let i = 0; i < 4; i++) Furniture.drawFloorTile(x, (size / 2) * DPR, i % 2, Math.floor(i / 2), key);
+      const s = (size / 2) * DPR;
+      x.fillStyle = f?.base || '#888';
+      x.beginPath();
+      x.moveTo(16 * s, 6 * s); x.lineTo(31 * s, 14 * s); x.lineTo(16 * s, 22 * s); x.lineTo(1 * s, 14 * s);
+      x.fill();
     });
   }
   if (type === 'wall') {
-    return canvasOf(32 * size / 2, 32 * size / 2, (x) => Furniture.drawWall(x, (size / 3) * DPR, { wall: key, w: 3, wallRows: 3 }));
+    const w = Iso.WALLS[key];
+    return canvasOf(32 * size / 2, 32 * size / 2, (x) => {
+      const s = (size / 2) * DPR;
+      x.fillStyle = w?.base || '#888';
+      x.fillRect(4 * s, 3 * s, 24 * s, 24 * s);
+      x.fillStyle = w?.trim || '#444';
+      x.fillRect(4 * s, 23 * s, 24 * s, 4 * s);
+    });
   }
   if (type === 'obj') {
-    const def = Furniture.OBJECTS[key];
-    const s = Math.min(2, 64 / (def.w * 16));
-    const top = def.wall ? 0 : 20;
-    return canvasOf(def.w * 16 * s, (def.h * 16 + top) * s, (x) => {
-      x.translate(0, top * s * DPR);
-      Furniture.drawObject(x, even(s), { type: key, x: 0, y: 0 }, { frame: 0, active: true, now: Date.now(), hour: 12, meeting: true });
+    const sp = Iso.objectSprite(key, false, { frame: 0, active: true, now: Date.now(), hour: 12, meeting: true });
+    const s = Math.max(1, Math.min(2, Math.floor(80 / sp.canvas.width)));
+    return canvasOf((sp.canvas.width * s) / DPR, (sp.canvas.height * s) / DPR, (x) => {
+      x.imageSmoothingEnabled = false;
+      x.drawImage(sp.canvas, 0, 0, sp.canvas.width * s, sp.canvas.height * s);
     });
   }
   return canvasOf(32, 32, () => {});
@@ -282,10 +293,10 @@ function renderShare() {
   const floorY = 470;
   ctx.save();
   for (let x = 40; x < 560; x += 32) {
-    ctx.save();
-    ctx.translate(x, floorY);
-    Furniture.drawFloorTile(ctx, 2, 0, 0, 'wood');
-    ctx.restore();
+    ctx.fillStyle = (x / 32) % 2 ? '#8a5a38' : '#94613c';
+    ctx.fillRect(x, floorY, 32, 32);
+    ctx.fillStyle = '#6e4428';
+    ctx.fillRect(x, floorY + 15, 32, 2);
   }
   ctx.restore();
   const crew = [];

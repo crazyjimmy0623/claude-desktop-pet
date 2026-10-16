@@ -1,5 +1,5 @@
 // All Deskmates windows: the taskbar strip, the room, settings and the guild book.
-const { BrowserWindow, screen } = require('electron');
+const { app, BrowserWindow, screen } = require('electron');
 const { buildIcon } = require('./icon');
 const path = require('path');
 
@@ -31,7 +31,7 @@ class Windows {
   }
 
   all() {
-    return [this.strip, this.room, this.settings, this.guild, this.hub].filter((w) => w && !w.isDestroyed());
+    return [this.strip, this.room, this.settings, this.guild].filter((w) => w && !w.isDestroyed());
   }
 
   broadcast(channel, data) {
@@ -53,8 +53,29 @@ class Windows {
 
   close(name) {
     const w = this[name];
-    if (w && !w.isDestroyed()) w.close();
     this[name] = null;
+    if (w && !w.isDestroyed()) w.destroy();
+  }
+
+  // The strip or room is the app's taskbar window: clicking the taskbar button brings it up,
+  // closing it from the taskbar quits.
+  overlayWindow(opts) {
+    const w = new BrowserWindow({
+      show: false, transparent: true, backgroundColor: '#00000000', frame: false, resizable: false, movable: false,
+      minimizable: true, maximizable: false, fullscreenable: false, hasShadow: false, alwaysOnTop: this.store.settings.alwaysOnTop,
+      title: 'Deskmates', icon: buildIcon(4), webPreferences: { preload: PRELOAD }, ...opts,
+    });
+    w.on('close', () => { if (this.strip === w || this.room === w) app.quit(); });
+    return w;
+  }
+
+  bringUp() {
+    this.setHidden(false);
+    const w = this.overlays[0];
+    if (!w) return;
+    if (w.isMinimized()) w.restore();
+    w.show();
+    w.moveTop();
   }
 
   get overlays() {
@@ -110,11 +131,7 @@ class Windows {
 
   openStrip() {
     if (this.strip && !this.strip.isDestroyed()) return;
-    const w = new BrowserWindow({
-      show: false, transparent: true, backgroundColor: '#00000000', frame: false, resizable: false, movable: false,
-      minimizable: false, maximizable: false, skipTaskbar: true, hasShadow: false, focusable: false, alwaysOnTop: true,
-      webPreferences: { preload: PRELOAD },
-    });
+    const w = this.overlayWindow();
     this.strip = w;
     wireDebug(w, 'strip');
     this.placeStrip();
@@ -127,24 +144,45 @@ class Windows {
 
   // ---- Room -----------------------------------------------------------------
 
-  // The room is docked above the taskbar like the strip; its height comes from the renderer.
+  // The room floats above the taskbar, bottom right unless the user dragged it somewhere.
+  // Its size comes from the renderer; the bottom-right corner stays put when it grows.
   placeRoom() {
     if (!this.room || this.room.isDestroyed()) return;
-    const { workArea } = screen.getPrimaryDisplay();
-    const height = this.roomHeight || 256;
-    this.room.setBounds({ x: workArea.x, y: workArea.y + workArea.height - height, width: workArea.width, height });
+    const width = this.roomWidth || 680;
+    const height = this.roomHeight || 560;
+    const pos = this.store.settings.roomPos;
+    const area = pos ? screen.getDisplayNearestPoint({ x: pos.right, y: pos.bottom }).workArea : screen.getPrimaryDisplay().workArea;
+    const right = pos ? Math.min(pos.right, area.x + area.width) : area.x + area.width - 8;
+    const bottom = pos ? Math.min(pos.bottom, area.y + area.height) : area.y + area.height;
+    this.room.setBounds({ x: Math.max(area.x, right - width), y: Math.max(area.y, bottom - height), width, height });
+  }
+
+  // Drag the room window with the cursor until the renderer reports the mouse is up.
+  dragRoom(on) {
+    clearInterval(this.dragTimer);
+    if (!this.room || this.room.isDestroyed()) return;
+    if (!on) {
+      const b = this.room.getBounds();
+      this.store.updateSettings({ roomPos: { right: b.x + b.width, bottom: b.y + b.height } });
+      return;
+    }
+    const start = screen.getCursorScreenPoint();
+    const b0 = this.room.getBounds();
+    this.dragTimer = setInterval(() => {
+      if (!this.room || this.room.isDestroyed()) return clearInterval(this.dragTimer);
+      const p = screen.getCursorScreenPoint();
+      this.room.setBounds({ ...b0, x: b0.x + p.x - start.x, y: b0.y + p.y - start.y });
+    }, 16);
   }
 
   openRoom() {
     if (this.room && !this.room.isDestroyed()) return;
-    const w = new BrowserWindow({
-      show: false, transparent: true, backgroundColor: '#00000000', frame: false, resizable: false, movable: false,
-      minimizable: false, maximizable: false, skipTaskbar: true, hasShadow: false, focusable: false, alwaysOnTop: true,
-      webPreferences: { preload: PRELOAD },
-    });
+    const w = this.overlayWindow();
     this.room = w;
     wireDebug(w, 'room');
     this.placeRoom();
+    // Clicks pass through the empty corners around the diorama (the renderer flips this on hover).
+    w.setIgnoreMouseEvents(true, { forward: true });
     w.loadFile(page('room', 'index.html'));
     w.once('ready-to-show', () => this.shouldShow() && w.showInactive());
     w.on('closed', () => { if (this.room === w) this.room = null; });
@@ -160,9 +198,10 @@ class Windows {
     }
   }
 
-  resizeRoom(_width, height) {
-    if (DEBUG) console.log(`[deskmates] room height ${height}`);
-    this.roomHeight = Math.round(height);
+  resizeRoom(width, height) {
+    if (DEBUG) console.log(`[deskmates] room ${width}x${height}`);
+    this.roomWidth = Math.ceil(width);
+    this.roomHeight = Math.ceil(height);
     this.placeRoom();
   }
 

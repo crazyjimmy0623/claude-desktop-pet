@@ -4,7 +4,7 @@ body{margin:0;background:#3b4a5a;font:11px sans-serif;color:#fff}
 canvas{image-rendering:pixelated}
 </style></head><body><canvas id="c"></canvas>
 <script src="../../src/shared/sprites.js"></script>
-<script src="../../src/shared/furniture.js" onerror="window.NoFurniture=true"></script>
+<script src="../../src/shared/iso.js"></script>
 <script>
 const mode = new URLSearchParams(location.search).get('mode') || 'chars';
 const c = document.getElementById('c'); const ctx = c.getContext('2d');
@@ -66,8 +66,8 @@ if (mode === 'chars') {
 } else if (mode === 'fx') {
   c.width = 700; c.height = 140; ctx.fillStyle = '#3b4a5a'; ctx.fillRect(0,0,c.width,c.height);
   let x = 10; for (const k of Object.keys(Sprites.FX)) for (let f = 0; f < 2; f++) { Sprites.drawFxAt(ctx, 4, x, 20, k, f); x += Sprites.FX[k].w * 4 + 16; }
-} else if (mode === 'room' && window.Furniture) {
-  Furniture.preview(c);
+} else if (mode === 'iso') {
+  Iso.preview(c, 2);
 }
 document.title = 'ready';
 </script></body></html>

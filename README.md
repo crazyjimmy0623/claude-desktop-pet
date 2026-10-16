@@ -7,7 +7,7 @@
 ## 兩種模式
 
 - **工作列**：角色直接站在工作列上，可以拖、可以甩，點一下看資訊、雙擊摸頭
-- **房間**：一間貼著工作列、橫跨整個螢幕的小辦公室（16px 地磚，小人跟工作列上的角色是同一套圖）。角色會走到對應的家具：寫程式去電腦桌、下指令去伺服器、讀檔去書櫃、開 subagent 去會議桌、等批准去按櫃台鈴、閒置去沙發
+- **房間**：一間浮在桌面右下角的等角小屋（可以拖到別處）：兩面牆、二樓夾層和樓梯。角色會走到對應的家具，也會上下樓：寫程式去電腦桌、下指令去伺服器、讀檔去書櫃、開 subagent 去會議桌、等批准去按櫃台鈴、閒置去床或沙發
 
 兩邊都有按鈕可以互相切換（工作列右下角的小工具列、房間右上角的工具列）。
 
@@ -46,7 +46,7 @@ npm install
 npm start              # 啟動
 npm run demo           # 播放示範
 npm run install-hooks  # 安裝 Claude Code hooks（設定視窗也有按鈕）
-npm run preview -- chars out.png   # 輸出角色/家具預覽圖（chars | lineup | minis | anim | fx | room）
+npm run preview -- chars out.png   # 輸出角色/家具預覽圖（chars | lineup | minis | anim | fx | iso）
 ```
 
 啟動參數：`--demo`、`--mode=room|strip`、`--open=settings|guild`；設 `DESKMATES_DEBUG=1` 會印出 hook 事件和視窗 console。

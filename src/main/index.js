@@ -13,7 +13,11 @@ const { Fx } = require('./fx');
 const { Focus } = require('./focus');
 const { ActivityMonitor } = require('./activity');
 const { Windows } = require('./windows');
-const { createHub, loginItemOptions } = require('./hub');
+
+function loginItemOptions() {
+  // In dev the app runs as electron.exe + project path, so both must be registered.
+  return app.isPackaged ? {} : { path: process.execPath, args: [app.getAppPath()] };
+}
 const { startServer } = require('./server');
 const { summarize } = require('./summarize');
 const { runDemo } = require('./demo');
@@ -119,6 +123,7 @@ function boot() {
   handle('chest:open', (id) => fx.openChest(id));
   handle('focus:start', () => focus.start());
   handle('focus:stop', () => focus.stop());
+  handle('focus:toggle', () => (focus.state ? focus.stop() : focus.start()));
   handle('hooks:install', () => hooks.install());
   handle('hooks:uninstall', () => hooks.uninstall());
   handle('hooks:status', () => hooks.status());
@@ -156,6 +161,7 @@ function boot() {
     BrowserWindow.fromWebContents(e.sender)?.setIgnoreMouseEvents(!!ignore, { forward: true });
   });
   ipcMain.on('room:hide', () => store.updateSettings({ mode: 'strip' }));
+  ipcMain.on('room:drag', (_e, on) => windows.dragRoom(!!on));
   ipcMain.on('actor:pat', (_e, id) => {
     const a = actors.map.get(id);
     if (!a) return;
@@ -179,10 +185,7 @@ function boot() {
   const modeArg = process.argv.find((arg) => /^--mode=(room|strip)$/.test(arg));
   if (modeArg) store.updateSettings({ mode: modeArg.slice(7) });
   windows.applyMode();
-  ctx.hub = createHub(ctx);
-  windows.hub = ctx.hub.window;
-  handle('hub:state', () => ctx.hub.state());
-  handle('hub:action', (name) => ctx.hub.action(name));
+  handle('app:quit', () => app.quit());
   screen.on('display-metrics-changed', () => windows.placeStrip());
   screen.on('display-added', () => windows.placeStrip());
   screen.on('display-removed', () => windows.placeStrip());
@@ -194,7 +197,7 @@ function boot() {
   }
 }
 
-app.on('second-instance', () => { ctx?.windows.setHidden(false); ctx?.hub.show(); });
+app.on('second-instance', () => ctx?.windows.bringUp());
 app.whenReady().then(boot);
 // Keep running in the taskbar when panels close.
 app.on('window-all-closed', () => {});

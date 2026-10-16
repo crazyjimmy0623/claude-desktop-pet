@@ -1,9 +1,9 @@
-/* global desk, Furniture, Catalog, RoomApp */
-// Room editor: place/move/delete furniture, paint floors (built-in or custom PNG tiles), change walls and size.
+/* global desk, Iso, Catalog, RoomApp */
+// Room editor: place, turn, move and delete furniture; swap the floor, walls and theme.
 (function () {
   const { state } = RoomApp;
-  const T = Furniture.T;
   const DPR = window.devicePixelRatio || 1;
+  const TU = Iso.TU;
   const canvas = document.getElementById('room');
   const editorEl = document.getElementById('editor');
   const palette = document.getElementById('palette');
@@ -12,41 +12,34 @@
   const tabButtons = [...document.querySelectorAll('.tabs button[data-tab]')];
 
   let tab = 'furniture';
-  let tool = null; // { kind: 'object', type, moving?, orig? } | { kind: 'floor', id } | { kind: 'custom', file, i }
-  let hover = null;
-  let painting = false;
+  let tool = null; // { type, flip, moving?, orig? }
+  let hover = null; // { x, y, flip } — a floor tile, or a wall spot for wall items
 
   const HINTS = {
-    furniture: '點選家具後放到房間裡；點房間裡的家具可以搬動，右鍵刪除',
-    floor: '點選地板後在房間裡點擊或拖曳塗色',
-    wall: '點一下就換整面牆',
-    custom: '把 16x16 的 PNG 放進素材資料夾的 tiles/，就能在這裡塗',
-    room: '調整房間大小、重設或重新載入素材',
+    furniture: '點家具放進房間；R 或右下按鈕換方向；點房間裡的家具可搬動，右鍵刪除',
+    floor: '點一下換整間地板',
+    wall: '點一下換牆面',
+    room: '換整體風格，或重設成預設房間',
   };
 
   const itemName = (id) => Catalog.ITEMS.find((i) => i.id === id)?.name || id;
   const owned = (type) => (state.progress?.owned || []).filter((id) => id.startsWith(`${type}:`)).map((id) => id.split(':')[1]);
-
-  function room() {
-    return state.room;
-  }
-
-  function save(relayout = false) {
-    RoomApp.setRoom(room(), { save: true, relayout });
-  }
+  const room = () => state.room;
+  const save = () => RoomApp.setRoom(room(), { save: true, relayout: false });
+  const still = { frame: 0, active: false, now: Date.now(), hour: 14, meeting: false };
 
   // ---- Palette ----------------------------------------------------------------------
 
-  function previewCanvas(w, h, drawFn) {
-    const c = document.createElement('canvas');
-    c.width = w * DPR;
-    c.height = h * DPR;
-    c.style.width = `${w}px`;
-    c.style.height = `${h}px`;
-    const x = c.getContext('2d');
+  function swatch(c, scale) {
+    const out = document.createElement('canvas');
+    out.width = c.width * scale;
+    out.height = c.height * scale;
+    out.style.width = `${(c.width * scale) / DPR}px`;
+    out.style.height = `${(c.height * scale) / DPR}px`;
+    const x = out.getContext('2d');
     x.imageSmoothingEnabled = false;
-    drawFn(x);
-    return c;
+    x.drawImage(c, 0, 0, out.width, out.height);
+    return out;
   }
 
   function button(label, preview, selected, onClick) {
@@ -60,6 +53,15 @@
     return b;
   }
 
+  // A small diamond of floor or a slice of wall, for the swatches.
+  function tileSwatch(draw) {
+    const c = document.createElement('canvas');
+    c.width = 34;
+    c.height = 26;
+    draw(c.getContext('2d'));
+    return swatch(c, 2);
+  }
+
   function refresh() {
     if (!state.editing) return;
     hint.textContent = HINTS[tab];
@@ -67,175 +69,108 @@
     palette.replaceChildren();
     if (tab === 'furniture') {
       for (const type of owned('obj')) {
-        const def = Furniture.OBJECTS[type];
-        if (!def) continue;
-        const s = 2 / DPR; // 2 device px per art px keeps the fine grid crisp
-        const top = def.wall ? 0 : 20;
-        const pc = previewCanvas(def.w * T * s, (def.h * T + top) * s, (x) => {
-          x.translate(0, top * s * DPR);
-          Furniture.drawObject(x, s * DPR, { type, x: 0, y: 0 }, { frame: 0, active: false, now: Date.now(), hour: 12, theme: room().theme });
-        });
-        palette.append(button(itemName(`obj:${type}`), pc, tool?.kind === 'object' && tool.type === type && !tool.moving, () => {
-          tool = { kind: 'object', type };
+        if (!Iso.OBJECTS[type]) continue;
+        const sp = Iso.objectSprite(type, false, still);
+        palette.append(button(itemName(`obj:${type}`), swatch(sp.canvas, 1), tool?.type === type && !tool.moving, () => {
+          tool = { type, flip: false };
           refresh();
         }));
       }
+      if (tool) palette.append(button('↻ 換方向', null, false, () => { tool.flip = !tool.flip; }));
     } else if (tab === 'floor') {
       for (const id of owned('floor')) {
-        const pc = previewCanvas(32, 32, (x) => Furniture.drawFloorTile(x, 2 * DPR, 0, 0, id));
-        palette.append(button(itemName(`floor:${id}`), pc, tool?.kind === 'floor' && tool.id === id, () => {
-          tool = { kind: 'floor', id };
-          refresh();
-        }));
-      }
-      if (tool?.kind === 'floor') {
-        palette.append(button(`整間鋪「${itemName(`floor:${tool.id}`)}」`, null, false, () => {
-          room().floor = tool.id;
-          room().tiles = Object.fromEntries(Object.entries(room().tiles).filter(([, v]) => typeof v === 'object'));
+        const f = Iso.FLOORS[id];
+        if (!f) continue;
+        palette.append(button(itemName(`floor:${id}`), tileSwatch((x) => { x.fillStyle = f.base; x.beginPath(); x.moveTo(17, 4); x.lineTo(33, 12); x.lineTo(17, 20); x.lineTo(1, 12); x.fill(); }), room().floor === id, () => {
+          room().floor = id;
           save();
+          refresh();
         }));
       }
     } else if (tab === 'wall') {
       for (const id of owned('wall')) {
-        // A 3x3-tile slice of wall, shrunk to fit the 32px swatch.
-        const pc = previewCanvas(32, 32, (x) => Furniture.drawWall(x, (32 / 48) * DPR, { wall: id, w: 3, wallRows: 3 }));
-        palette.append(button(itemName(`wall:${id}`), pc, room().wall === id, () => {
+        const w = Iso.WALLS[id];
+        if (!w) continue;
+        palette.append(button(itemName(`wall:${id}`), tileSwatch((x) => { x.fillStyle = w.base; x.fillRect(4, 2, 26, 22); x.fillStyle = w.trim; x.fillRect(4, 20, 26, 4); }), room().wall === id, () => {
           room().wall = id;
           save();
           refresh();
         }));
       }
-    } else if (tab === 'custom') {
-      const tiles = state.assets?.tiles || [];
-      if (!tiles.length) {
-        const p = document.createElement('div');
-        p.className = 'row';
-        p.textContent = '還沒有自訂地板。';
-        p.append(button('開啟素材資料夾', null, false, () => desk.invoke('assets:open-folder')));
-        p.append(button('重新載入素材', null, false, () => desk.invoke('assets:reload')));
-        palette.append(p);
-      }
-      for (const t of tiles) {
-        const img = state.customTiles[t.file]?.img;
-        if (!img?.complete) {
-          img?.addEventListener('load', refresh, { once: true });
-          continue;
-        }
-        const cols = Math.max(1, Math.floor(img.width / T));
-        const rows = Math.max(1, Math.floor(img.height / T));
-        for (let i = 0; i < cols * rows; i++) {
-          const pc = previewCanvas(32, 32, (x) => Furniture.drawFloorTile(x, 2 * DPR, 0, 0, { file: t.file, i }, state.customTiles));
-          palette.append(button(`${t.file.replace(/\.png$/i, '')}#${i}`, pc, tool?.kind === 'custom' && tool.file === t.file && tool.i === i, () => {
-            tool = { kind: 'custom', file: t.file, i };
-            refresh();
-          }));
-        }
-      }
     } else if (tab === 'room') {
-      const row = (label, value, onMinus, onPlus) => {
-        const r = document.createElement('div');
-        r.className = 'row';
-        const l = document.createElement('span');
-        l.textContent = `${label}：${value}`;
-        l.style.minWidth = '80px';
-        r.append(l, button('－', null, false, onMinus), button('＋', null, false, onPlus));
-        return r;
-      };
-      const themeRow = document.createElement('div');
-      themeRow.className = 'row';
-      const label = document.createElement('span');
-      label.textContent = '風格：';
-      label.style.minWidth = '80px';
-      themeRow.append(label);
-      for (const [id, t] of Object.entries(Furniture.THEMES)) {
-        themeRow.append(button(t.name, null, (room().theme || 'cozy') === id, () => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      for (const [id, t] of Object.entries(Iso.THEMES)) {
+        row.append(button(t.name, null, room().theme === id, () => {
           Object.assign(room(), { theme: id, wall: t.wall, floor: t.floor });
           save();
           refresh();
         }));
       }
-      palette.append(themeRow);
-      palette.append(row('高度', `${room().h} 格`, () => resize(0, -1), () => resize(0, 1)));
-      const r = document.createElement('div');
-      r.className = 'row';
-      r.append(
-        button('重設為預設房間', null, false, () => {
-          RoomApp.setRoom(Furniture.generateRoom(room().w, room().h), { save: true });
-          refresh();
-        }),
-        button('開啟素材資料夾', null, false, () => desk.invoke('assets:open-folder')),
-        button('重新載入素材', null, false, () => desk.invoke('assets:reload')),
-      );
-      palette.append(r);
+      row.append(button('重設為預設房間', null, false, () => {
+        RoomApp.setRoom(Iso.generateRoom(room().theme), { save: true });
+        refresh();
+      }));
+      palette.append(row);
     }
-  }
-
-  function resize(dw, dh) {
-    const r = room();
-    const w = Math.max(10, Math.min(40, r.w + dw));
-    const h = Math.max(6, Math.min(14, r.h + dh));
-    if (w === r.w && h === r.h) return;
-    r.w = w;
-    r.h = h;
-    r.objects = r.objects.filter((o) => {
-      const def = Furniture.OBJECTS[o.type];
-      return def && o.x + def.w <= w && o.y + def.h <= h;
-    });
-    r.tiles = Object.fromEntries(Object.entries(r.tiles).filter(([k]) => {
-      const [x, y] = k.split(',').map(Number);
-      return x < w && y < h;
-    }));
-    save(true);
-    refresh();
   }
 
   // ---- Canvas interaction -----------------------------------------------------------
 
-  function objectAt(t) {
-    const r = room();
+  // Where the tool would go under the mouse.
+  function target(e) {
+    const p = RoomApp.finePoint(e);
+    const def = tool && Iso.OBJECTS[tool.type];
+    if (def?.wall) {
+      const w = Iso.wallAt(room(), p.x, p.y);
+      if (!w) return null;
+      return w.flip ? { x: 0, y: w.along, flip: true } : { x: w.along, y: 0, flip: false };
+    }
+    const t = Iso.tileAt(room(), p.x, p.y);
+    return t ? { x: t.x, y: t.y, flip: tool?.flip || false } : null;
+  }
+
+  function objectAt(e) {
+    const p = RoomApp.finePoint(e);
+    const w = Iso.wallAt(room(), p.x, p.y);
+    const t = Iso.tileAt(room(), p.x, p.y);
     let found = -1;
-    let rank = -1;
-    r.objects.forEach((o, i) => {
-      const def = Furniture.OBJECTS[o.type];
+    room().objects.forEach((o, i) => {
+      const def = Iso.OBJECTS[o.type];
       if (!def) return;
-      const inside = t.x >= o.x && t.x < o.x + def.w && t.y >= o.y - (def.wall || def.flat ? 0 : 1) && t.y < o.y + def.h;
-      const myRank = def.flat ? 0 : def.wall ? 1 : 2;
-      if (inside && myRank >= rank) { found = i; rank = myRank; }
+      if (def.wall) {
+        if (w && !!o.flip === w.flip) {
+          const along = o.flip ? o.y : o.x;
+          if (w.along >= along && w.along < along + def.w) found = i;
+        }
+        return;
+      }
+      const f = Iso.footprint(o);
+      if (t && t.x >= f.x && t.x < f.x + f.w && t.y >= f.y && t.y < f.y + f.d && (found < 0 || !def.flat)) found = i;
     });
     return found;
   }
 
-  function paint(t) {
-    const r = room();
-    if (t.y < r.wallRows || t.x < 0 || t.y >= r.h || t.x >= r.w) return;
-    const key = `${t.x},${t.y}`;
-    if (tool.kind === 'floor') {
-      if (tool.id === r.floor) delete r.tiles[key]; else r.tiles[key] = tool.id;
-    } else {
-      r.tiles[key] = { file: tool.file, i: tool.i };
-    }
-    save();
-  }
-
   canvas.addEventListener('mousemove', (e) => {
     if (!state.editing) return;
-    hover = RoomApp.tileAt(e);
-    if (painting && tool && tool.kind !== 'object') paint(hover);
+    hover = tool ? target(e) : { pick: objectAt(e) };
   });
-
   canvas.addEventListener('mouseleave', () => { hover = null; });
+
+  function cancelMove() {
+    if (tool?.moving) room().objects.push({ type: tool.type, ...tool.orig });
+    tool = null;
+  }
 
   canvas.addEventListener('mousedown', (e) => {
     if (!state.editing) return;
-    const t = RoomApp.tileAt(e);
     const r = room();
     if (e.button === 2) {
-      if (tool?.moving) r.objects.push({ type: tool.type, ...tool.orig });
       if (tool) {
-        tool = null;
+        cancelMove();
         save();
       } else {
-        const i = objectAt(t);
+        const i = objectAt(e);
         if (i >= 0) {
           r.objects.splice(i, 1);
           save();
@@ -245,73 +180,65 @@
       return;
     }
     if (e.button !== 0) return;
-    if (tool?.kind === 'object') {
-      const def = Furniture.OBJECTS[tool.type];
-      const x = t.x;
-      const y = t.y - def.h + 1;
-      if (Furniture.canPlace(r, tool.type, x, y)) {
-        r.objects.push({ type: tool.type, x, y });
+    if (tool) {
+      const t = target(e);
+      if (t && Iso.canPlace(r, tool.type, t.x, t.y, t.flip)) {
+        r.objects.push({ type: tool.type, x: t.x, y: t.y, flip: t.flip });
         if (tool.moving) tool = null;
         save();
         refresh();
       }
       return;
     }
-    if (tool) {
-      painting = true;
-      paint(t);
-      return;
-    }
-    const i = objectAt(t);
+    const i = objectAt(e);
     if (i >= 0) {
       const [o] = r.objects.splice(i, 1);
-      tool = { kind: 'object', type: o.type, moving: true, orig: { x: o.x, y: o.y } };
+      tool = { type: o.type, flip: !!o.flip, moving: true, orig: { x: o.x, y: o.y, flip: !!o.flip } };
       tab = 'furniture';
       save();
       refresh();
     }
   });
 
-  window.addEventListener('mouseup', () => { painting = false; });
   canvas.addEventListener('contextmenu', (e) => { if (state.editing) e.preventDefault(); });
   window.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || !tool) return;
-    if (tool.moving) room().objects.push({ type: tool.type, ...tool.orig });
-    tool = null;
-    save();
-    refresh();
+    if (!state.editing || !tool) return;
+    if (e.key === 'r' || e.key === 'R') tool.flip = !tool.flip;
+    if (e.key === 'Escape') {
+      cancelMove();
+      save();
+      refresh();
+    }
   });
 
-  // Ghost preview and grid, drawn on top of the room.
-  state.onDrawTop = (ctx, u) => {
-    if (!state.editing) return;
+  // Diamond outline of a footprint, in device pixels.
+  function diamond(ctx, z, f, h, color) {
+    const n = room().n;
+    const pts = [[f.x, f.y], [f.x + f.w, f.y], [f.x + f.w, f.y + f.d], [f.x, f.y + f.d]].map(([x, y]) => Iso.project(n, x * TU, y * TU, h));
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    pts.forEach((p, i) => (i ? ctx.lineTo(p.x * z, p.y * z) : ctx.moveTo(p.x * z, p.y * z)));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Ghost preview, drawn on top of the room.
+  state.onDrawTop = (ctx, z) => {
+    if (!state.editing || !hover) return;
     const r = room();
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    for (let x = 1; x < r.w; x++) ctx.fillRect(x * T * u, 0, 1, r.h * T * u);
-    for (let y = 1; y < r.h; y++) ctx.fillRect(0, y * T * u, r.w * T * u, 1);
-    if (!hover) return;
-    if (tool?.kind === 'object') {
-      const def = Furniture.OBJECTS[tool.type];
-      const x = hover.x;
-      const y = hover.y - def.h + 1;
-      const ok = Furniture.canPlace(r, tool.type, x, y);
-      ctx.globalAlpha = 0.6;
-      Furniture.drawObject(ctx, u, { type: tool.type, x, y }, { frame: 0, active: false, now: Date.now(), hour: 12, theme: room().theme });
+    if (tool && hover.x !== undefined) {
+      const def = Iso.OBJECTS[tool.type];
+      const o = { type: tool.type, x: hover.x, y: hover.y, flip: hover.flip };
+      const ok = Iso.canPlace(r, tool.type, o.x, o.y, o.flip);
+      const h = def.wall ? 0 : Iso.heightAt(r, o.x, o.y) ?? 0;
+      if (!def.wall) diamond(ctx, z, Iso.footprint(o), h, ok ? 'rgba(124,196,127,0.35)' : 'rgba(224,64,90,0.4)');
+      ctx.globalAlpha = ok ? 0.75 : 0.4;
+      Iso.blit(ctx, r.n, Iso.objectSprite(tool.type, o.flip, still), o.x * TU, o.y * TU, h, z);
       ctx.globalAlpha = 1;
-      ctx.fillStyle = ok ? 'rgba(124,196,127,0.35)' : 'rgba(224,64,90,0.4)';
-      ctx.fillRect(x * T * u, y * T * u, def.w * T * u, def.h * T * u);
-    } else if (tool) {
-      ctx.fillStyle = 'rgba(255,224,102,0.35)';
-      ctx.fillRect(hover.x * T * u, hover.y * T * u, T * u, T * u);
-    } else {
-      const i = objectAt(hover);
-      if (i >= 0) {
-        const o = r.objects[i];
-        const def = Furniture.OBJECTS[o.type];
-        ctx.strokeStyle = '#ffe066';
-        ctx.lineWidth = 2 * DPR;
-        ctx.strokeRect(o.x * T * u, o.y * T * u, def.w * T * u, def.h * T * u);
-      }
+    } else if (hover.pick >= 0) {
+      const o = r.objects[hover.pick];
+      const def = o && Iso.OBJECTS[o.type];
+      if (def && !def.wall) diamond(ctx, z, Iso.footprint(o), Iso.heightAt(r, o.x, o.y) ?? 0, 'rgba(255,224,102,0.35)');
     }
   };
 
@@ -319,12 +246,13 @@
 
   btnEdit.addEventListener('click', () => {
     state.editing = !state.editing;
-    if (!state.editing && tool?.moving) room().objects.push({ type: tool.type, ...tool.orig });
+    if (!state.editing) cancelMove();
     tool = null;
     editorEl.classList.toggle('hidden', !state.editing);
     btnEdit.classList.toggle('on', state.editing);
-    btnEdit.textContent = state.editing ? '✅ 完成' : '✏️ 編輯';
-    if (!state.editing) save(true); else RoomApp.layout();
+    document.getElementById('toolbar').classList.toggle('pinned', state.editing);
+    if (!state.editing) save();
+    RoomApp.layout();
     refresh();
   });
 
