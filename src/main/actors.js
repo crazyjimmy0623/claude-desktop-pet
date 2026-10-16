@@ -346,7 +346,7 @@ class Actors extends EventEmitter {
       this.activeSeconds += 1;
       if (this.activeSeconds >= 60) {
         this.activeSeconds = 0;
-        this.emit('active-minute');
+        this.emit('active-minute', user.state === 'work' ? user.station : null);
       }
     }
   }

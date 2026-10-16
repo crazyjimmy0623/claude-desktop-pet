@@ -7,9 +7,12 @@
   function create({ editor = null, onChange = () => {} } = {}) {
     const el = document.createElement('div');
     el.id = 'drawer';
-    el.className = 'drawer hidden';
+    el.className = 'drawer ui hidden';
     const bar = document.createElement('div');
     bar.className = 'drawer-tabs';
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    bar.append(seg);
     const body = document.createElement('div');
     body.className = 'drawer-body';
     el.append(bar, body);
@@ -35,13 +38,14 @@
       b.textContent = NAMES[id];
       b.addEventListener('click', () => api.toggle(id));
       buttons[id] = b;
-      bar.append(b);
+      seg.append(b);
     }
     const spacer = document.createElement('span');
     spacer.className = 'spacer';
     const shut = document.createElement('button');
     shut.textContent = '✕';
     shut.title = '收起';
+    shut.className = 'icon-btn close';
     shut.addEventListener('click', () => api.close());
     bar.append(spacer, shut);
 

@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
   <title>Deskmates 夥伴手冊</title>
+  <link rel="stylesheet" href="../theme.css">
   <link rel="stylesheet" href="../panel.css">
   <link rel="stylesheet" href="guild.css">
 </head>
@@ -15,16 +16,16 @@
     <span id="coins" class="pill"></span>
   </header>
   <nav class="tabs">
-    <button data-tab="equip" class="active">夥伴</button>
-    <button data-tab="gacha">招募</button>
-    <button data-tab="book">圖鑑</button>
-    <button data-tab="achievements">成就</button>
-    <button data-tab="stats">戰績卡</button>
+    <button data-tab="equip" class="active">🧑‍🤝‍🧑 夥伴</button>
+    <button data-tab="gacha">🎰 招募</button>
+    <button data-tab="book">📚 圖鑑</button>
+    <button data-tab="achievements">🏆 成就</button>
+    <button data-tab="stats">📊 戰績卡</button>
   </nav>
   <main>
     <div id="tab-equip" class="tab">
       <section class="card">
-        <h2>選擇夥伴</h2>
+        <h2>🧑‍🤝‍🧑 選擇夥伴</h2>
         <p class="desc">「你」是代表自己的角色；AI 夥伴可以設定預設外觀，也能替每個專案指定不同角色。</p>
         <div id="targets" class="targets"></div>
       </section>
@@ -41,12 +42,17 @@
 
     <div id="tab-gacha" class="tab hidden">
       <section class="card gacha">
-        <h2>招募新成員</h2>
-        <p class="desc">金幣只能靠工作賺：AI 完成回合、專注番茄鐘、陪伴時間、抓 bug、拆包裹。抽到重複的會退回 3 🪙。十連抽保證至少一個稀有以上。</p>
-        <div class="gacha-buttons">
-          <button class="btn primary" id="pull-1">招募 ×1（10 🪙）</button>
-          <button class="btn primary" id="pull-10">招募 ×10（100 🪙）</button>
-          <span id="gacha-error" class="status off"></span>
+        <h2>🎰 招募新成員</h2>
+        <div class="gacha-top">
+          <canvas id="gacha-machine" class="pixel"></canvas>
+          <div>
+            <p class="desc">金幣只能靠用電腦賺：AI 完成回合、專注時段和番茄鐘、陪伴時間、每日簽到、抓 bug、拆包裹。抽到重複的退回 3 🪙，十連抽保證至少一個稀有以上。</p>
+            <div class="gacha-buttons">
+              <button class="btn primary" id="pull-1">🎲 招募 ×1<small>10 🪙</small></button>
+              <button class="btn primary" id="pull-10">🎁 招募 ×10<small>100 🪙</small></button>
+              <span id="gacha-error" class="status off"></span>
+            </div>
+          </div>
         </div>
         <div id="gacha-results" class="gacha-results"></div>
         <p class="desc" id="rates"></p>
@@ -69,7 +75,7 @@
 
     <div id="tab-stats" class="tab hidden">
       <section class="card">
-        <h2>本週戰績</h2>
+        <h2>📊 本週戰績</h2>
         <p class="desc">做成一張圖分享出去吧。</p>
         <canvas id="share" class="share"></canvas>
         <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">

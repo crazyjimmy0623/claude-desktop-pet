@@ -204,6 +204,7 @@ function animateEquip() {
 
 async function pull(count) {
   $('gacha-error').textContent = '';
+  for (const [i, d] of [1, -1, 1, 0].entries()) setTimeout(() => drawMachine(d), i * 70);
   const res = await desk.invoke('gacha:pull', count);
   if (res.error) {
     $('gacha-error').textContent = res.error;
@@ -220,6 +221,41 @@ async function pull(count) {
 
 $('pull-1').addEventListener('click', () => pull(1));
 $('pull-10').addEventListener('click', () => pull(10));
+
+// A little capsule machine, drawn in pixels: a glass dome of capsules on a red stand. It shakes
+// while pulling.
+function drawMachine(shake = 0) {
+  const c = $('gacha-machine');
+  const S = 4;
+  c.width = 32 * S;
+  c.height = 40 * S;
+  c.style.width = `${32 * 3}px`;
+  c.style.height = `${40 * 3}px`;
+  const x = c.getContext('2d');
+  const px = (X, Y, w, h, col) => { x.fillStyle = col; x.fillRect((X + shake) * S, Y * S, w * S, h * S); };
+  // Dome.
+  for (let y = 0; y < 18; y++) {
+    const half = Math.round(Math.sqrt(Math.max(0, 81 - (y - 9) ** 2)) * 1.25);
+    px(16 - half, 2 + y, half * 2, 1, y < 2 || y > 15 ? '#9ec9d8' : '#cfe9f1');
+  }
+  const caps = ['#f2685a', '#f0b54d', '#7cc47f', '#5aa7ff', '#c27bff', '#ff8fb1'];
+  [[8, 11], [13, 13], [18, 12], [22, 10], [10, 15], [16, 16], [21, 15], [12, 8], [17, 7]].forEach(([cx, cy], i) => {
+    px(cx, cy, 3, 3, caps[i % caps.length]);
+    px(cx, cy + 1.5, 3, 1.5, '#fff6ea');
+  });
+  px(10, 4, 3, 1, '#ffffff');
+  px(8, 5, 2, 2, '#ffffff');
+  // Stand, slot, handle.
+  px(6, 20, 20, 3, '#c9473d');
+  px(5, 23, 22, 14, '#e2564a');
+  px(5, 35, 22, 2, '#a83a31');
+  px(11, 26, 10, 7, '#7a2a24');
+  px(13, 28, 6, 3, '#3a1512');
+  px(22, 25, 3, 3, '#f0b54d');
+  px(21, 26, 5, 1, '#d79a32');
+  px(8, 37, 4, 2, '#5a2420');
+  px(20, 37, 4, 2, '#5a2420');
+}
 
 function renderRates() {
   const pool = ITEMS.filter((i) => RARITY[i.rarity].weight > 0);
@@ -424,6 +460,7 @@ desk.invoke('init').then((init) => {
   assets = init.assets;
   Common.loadSheets(assets);
   renderRates();
+  drawMachine();
   animateEquip();
   render();
   openTab(new URLSearchParams(location.search).get('tab'));

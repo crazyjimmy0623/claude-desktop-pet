@@ -100,15 +100,59 @@
     return out;
   }
 
-  function button(label, preview, selected, onClick) {
+  // A tile (a picture, a name, a price in the corner) when there is something to show, otherwise
+  // a small chip. `preview` may be a canvas or an emoji.
+  function button(label, preview, selected, onClick, { price: cost = null, wide = false, tile = false } = {}) {
     const b = document.createElement('button');
-    if (preview) b.append(preview);
+    b.className = preview || tile ? 'tile' : 'chip';
+    if (wide) b.classList.add('wide');
+    if (typeof preview === 'string') {
+      const em = document.createElement('span');
+      em.className = 'emoji';
+      em.textContent = preview;
+      b.append(em);
+    } else if (preview) b.append(preview);
     const span = document.createElement('span');
+    span.className = 'name';
     span.textContent = label;
     b.append(span);
+    if (cost !== null) {
+      const p = document.createElement('span');
+      p.className = 'price';
+      p.textContent = `${cost} 🪙`;
+      b.append(p);
+    }
     if (selected) b.classList.add('selected');
     b.addEventListener('click', onClick);
     return b;
+  }
+
+  // A sprite cropped to its drawn pixels and fitted into a tile's picture box.
+  function thumb(src, W = 64, H = 50) {
+    const px = src.getContext('2d').getImageData(0, 0, src.width, src.height).data;
+    let [x0, y0, x1, y1] = [src.width, src.height, 0, 0];
+    for (let y = 0; y < src.height; y++) {
+      for (let x = 0; x < src.width; x++) {
+        if (px[(y * src.width + x) * 4 + 3] < 8) continue;
+        if (x < x0) x0 = x;
+        if (x >= x1) x1 = x + 1;
+        if (y < y0) y0 = y;
+        if (y >= y1) y1 = y + 1;
+      }
+    }
+    if (x1 <= x0) return swatch(src, 1);
+    const w = x1 - x0;
+    const h = y1 - y0;
+    const k = Math.max(1, Math.floor(Math.min((W * DPR) / w, (H * DPR) / h)));
+    const out = document.createElement('canvas');
+    out.width = w * k;
+    out.height = h * k;
+    out.style.width = `${(w * k) / DPR}px`;
+    out.style.height = `${(h * k) / DPR}px`;
+    const x = out.getContext('2d');
+    x.imageSmoothingEnabled = false;
+    x.drawImage(src, x0, y0, w, h, 0, 0, w * k, h * k);
+    return out;
   }
 
   // A small diamond of floor or a slice of wall, for the swatches.
@@ -140,12 +184,12 @@
       for (const type of owned('obj')) {
         if (!Iso.OBJECTS[type] || !!Iso.OBJECTS[type].plant !== (tab === 'plants')) continue;
         const sp = Iso.objectSprite(type, false, still);
-        palette.append(button(`${itemName(`obj:${type}`)} ${price(`obj:${type}`)}🪙`, swatch(sp.canvas, 1), tool?.type === type && !tool.moving, () => {
+        palette.append(button(itemName(`obj:${type}`), thumb(sp.canvas), tool?.type === type && !tool.moving, () => {
           tool = { type, flip: false };
           refresh();
-        }));
+        }, { price: price(`obj:${type}`) }));
       }
-      if (tool) palette.append(button('↻ 換方向', null, false, () => { tool.flip = !tool.flip; }));
+      if (tool) palette.append(button('換方向（R）', '↻', false, () => { tool.flip = !tool.flip; }));
     } else if (tab === 'terrain') {
       refreshTerrain();
     } else if (tab === 'floor' || tab === 'wall') {
@@ -154,7 +198,7 @@
       row.className = 'row';
       if (!room().zones[storey]) storey = 0;
       room().zones.forEach((zn, i) => {
-        row.append(button(zn.name || `${i + 1}F`, null, storey === i, () => { storey = i; refresh(); }));
+        row.append(button(`${zn.kind === 'room' ? '🏠' : zn.kind === 'water' ? '💧' : '🌿'} ${zn.name || `${i + 1}F`}`, null, storey === i, () => { storey = i; refresh(); }));
       });
       palette.append(row);
       const set = key === 'floor' ? Iso.FLOORS : Iso.WALLS;
@@ -173,18 +217,60 @@
     } else if (tab === 'room') {
       refreshRoomTab();
       // Time of day and weather, the same switches as in the settings.
-      const sky = document.createElement('div');
-      sky.className = 'row';
       const S = RoomApp.state.settings || {};
       const pickSetting = (patch) => desk.invoke('settings:set', patch).then(() => { Object.assign(RoomApp.state.settings, patch); refresh(); });
+      const labelled = (text) => {
+        const el = document.createElement('div');
+        el.className = 'row';
+        const b = document.createElement('b');
+        b.textContent = text;
+        el.append(b);
+        palette.append(el);
+        return el;
+      };
+      const time = labelled('時間');
       for (const [id, name] of [['clock', '🕒 跟著時鐘'], ['day', '☀️ 白天'], ['dusk', '🌇 傍晚'], ['night', '🌙 夜晚']]) {
-        sky.append(button(name, null, (S.timeOfDay || 'clock') === id, () => pickSetting({ timeOfDay: id })));
+        time.append(button(name, null, (S.timeOfDay || 'clock') === id, () => pickSetting({ timeOfDay: id })));
       }
+      const sky = labelled('天氣');
+      const SKY = { auto: '🔄', clear: '☀️', rain: '🌧️', snow: '❄️', petals: '🌸', leaves: '🍂' };
       for (const [id, name] of Object.entries(Iso.WEATHERS)) {
-        sky.append(button(`天氣：${name}`, null, (S.weather || 'auto') === id, () => pickSetting({ weather: id })));
+        sky.append(button(`${SKY[id] || ''} ${name}`, null, (S.weather || 'auto') === id, () => pickSetting({ weather: id })));
       }
-      palette.append(sky);
     }
+  }
+
+  // A plot of n x n as a small lawn diamond, bigger for bigger plots.
+  function landThumb(n) {
+    const c = document.createElement('canvas');
+    const W = 60;
+    const H = 40;
+    c.width = W * DPR;
+    c.height = H * DPR;
+    c.style.width = `${W}px`;
+    c.style.height = `${H}px`;
+    const x = c.getContext('2d');
+    x.scale(DPR, DPR);
+    const s = 2.1 * n;
+    const cx = W / 2;
+    const cy = H / 2 - 2;
+    const top = [[cx, cy - s / 2], [cx + s, cy], [cx, cy + s / 2], [cx - s, cy]];
+    x.fillStyle = '#5e3922';
+    x.beginPath();
+    x.moveTo(cx - s, cy); x.lineTo(cx, cy + s / 2); x.lineTo(cx + s, cy); x.lineTo(cx + s, cy + 4); x.lineTo(cx, cy + s / 2 + 4); x.lineTo(cx - s, cy + 4);
+    x.fill();
+    x.fillStyle = '#5f9a4a';
+    x.beginPath();
+    top.forEach(([px, py], i) => (i ? x.lineTo(px, py) : x.moveTo(px, py)));
+    x.fill();
+    x.strokeStyle = 'rgba(255,255,255,0.18)';
+    x.lineWidth = 0.6;
+    for (let i = 1; i < n; i++) {
+      const t = i / n;
+      x.beginPath(); x.moveTo(cx - s + s * t, cy - (s / 2) * t); x.lineTo(cx + s * t, cy + s / 2 - (s / 2) * t); x.stroke();
+      x.beginPath(); x.moveTo(cx + s - s * t, cy - (s / 2) * t); x.lineTo(cx - s * t, cy + s / 2 - (s / 2) * t); x.stroke();
+    }
+    return c;
   }
 
   // The plot, the blueprints and (for rooms from before plots) the old painted scenery.
@@ -203,7 +289,7 @@
     const lands = row('土地');
     for (const n of Iso.LAND_SIZES) {
       const have = owns(`land:${n}`) || n === land;
-      const b = button(`${n}×${n}`, null, n === land, () => {
+      const b = button(`${n}×${n}`, landThumb(n), n === land, () => {
         if (!have) { hint.textContent = locked(`land:${n}`); return; }
         if (n !== land) charged((rr) => Iso.setLand(rr, n), { ok: `換成 ${n}×${n} 的地了` });
       });
@@ -220,7 +306,7 @@
       const built = fits ? Iso.blueprintRoom(id, land) : null;
       const total = built ? worth(built) : 0;
       const missing = built ? Iso.needsOf(built).filter((k) => Catalog.ITEMS.some((i) => i.id === k) && !owns(k)) : [];
-      const label = fits ? `${bp.name} ${total}🪙` : `${bp.name}（要 ${need}×${need} 的地）`;
+      const label = fits ? bp.name : `${bp.name}（要 ${need}×${need} 的地）`;
       const b = button(label, blueprintThumb(id), r.blueprint === id, () => {
         if (!fits) { hint.textContent = `「${bp.name}」要 ${need}×${need} 以上的地才蓋得下`; return; }
         if (missing.length) {
@@ -233,7 +319,7 @@
           for (const k of Object.keys(rr)) delete rr[k];
           Object.assign(rr, built);
         }, { ok: `「${bp.name}」蓋好了`, bill: (before, after) => after - Math.floor(before / 2) });
-      });
+      }, { price: fits ? total : null, wide: true });
       b.title = `${bp.desc}${missing.length ? `（還缺 ${missing.length} 樣沒解鎖）` : ''}`;
       if (!fits || missing.length) b.classList.add('locked');
       plans.append(b);
@@ -254,21 +340,21 @@
     // Locked pieces show greyed out, with where to get them.
     const piece = (id, label, preview, selected, pick) => {
       const have = owns(id);
-      const b = button(label, preview, selected, () => { if (have) pick(); else hint.textContent = locked(id); });
+      const b = button(label, preview, selected, () => { if (have) pick(); else hint.textContent = locked(id); }, { price: price(id) });
       if (!have) b.classList.add('locked');
       row.append(b);
     };
     for (const [id, b] of Object.entries(Iso.BLOCKS)) {
-      piece(`block:${id}`, `${b.name} ${price(`block:${id}`)}🪙`, swatch(Iso.blockSprite(id).canvas, 2), build.tool === 'block' && build.block === id, () => {
+      piece(`block:${id}`, b.name, thumb(Iso.blockSprite(id).canvas), build.tool === 'block' && build.block === id, () => {
         Object.assign(build, { block: id, tool: 'block' });
         refresh();
       });
     }
-    piece('block:stairs', `🪜 樓梯 每階${price('block:stairs')}🪙`, null, build.tool === 'stairs', () => {
+    piece('block:stairs', '樓梯（每階）', '🪜', build.tool === 'stairs', () => {
       build.tool = build.tool === 'stairs' ? 'block' : 'stairs';
       refresh();
     });
-    piece('block:spiral', `🌀 旋轉樓梯 ${price('block:spiral')}🪙`, null, build.tool === 'spiral', () => {
+    piece('block:spiral', '旋轉樓梯', '🌀', build.tool === 'spiral', () => {
       build.tool = build.tool === 'spiral' ? 'block' : 'spiral';
       refresh();
     });

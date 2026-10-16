@@ -39,7 +39,9 @@ const DEFAULTS = {
     stats: {
       turns: 0, toolCalls: 0, edits: 0, reads: 0, failures: 0, permissions: 0, subagents: 0, maxHelpers: 0,
       nightTurns: 0, earlyTurns: 0, bugs: 0, focus: 0, chests: 0, ufos: 0, pulls: 0, activeMinutes: 0, streak: 0,
+      flowSessions: 0, checkInBest: 0,
     },
+    checkIn: { last: '', streak: 0 }, // the last day a check-in was paid, and the run of days
     days: {}, // 'YYYY-MM-DD' -> { turns, tools, activeMinutes, focus, projects: {}, toolsBy: {} }
   },
   room: null,

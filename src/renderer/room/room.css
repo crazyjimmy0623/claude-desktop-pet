@@ -22,22 +22,12 @@ html, body {
 }
 
 /* The toolbar runs under the room, along the taskbar. */
-#roomcol #toolbar { order: 2; }
-
-#toolbar {
+#roomcol #toolbar {
+  order: 2;
   flex: none;
-  height: 30px;
-  margin: 2px 4px 2px auto;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 0 4px;
-  background: rgba(29, 27, 38, 0.86);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  color: #fff;
-  font-size: 11px;
-  opacity: 0.25;
+  height: 32px;
+  margin: 1px 4px 1px auto;
+  opacity: 0.3;
   transition: opacity 0.15s;
 }
 
@@ -45,40 +35,12 @@ html, body {
 
 #grip {
   cursor: move;
-  padding: 0 4px;
-  color: #b8b0c8;
+  padding: 0 5px 0 3px;
+  color: var(--text-3);
   font-size: 14px;
 }
 
-#toolbar .coins {
-  padding: 1px 6px;
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 3px;
-}
-
-#toolbar .spacer, .tabs .spacer, .modes .spacer {
-  flex: 1;
-}
-
-#toolbar button, .tabs button, .modes button, #palette button {
-  font: inherit;
-  color: inherit;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-  padding: 2px 6px;
-  cursor: pointer;
-}
-
-#toolbar button:hover, .tabs button:hover, .modes button:hover, #palette button:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-#toolbar button.on, .tabs button.active, .modes button.active, #palette button.selected {
-  background: #e8b13a;
-  color: var(--ink);
-  border-color: #e8b13a;
-}
+#toolbar .spacer { flex: 1; min-width: 6px; }
 
 #viewport {
   position: relative;
@@ -131,68 +93,89 @@ html, body {
   position: absolute;
 }
 
+/* ---- The editor, in the drawer ---- */
 #editor {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  color: var(--text);
 }
 
-.tabs {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  padding: 5px 6px;
-}
-
-/* The two big switches: building things, or deleting them. */
 .modes {
   display: flex;
-  gap: 6px;
+  gap: 10px;
   align-items: center;
-  padding: 6px 6px 2px;
+  padding: 8px 12px 4px;
 }
 
-.modes button {
-  font-size: 13px;
-  padding: 5px 16px;
+.seg.big > button { font-size: 13px; padding: 5px 18px; }
+.modes .seg > button[data-mode="erase"].active { background: var(--danger) !important; color: #fff !important; }
+.modes .hint { flex: 1; text-align: right; color: var(--text-2); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Categories: quiet labels with an amber underline under the chosen one. */
+.tabs.cats {
+  display: flex;
+  gap: 2px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line);
 }
 
-.modes button[data-mode="erase"].active {
-  background: #e0405a;
-  border-color: #ff8095;
-  color: #fff;
+.tabs.cats button {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--text-2);
+  padding: 6px 10px 5px;
+  font-weight: 600;
 }
 
-.tabs.hidden {
-  display: none;
-}
-
-.modes .hint {
-  color: #b8b0c8;
-  font-size: 11px;
-}
+.tabs.cats button:hover { background: transparent; color: var(--text); }
+.tabs.cats button.active { color: var(--text); border-bottom-color: var(--accent); }
 
 #palette {
   flex: 1;
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
-  gap: 6px;
-  padding: 2px 6px 6px;
+  gap: 8px;
+  padding: 10px 12px;
   overflow-y: auto;
 }
 
-#palette button {
+/* One thing to pick: its picture, its name, its price in the corner. */
+#palette button.tile {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 3px;
-  min-width: 58px;
+  justify-content: flex-end;
+  gap: 3px;
+  width: 78px;
+  min-height: 78px;
+  padding: 6px 4px 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
 }
 
-#palette button canvas {
-  image-rendering: pixelated;
+#palette button.tile canvas { image-rendering: pixelated; max-width: 70px; max-height: 56px; object-fit: contain; }
+#palette button.tile .name { font-size: 11px; line-height: 14px; color: var(--text); text-align: center; }
+#palette button.tile .price { position: absolute; top: 4px; right: 4px; padding: 0 5px; font-size: 10px; font-weight: 700; border-radius: 999px; color: #ffd77a; background: rgba(31, 26, 23, 0.75); }
+#palette button.tile.wide { width: 128px; }
+#palette button.tile.wide canvas { max-width: 118px; max-height: 70px; }
+#palette button.tile:hover { background: var(--surface-3); border-color: var(--line-strong); }
+#palette button.selected { background: var(--accent-soft) !important; border-color: var(--accent) !important; box-shadow: 0 0 0 1px var(--accent); }
+#palette button.locked { opacity: 0.5; }
+#palette button.locked::after { content: "🔒"; position: absolute; top: 3px; left: 5px; font-size: 10px; }
+
+/* Plain choices (floors to paint, sizes, time and weather): small rounded chips. */
+#palette button.chip {
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--text);
 }
 
 #palette .row {
@@ -203,11 +186,21 @@ html, body {
   width: 100%;
 }
 
-#palette .row b {
-  color: #b8b0c8;
+#palette .row > b {
+  width: 56px;
+  flex: none;
+  color: var(--text-3);
   font-size: 11px;
-  font-weight: normal;
-  min-width: 26px;
+  font-weight: 600;
+}
+
+#palette .erase-note {
+  margin: 6px 2px;
+  padding: 10px 14px;
+  color: #ffd0c9;
+  background: var(--danger-soft);
+  border-radius: var(--r);
+  font-size: 12px;
 }
 
 .chest-hit {
@@ -226,8 +219,4 @@ html, body {
   padding: 10px 4px;
 }
 
-.modes .coins {
-  color: #ffd65a;
-  font-weight: bold;
-  margin-left: 6px;
-}
+#palette button.tile .emoji { font-size: 30px; line-height: 44px; }

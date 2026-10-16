@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
   <title>Deskmates 設定</title>
+  <link rel="stylesheet" href="../theme.css">
   <link rel="stylesheet" href="../panel.css">
 </head>
 <body>
@@ -14,7 +15,7 @@
   </header>
   <main>
     <section class="card">
-      <h2>顯示</h2>
+      <h2>🖥️ 顯示</h2>
       <div class="field"><label class="name">顯示模式</label>
         <div class="segmented" id="mode">
           <button data-mode="strip">🧍 工作列<small>站在工作列上</small></button>
@@ -39,7 +40,7 @@
     </section>
 
     <section class="card">
-      <h2>資料來源</h2>
+      <h2>🔌 資料來源</h2>
       <p class="desc">夥伴要演什麼，取決於這裡開了哪些來源。不用 AI 也可以只開「電腦活動」。</p>
       <div class="field"><label class="name">Claude Code</label>
         <input type="checkbox" id="src-claude">
@@ -56,7 +57,7 @@
     </section>
 
     <section class="card">
-      <h2>程式對應表</h2>
+      <h2>🗂️ 程式對應表</h2>
       <p class="desc">前景程式要算成哪種活動。內建表涵蓋常見程式；在這裡新增的規則會覆蓋內建表。程式名稱就是工作管理員裡的處理程序名稱（不含 .exe）。</p>
       <table class="map"><thead><tr><th>程式名稱</th><th>活動</th><th></th></tr></thead><tbody id="map-rows"></tbody></table>
       <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
@@ -67,7 +68,7 @@
     </section>
 
     <section class="card">
-      <h2>番茄鐘與提醒</h2>
+      <h2>🍅 番茄鐘與提醒</h2>
       <div class="field"><label class="name">專注（分鐘）</label><input type="number" id="pomo-focus" min="1" max="180"></div>
       <div class="field"><label class="name">休息（分鐘）</label><input type="number" id="pomo-break" min="1" max="60"></div>
       <div class="field"><label class="name">番茄鐘</label><button class="btn primary" id="pomo-toggle"></button></div>
@@ -76,7 +77,7 @@
     </section>
 
     <section class="card">
-      <h2>自訂素材</h2>
+      <h2>🎨 自訂素材</h2>
       <p class="desc">自己畫的角色（Aseprite sprite sheet）和房間地板（16x16 PNG）放進素材資料夾就能用。</p>
       <div class="field"><label class="name">素材資料夾</label>
         <button class="btn" id="assets-open">開啟資料夾</button>
@@ -86,7 +87,7 @@
     </section>
 
     <section class="card">
-      <h2>其他</h2>
+      <h2>🧰 其他</h2>
       <div class="field"><label class="name">開機自動啟動</label><input type="checkbox" id="autostart"></div>
       <div class="field"><label class="name">小工具</label>
         <button class="btn" id="run-demo">▶ 播放示範</button>
@@ -96,7 +97,7 @@
     </section>
 
     <section class="card">
-      <h2>給其他工具用的 API</h2>
+      <h2>🔗 給其他工具用的 API</h2>
       <p class="desc">任何程式都能讓一位夥伴動起來：把 JSON POST 到本機的 Deskmates。</p>
       <pre id="api-example"></pre>
       <p class="desc">Codex CLI：在 <code>~/.codex/config.toml</code> 加上下面這行，每次回合結束夥伴就會歡呼。</p>

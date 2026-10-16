@@ -1,11 +1,15 @@
 // Coins, XP, stats, achievements and the recruit (gacha) machine.
 // Currency is only ever earned by working — there is no way to buy it.
 const { EventEmitter } = require('events');
-const { ITEMS, RARITY, ACHIEVEMENTS, PULL_COST, DUPLICATE_REFUND } = require('../shared/catalog');
+const { ITEMS, RARITY, ACHIEVEMENTS, STATIONS, PULL_COST, DUPLICATE_REFUND } = require('../shared/catalog');
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const READ_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'NotebookRead']);
 const KEEP_DAYS = 120;
+// A flow session: this many active minutes on the same kind of work; a pause of up to about three
+// minutes between them keeps the run going.
+const FLOW_MINUTES = 25;
+const FLOW_GAP_MS = 4.5 * 60000;
 
 const dayKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
@@ -17,6 +21,7 @@ class Progress extends EventEmitter {
   constructor(store) {
     super();
     this.store = store;
+    this.flow = { station: null, minutes: 0, at: 0 };
   }
 
   get p() { return this.store.progress; }
@@ -123,12 +128,50 @@ class Progress extends EventEmitter {
     this.commit();
   }
 
-  onActiveMinute() {
+  // A minute of the user at the computer. `station` is the kind of work in the foreground (null
+  // for anything unmapped); `focusing` while a pomodoro runs, which pays for itself.
+  onActiveMinute(station = null, focusing = false) {
     const s = this.p.stats;
     s.activeMinutes += 1;
     this.today().activeMinutes += 1;
-    this.earn(s.activeMinutes % 15 === 0 ? 1 : 0, s.activeMinutes % 5 === 0 ? 1 : 0, 'user');
+    this.earn(s.activeMinutes % 5 === 0 ? 1 : 0, s.activeMinutes % 5 === 0 ? 1 : 0, 'user');
+    this.checkIn();
+    this.onFlowMinute(station, focusing);
     this.commit();
+  }
+
+  // Auto focus sessions, for people working without AI: 25 minutes on the same kind of work pay
+  // like a pomodoro. Short pauses and unmapped programs don't break a run; switching to another
+  // kind of work or a long pause starts over.
+  onFlowMinute(station, focusing, now = Date.now()) {
+    const f = this.flow;
+    if (focusing || (f.at && now - f.at > FLOW_GAP_MS)) Object.assign(f, { station: null, minutes: 0, at: 0 });
+    if (focusing || !station || station === 'ignore') return;
+    if (station !== f.station) Object.assign(f, { station, minutes: 0 });
+    f.minutes += 1;
+    f.at = now;
+    if (f.minutes < FLOW_MINUTES) return;
+    f.minutes = 0;
+    this.p.stats.flowSessions = (this.p.stats.flowSessions || 0) + 1;
+    this.earn(3, 20, 'user');
+    this.emit('toast', { text: `🔥 專注 ${FLOW_MINUTES} 分鐘：${STATIONS[station]?.name || station}（+3 🪙）`, actorId: 'user' });
+  }
+
+  // Daily check-in: the first time each day, 3 coins and one more for every day in a row, up to 10.
+  checkIn(now = new Date()) {
+    const p = this.p;
+    const today = dayKey(now);
+    if (p.checkIn.last === today) return false;
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    p.checkIn.streak = p.checkIn.last === dayKey(yesterday) ? p.checkIn.streak + 1 : 1;
+    p.checkIn.last = today;
+    p.stats.checkInBest = Math.max(p.stats.checkInBest || 0, p.checkIn.streak);
+    const coins = Math.min(10, 2 + p.checkIn.streak);
+    this.earn(coins, 5, 'user');
+    this.emit('toast', { text: `📅 每日簽到：連續 ${p.checkIn.streak} 天（+${coins} 🪙）`, actorId: 'user' });
+    this.commit();
+    return true;
   }
 
   onFocusDone() {

@@ -1,9 +1,6 @@
 :root {
-  --ink: #1d1b26;
-  --paper: #fffdf6;
-  --alert: #ffe066;
-  --success: #c9f5c4;
-  --shadow: rgba(0, 0, 0, 0.35);
+  --alert: #ffe08a;
+  --success: #d4f2cc;
 }
 
 html, body {
@@ -12,7 +9,7 @@ html, body {
   overflow: hidden;
   background: transparent;
   user-select: none;
-  font-family: "Microsoft JhengHei UI", "Microsoft JhengHei", "Segoe UI", sans-serif;
+  font-family: var(--font);
 }
 
 #stage {
@@ -48,10 +45,11 @@ html, body {
   font-size: 11px;
   font-weight: 700;
   line-height: 15px;
-  color: #fff;
-  background: rgba(29, 27, 38, 0.78);
-  border-bottom: 2px solid var(--c);
-  border-radius: 3px;
+  color: var(--text);
+  background: rgba(31, 26, 23, 0.82);
+  box-shadow: inset 0 -2px 0 var(--c);
+  border-radius: 999px;
+  padding: 0 8px 1px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -64,13 +62,13 @@ html, body {
   left: 50%;
   transform: translateX(-50%);
   max-width: 200px;
-  padding: 3px 8px;
+  padding: 3px 10px;
   font-size: 12px;
   line-height: 16px;
-  color: var(--ink);
+  color: var(--paper-ink);
   background: var(--paper);
-  border: 2px solid var(--ink);
-  box-shadow: 2px 2px 0 var(--shadow);
+  border-radius: 10px;
+  box-shadow: var(--shadow-s);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -81,13 +79,12 @@ html, body {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -6px;
-  width: 6px;
-  height: 6px;
-  margin-left: -3px;
+  bottom: -3px;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
   background: inherit;
-  border-right: 2px solid var(--ink);
-  border-bottom: 2px solid var(--ink);
+  border-radius: 1px;
   transform: rotate(45deg);
 }
 
@@ -115,8 +112,8 @@ html, body {
   top: 6px;
   right: 6px;
   font-weight: 700;
-  color: #dfe6ff;
-  text-shadow: 1px 1px 0 var(--ink), -1px -1px 0 var(--ink), 1px -1px 0 var(--ink), -1px 1px 0 var(--ink);
+  color: #e6ecff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
   pointer-events: none;
 }
 
@@ -155,7 +152,7 @@ html, body {
   font-size: 11px;
   font-weight: 700;
   color: #fff;
-  text-shadow: 1px 1px 0 var(--ink);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
 .card {
@@ -163,15 +160,15 @@ html, body {
   bottom: calc(100% + 2px);
   left: 50%;
   transform: translateX(-50%);
-  width: 230px;
-  padding: 8px 10px;
+  width: 236px;
+  padding: 10px 12px;
   font-size: 12px;
   line-height: 18px;
-  color: var(--ink);
-  background: var(--paper);
-  border: 2px solid var(--ink);
-  border-top: 6px solid var(--c);
-  box-shadow: 3px 3px 0 var(--shadow);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  box-shadow: inset 0 3px 0 var(--c), var(--shadow);
   cursor: default;
 }
 
@@ -191,7 +188,7 @@ html, body {
 .card .row b {
   flex: none;
   width: 52px;
-  color: #6a6478;
+  color: var(--text-3);
   font-weight: 400;
 }
 
@@ -202,18 +199,18 @@ html, body {
 }
 
 .bubble.focus {
-  background: #ffd9d2;
+  background: #ffdcd3;
   font-weight: 700;
 }
 
 .nameplate.user {
-  background: rgba(120, 82, 20, 0.85);
+  background: rgba(96, 66, 22, 0.88);
 }
 
 .card .hint {
   margin-top: 4px;
   font-size: 11px;
-  color: #8a8496;
+  color: var(--text-3);
 }
 
 .toast {
@@ -221,17 +218,18 @@ html, body {
   top: 8px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 6px 14px;
+  padding: 6px 16px;
   font-size: 13px;
   font-weight: 700;
-  color: var(--ink);
-  background: #fff3c4;
-  border: 2px solid var(--ink);
-  box-shadow: 3px 3px 0 var(--shadow);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid rgba(240, 181, 77, 0.35);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
   white-space: nowrap;
   pointer-events: none;
   z-index: 20;
-  animation: drop 0.25s steps(3);
+  animation: drop 0.25s ease-out;
 }
 
 @keyframes drop {
@@ -245,8 +243,8 @@ html, body {
   transform: translateX(-50%);
   font-size: 13px;
   font-weight: 800;
-  color: #ffe066;
-  text-shadow: 1px 1px 0 var(--ink), -1px -1px 0 var(--ink), 1px -1px 0 var(--ink), -1px 1px 0 var(--ink);
+  color: #ffd77a;
+  text-shadow: 0 1px 0 #3a2a10, 0 0 6px rgba(0, 0, 0, 0.6);
   white-space: nowrap;
   pointer-events: none;
   animation: rise 1.6s ease-out forwards;
@@ -337,13 +335,13 @@ html, body {
   flex: none;
   display: flex;
   flex-direction: column;
-  background: #322d3d;
-  color: #fff;
-  font: 12px "Microsoft JhengHei UI", "Microsoft JhengHei", sans-serif;
-  border: 2px solid #1d1b26;
+  background: var(--surface);
+  color: var(--text);
+  font: 12px var(--font);
+  border: 1px solid var(--line-strong);
   border-bottom: none;
-  border-radius: 10px 10px 0 0;
-  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.35);
+  border-radius: var(--r-l) var(--r-l) 0 0;
+  box-shadow: var(--shadow);
   overflow: hidden;
 }
 
@@ -351,31 +349,20 @@ html, body {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 6px;
-  background: rgba(0, 0, 0, 0.28);
+  gap: 8px;
+  padding: 7px 8px 6px 10px;
+  border-bottom: 1px solid var(--line);
 }
 
 .drawer-tabs .spacer { flex: 1; }
-
-.drawer-tabs button {
-  font: inherit;
-  font-weight: 700;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 5px;
-  padding: 2px 10px;
-  cursor: pointer;
-}
-
-.drawer-tabs button:hover { background: rgba(255, 255, 255, 0.2); }
-.drawer-tabs button.active { background: #e8b13a; color: #1d1b26; border-color: #e8b13a; }
+.drawer-tabs .seg { font-size: 12px; }
+.drawer-tabs .close { margin-left: 4px; }
 
 .drawer-body {
   flex: 1;
   min-height: 0;
   display: flex;
+  background: var(--surface);
 }
 
 .drawer-body .pane {
@@ -391,8 +378,36 @@ html, body {
 .strip-drawer {
   position: fixed;
   right: 6px;
-  bottom: 34px;
+  bottom: 40px;
   z-index: 40;
-  border-bottom: 2px solid #1d1b26;
-  border-radius: 10px;
+  border-bottom: 1px solid var(--line-strong);
+  border-radius: var(--r-l);
 }
+
+/* The little bar of buttons by the characters (strip) or under the room. */
+.dockbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(31, 26, 23, 0.9);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-s);
+  color: var(--text);
+  font: 12px var(--font);
+}
+
+.dockbar button {
+  font: inherit;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-radius: var(--r-s);
+  cursor: pointer;
+}
+
+.dockbar button:hover { background: var(--surface-3); }
+.dockbar button.on { background: var(--accent-soft); color: #ffd77a; }
+.dockbar .sep { width: 1px; height: 16px; margin: 0 3px; background: var(--line-strong); }
+.dockbar .badge { font-size: 11px; padding: 1px 8px; }

@@ -58,7 +58,7 @@ function boot() {
   actors.on('failure', () => progress.onFailure());
   actors.on('permission', () => progress.onPermission());
   actors.on('helpers', (a) => progress.onHelpers(a));
-  actors.on('active-minute', () => progress.onActiveMinute());
+  actors.on('active-minute', (station) => progress.onActiveMinute(station, !!focus.state));
   actors.on('talk', (from, to) => windows.broadcast('fx', { type: 'talk', actorId: from.id, targetId: to.id, duration: 6000 }));
   progress.on('coins', (d) => windows.broadcast('fx', { type: 'coins', ...d }));
   progress.on('toast', (t) => windows.broadcast('fx', { type: 'toast', ...t }));
@@ -83,6 +83,8 @@ function boot() {
   activity.on('idle', (seconds) => actors.setIdle(seconds));
   if (store.settings.sources.activity) activity.start();
   actors.updateUser();
+  // Opening the app counts as checking in for the day (once the windows are there to show it).
+  setTimeout(() => progress.checkIn(), 4000);
 
   startServer(PORT, {
     '/event': dispatchClaude,

@@ -4,24 +4,27 @@
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
   <title>Deskmates</title>
+  <link rel="stylesheet" href="../theme.css">
   <link rel="stylesheet" href="../overlay.css">
   <link rel="stylesheet" href="room.css">
 </head>
 <body>
   <div id="frame">
     <div id="roomcol">
-    <div id="toolbar">
+    <div id="toolbar" class="dockbar">
       <span id="grip" title="拖曳移動房間">⠿</span>
-      <span id="coins" class="coins"></span>
+      <span id="coins" class="badge coin"></span>
       <span class="spacer"></span>
-      <button id="btn-edit" title="編輯房間">✏️</button>
-      <button id="btn-zoom-out" title="縮小">－</button>
-      <button id="btn-zoom-in" title="放大">＋</button>
-      <button id="btn-focus" title="開始／停止番茄鐘">🍅</button>
-      <button id="btn-guild" title="夥伴手冊">📖</button>
-      <button id="btn-settings" title="設定">⚙️</button>
-      <button id="btn-strip" title="切換到工作列模式">🧍</button>
-      <button id="btn-quit" title="結束 Deskmates">⏻</button>
+      <button id="btn-edit" class="icon-btn" title="編輯房間">✏️</button>
+      <button id="btn-guild" class="icon-btn" title="夥伴手冊">📖</button>
+      <button id="btn-settings" class="icon-btn" title="設定">⚙️</button>
+      <span class="sep"></span>
+      <button id="btn-zoom-out" class="icon-btn" title="縮小">－</button>
+      <button id="btn-zoom-in" class="icon-btn" title="放大">＋</button>
+      <button id="btn-focus" class="icon-btn" title="開始／停止番茄鐘">🍅</button>
+      <span class="sep"></span>
+      <button id="btn-strip" class="icon-btn" title="切換到工作列模式">🧍</button>
+      <button id="btn-quit" class="icon-btn" title="結束 Deskmates">⏻</button>
     </div>
     <div id="viewport">
       <canvas id="room"></canvas>
@@ -29,21 +32,22 @@
       <div id="toast" class="toast hidden"></div>
     </div>
     </div>
-    <div id="editor" class="hidden">
+    <div id="editor" class="hidden ui">
       <div class="modes">
-        <button data-mode="build" class="active">🔨 建造</button>
-        <button data-mode="erase">🗑 刪除</button>
-        <span id="editor-coins" class="coins"></span>
-        <span class="spacer"></span>
+        <div class="seg big">
+          <button data-mode="build" class="active">🔨 建造</button>
+          <button data-mode="erase">🗑 刪除</button>
+        </div>
+        <span id="editor-coins" class="badge coin"></span>
         <span id="editor-hint" class="hint"></span>
       </div>
-      <div class="tabs" id="build-tabs">
+      <div class="tabs cats" id="build-tabs">
         <button data-tab="furniture" class="active">🪑 家具</button>
-        <button data-tab="terrain">🧱 方塊</button>
-        <button data-tab="floor">地板</button>
-        <button data-tab="wall">牆面</button>
         <button data-tab="plants">🌲 植物</button>
-        <button data-tab="room">🏠 房間</button>
+        <button data-tab="terrain">🧱 方塊</button>
+        <button data-tab="floor">🟫 地板</button>
+        <button data-tab="wall">🧱 牆面</button>
+        <button data-tab="room">🏠 土地與藍圖</button>
       </div>
       <div id="palette"></div>
     </div>

@@ -199,6 +199,9 @@
     { id: 'chest_10', name: '拆箱達人', desc: '打開 10 個包裹', reward: 15, test: (s) => s.chests >= 10 },
     { id: 'ufo', name: '第三類接觸', desc: '目睹 UFO 飛過', reward: 10, test: (s) => s.ufos >= 1 },
     { id: 'hours_100', name: '百小時夥伴', desc: '一起度過 100 小時', reward: 30, test: (s) => s.activeMinutes >= 6000 },
+    { id: 'flow_1', name: '進入心流', desc: '同一件事專注 25 分鐘', reward: 5, test: (s) => s.flowSessions >= 1 },
+    { id: 'flow_50', name: '專注職人', desc: '累計 50 段專注時段', reward: 25, test: (s) => s.flowSessions >= 50 },
+    { id: 'checkin_7', name: '天天報到', desc: '連續簽到 7 天', reward: 15, test: (s) => s.checkInBest >= 7 },
   ];
 
   const PULL_COST = 10;

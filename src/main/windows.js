@@ -217,6 +217,16 @@ class Windows {
         const shot = require('path').join(require('os').tmpdir(), 'deskmates-window.png');
         require('fs').writeFileSync(shot, (await w.webContents.capturePage()).toPNG());
         console.log(`[room] window dump -> ${shot}`);
+        // DESKMATES_DEBUG_STEPS: a JSON list of more scripts, a window dump after each (-1, -2...).
+        const steps = (() => { try { return JSON.parse(process.env.DESKMATES_DEBUG_STEPS || '[]'); } catch { return []; } })();
+        for (const [i, js] of steps.entries()) {
+          if (w.isDestroyed()) return;
+          await w.webContents.executeJavaScript(js).catch((e) => console.log(`[room] debug step ${i + 1}: ${e}`));
+          await new Promise((r) => setTimeout(r, 1800));
+          const file = require('path').join(require('os').tmpdir(), `deskmates-window-${i + 1}.png`);
+          require('fs').writeFileSync(file, (await w.webContents.capturePage()).toPNG());
+          console.log(`[room] window dump ${i + 1} -> ${file}`);
+        }
       }, 6000);
     }
   }

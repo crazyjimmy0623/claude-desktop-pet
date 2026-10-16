@@ -4,18 +4,21 @@
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
   <title>Deskmates</title>
+  <link rel="stylesheet" href="../theme.css">
   <link rel="stylesheet" href="../overlay.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="stage"></div>
   <div id="toast" class="toast hidden"></div>
-  <div id="dock" class="dock hit">
+  <div id="dock" class="dock dockbar hit">
     <button class="hit" data-action="room" title="切換到房間模式">🏠 房間</button>
-    <button class="hit" data-action="guild" title="夥伴手冊">📖</button>
-    <button class="hit" data-action="focus" title="開始／停止番茄鐘">🍅</button>
-    <button class="hit" data-action="settings" title="設定">⚙️</button>
-    <button class="hit" data-action="quit" title="結束 Deskmates">⏻</button>
+    <span class="sep"></span>
+    <button class="hit icon-btn" data-action="guild" title="夥伴手冊">📖</button>
+    <button class="hit icon-btn" data-action="focus" title="開始／停止番茄鐘">🍅</button>
+    <button class="hit icon-btn" data-action="settings" title="設定">⚙️</button>
+    <span class="sep"></span>
+    <button class="hit icon-btn" data-action="quit" title="結束 Deskmates">⏻</button>
   </div>
   <script src="../../shared/catalog.js"></script>
   <script src="../../shared/sprites.js"></script>
