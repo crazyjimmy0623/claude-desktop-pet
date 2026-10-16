@@ -485,7 +485,8 @@
     }
 
     // --- Head.
-    const H = B + (sk.drop || 0);
+    // Helmet-like heads are drawn shorter than faces: sit them down on the body instead of floating.
+    const H = B + (sk.drop || 0) + ({ robot: 4, droid: 3, astronaut: 3 }[sk.head] || 0);
     const eyeDots = (color = PAL.eye, at = [[8, 12], [22, 12]]) => at.map(([x, y]) => (sleeping ? [x - 1, y + 1 + H, 4, 1, color] : [x, y + H, 2, 2, color]));
     const blush = [[5, 14 + H, 3, 2, PAL.blush], [23, 14 + H, 2, 2, PAL.blush]];
     const face = (skin) => {
@@ -543,16 +544,15 @@
         g([[14, -4 + H, 2, 4, c.bodyShade]], []);
         g([[13, -7 + H, 4, 3, col.main]], [[14, -6 + H, 2, 1, glow(col.main)]]);
         L(ROBOT_HEAD, { a: c.head, A: c.bodyShade, s: '#1b2b3a', '+': lite(c.head) }, 2, H);
-        g([[0, 7 + H, 2, 4, c.bodyShade]], [...eyeDots(glow('#5ef0ff'), [[9, 10], [21, 10]]), [14, 13 + H, 3, 1, 'rgba(94,240,255,0.55)']]);
+        g([[0, 7 + H, 2, 4, c.bodyShade]], [...eyeDots('#7ff4ff', [[9, 10], [21, 10]]), [14, 13 + H, 3, 1, 'rgba(94,240,255,0.55)']]);
         break;
       case 'droid': {
         const E = glow(c.glow);
         L(HORN, { a: c.plate }, 4, -5 + H);
         L(HORN.map((r) => [...r].reverse().join('')), { a: c.plate }, 21, -5 + H);
         L(DROID_HEAD, { a: c.head, A: c.headShade, f: c.face, t: '#c9ced8', '+': lite(c.head) }, 2, -1 + H);
-        g([], sleeping
-          ? [[5, 9 + H, 5, 1, '#5a6070'], [19, 9 + H, 5, 1, '#5a6070']]
-          : [[4, 6 + H, 3, 1, E], [6, 7 + H, 3, 1, E], [8, 8 + H, 2, 1, E], [19, 8 + H, 2, 1, E], [20, 7 + H, 3, 1, E], [21, 6 + H, 3, 1, E], [4, -5 + H, 1, 1, E], [23, -5 + H, 1, 1, E]]);
+        // Bean eyes like everyone else's, low and wide on the dark face.
+        g([], [...eyeDots(sleeping ? '#5a6070' : c.glow, [[6, 7], [21, 7]]), [4, -5 + H, 1, 1, E], [23, -5 + H, 1, 1, E]]);
         break;
       }
       case 'ninja': {
