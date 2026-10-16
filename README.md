@@ -32,7 +32,7 @@
 
 ## 自訂
 
-- 8 種內建角色（黑甲將軍、上班族、研究員、貓貓、機器人、忍者、廚師、太空人）和 8 種配件
+- 11 種內建角色（黑騎士、暴走機器人、鴨嘴獸、白貓、上班族、研究員、貓貓、機器人、忍者、廚師、太空人）和 8 種配件；AI session 預設是暴走機器人
 - 房間編輯器：擺家具、塗地板、換牆面、調高度
 - 自己的素材放進 `%APPDATA%\Deskmates\custom\`：
   - `characters/<名稱>/`：Aseprite 匯出的 PNG + JSON，用 frame tag 命名動作（idle、walk、work、type、command、game、read、wait、done、sleep…）

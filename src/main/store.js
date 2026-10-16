@@ -10,7 +10,7 @@ const STARTER_ITEMS = ITEMS.filter((i) => i.rarity === 'starter').map((i) => i.i
 const DEFAULTS = {
   settings: {
     mode: 'strip', // strip | room
-    layoutVersion: 5,
+    layoutVersion: 6,
     alwaysOnTop: true,
     hideInFullscreen: true,
     scale: 3,
@@ -21,7 +21,7 @@ const DEFAULTS = {
     appMap: {}, // process name (lower case) -> station id or 'ignore'; overrides the built-in table
     characters: {
       user: { skin: 'commander', accessory: null },
-      ai: { skin: 'auto', accessory: null }, // 'auto' = a different owned character per session
+      ai: { skin: 'droid', accessory: null }, // 'auto' = a different owned character per session
       projects: {}, // project name -> { skin, accessory }
     },
     pomodoro: { focus: 25, break: 5 },
@@ -101,6 +101,11 @@ class Store extends EventEmitter {
         if (p.achievements[from]) p.achievements[to] = p.achievements[from];
         delete p.achievements[from];
       }
+    }
+    // v6 gives AI sessions the scary robot by default.
+    if ((raw.settings?.layoutVersion || 0) < 6) {
+      s.layoutVersion = 6;
+      if (s.characters.ai?.skin === 'auto') s.characters.ai.skin = 'droid';
     }
     // Rooms from before themes existed switch to the cyberpunk look once.
     if (this.data.room && !this.data.room.theme) Object.assign(this.data.room, { theme: 'cyber', wall: 'cyber', floor: 'cyber' });

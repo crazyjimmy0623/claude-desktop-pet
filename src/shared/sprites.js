@@ -30,8 +30,9 @@
 
   // Each skin: head shape, hat, torso, held item, colours.
   const SKINS = {
-    commander: { head: 'face', hat: 'helmet', body: 'armor', item: 'none', cape: true,
-      c: { skin: PAL.skin, helmet: '#2b2d3a', body: '#30323f', bodyShade: '#23252f', plate: '#434657', leg: '#3a3d4c', boot: '#1f2029', hand: '#3a3d4c', red: '#c8303c', redDark: '#7e1d2a', glow: '#ff3b3b' } },
+    commander: { head: 'helmet', body: 'armor', item: 'none', cape: true,
+      c: { helmet: '#eceef3', helmetShade: '#bfc3cf', plume: '#3a3c48', plumeDark: '#26272f', body: '#2a2c36', bodyShade: '#1f2029', plate: '#3d404d', trim: '#8a90a0',
+        leg: '#33353f', boot: '#1c1d24', hand: '#33353f', cape: '#45464f', capeDark: '#2e2f37' } },
     office: { head: 'face', hat: 'hair', body: 'shirt', item: 'mug',
       c: { skin: PAL.skin, hair: '#3a2a20', body: '#f4f4f6', bodyShade: '#c9ccd6', leg: '#3b4256', boot: '#262a38', hand: PAL.skin } },
     scientist: { head: 'face', hat: 'messy', specs: true, body: 'labcoat', item: 'flask',
@@ -44,6 +45,13 @@
       c: { skin: PAL.skin, head: '#343a56', body: '#343a56', bodyShade: '#262a40', leg: '#343a56', boot: '#1c1f2e', hand: '#262a40' } },
     chef: { head: 'face', hat: 'chef', body: 'apron', item: 'ladle',
       c: { skin: PAL.skin, hair: '#6b4423', body: '#f7f7f7', bodyShade: '#cfd3dc', leg: '#3b4256', boot: '#262a38', hand: PAL.skin } },
+    droid: { head: 'droid', body: 'mech', item: 'none', spikes: true,
+      c: { head: '#34373f', headShade: '#25272e', body: '#34373f', bodyShade: '#25272e', plate: '#4a4e59', face: '#16171c', glow: '#d8f1ff',
+        leg: '#2c2e36', boot: '#1b1c22', hand: '#4a4e59' } },
+    platypus: { head: 'platypus', body: 'fur', item: 'none', tail: 'flat',
+      c: { body: '#9a6a45', bodyShade: '#7c5236', belly: '#e8c9a0', bill: '#55606c', billDark: '#3a434d', leg: '#9a6a45', boot: '#55606c', hand: '#e8c9a0' } },
+    whitecat: { head: 'cat', body: 'fur', item: 'none', tail: true,
+      c: { body: '#f3f1ec', bodyShade: '#d3cfc7', belly: '#ffffff', leg: '#f3f1ec', boot: '#d3cfc7', hand: '#ffffff' } },
     astronaut: { head: 'astronaut', body: 'suit', item: 'none', backpack: true,
       c: { head: '#f4f6fa', body: '#f4f6fa', bodyShade: '#c3c9d6', leg: '#e6e9f0', boot: '#8a93a6', hand: '#c3c9d6' } },
   };
@@ -127,9 +135,14 @@
     }
     if (sk.cape) {
       const flap = pose === 'walk' ? WALK_FLAP[step % 4] : pose === 'dance' ? frame * 2 : sway;
-      g([[10 - flap, 36 + F, 10 + flap, 13], [8 - flap, 44 + F, 8, 6]].map((r) => [...r, c.red]), [[10 - flap, 36 + F, 3, 13, c.redDark], [8 - flap, 47 + F, 6, 3, c.redDark], [16, 37 + F, 2, 10, HL]]);
+      // A torn, ragged cape: the hem hangs in uneven strips that flutter out of step.
+      const x0 = 8 - flap;
+      const strips = [[0, 3, 7], [3, 2, 3], [5, 3, 9], [8, 2, 4], [10, 2 + flap, 6]].map(([dx, w, h], i) => [x0 + dx, 44 + F, w, h + ((step + i) % 2), c.cape]);
+      g([[10 - flap, 36 + F, 10 + flap, 9, c.cape], ...strips], [[10 - flap, 36 + F, 2, 9, c.capeDark], [x0 + 6, 39 + F, 1, 7, c.capeDark], [x0 + 3, 44 + F, 1, 3, c.capeDark],
+        [x0 + 9, 41 + F, 2, 1, c.capeDark], [x0 + 1, 47 + F, 1, 2, c.capeDark], [16, 37 + F, 1, 6, HL]]);
     }
-    if (sk.tail) g([[8, 30 + F, 4, 10, c.body], [10, 38 + F, 8, 4, c.body]], [[8, 33 + F, 4, 1, c.bodyShade], [8, 36 + F, 4, 1, c.bodyShade], [9, 30 + F, 2, 2, c.belly]]);
+    if (sk.tail === 'flat') g([[4, 42 + F, 15, 5, c.bodyShade], [2, 43 + F, 3, 3, c.bodyShade]], [[6, 42 + F, 11, 1, HL], [7, 44 + F, 1, 1, '#5f3f28'], [11, 45 + F, 1, 1, '#5f3f28'], [14, 44 + F, 1, 1, '#5f3f28']]);
+    else if (sk.tail) g([[8, 30 + F, 4, 10, c.body], [10, 38 + F, 8, 4, c.body]], [[8, 33 + F, 4, 1, c.bodyShade], [8, 36 + F, 4, 1, c.bodyShade], [9, 30 + F, 2, 2, c.belly]]);
     if (sk.backpack) g([[11, 34 + F, 7, 12, c.body]], [[11, 36 + F, 2, 9, c.bodyShade], [13, 40 + F, 3, 3, '#8a93a6'], [14, 41 + F, 1, 1, glow('#3dffb0')]]);
 
     // --- Back arm (and a shoulder plate for the commander).
@@ -137,7 +150,8 @@
     const backSwing = pose === 'walk' ? -WALK_ARM[step % 4] : 0;
     if (backUp) g([[14, 22, 4, 14, c.bodyShade], [14, 19, 4, 4, c.hand]], [[14, 22, 1, 14, HL]]);
     else g([[14 + backSwing, 38 + F, 4, 7, c.bodyShade], [14 + backSwing, 44 + F, 4, 3, c.hand]], [[14 + backSwing, 38 + F, 1, 6, HL]]);
-    if (sk.body === 'armor') g([[12, 35 + F, 8, 5, c.plate]], [[12, 35 + F, 8, 1, HL], [12, 39 + F, 8, 1, c.red]]);
+    if (sk.body === 'armor') g([[12, 35 + F, 8, 5, c.plate]], [[12, 35 + F, 8, 1, HL], [12, 39 + F, 8, 1, c.trim]]);
+    if (sk.spikes) g([[12, 35 + F, 8, 5, c.plate], [13, 31 + F, 2, 4, c.plate], [16, 32 + F, 2, 3, c.plate]], [[12, 35 + F, 8, 1, HL], [12, 39 + F, 8, 1, c.face]]);
 
     // --- Legs.
     const legs = {
@@ -154,8 +168,12 @@
     const light = [[36, TY + 1, 1, 9, HL], [18, TY + 11, 20, 1, SH], [18, TY, 2, 12, c.bodyShade]];
     switch (sk.body) {
       case 'armor':
-        g(torso, [...light, [21, TY + 1, 14, 7, c.plate], [21, TY + 1, 14, 1, HL], [24, TY + 3, 4, 3, PAL.gold], [24, TY + 3, 1, 1, PAL.shine],
-          [30, TY + 3, 2, 2, glow(c.glow)], [18, TY + 8, 20, 2, c.boot], [27, TY + 8, 3, 2, PAL.gold], [18, TY + 11, 20, 1, c.red]]);
+        g(torso, [...light, [21, TY + 1, 14, 7, c.plate], [21, TY + 1, 14, 1, HL], [27, TY + 2, 2, 5, c.bodyShade], [23, TY + 3, 2, 1, c.trim], [31, TY + 3, 2, 1, c.trim],
+          [18, TY + 8, 20, 2, c.boot], [27, TY + 8, 3, 2, c.trim], [27, TY + 8, 1, 1, PAL.shine], [22, TY + 10, 2, 2, c.bodyShade], [31, TY + 10, 2, 2, c.bodyShade]]);
+        break;
+      case 'mech':
+        g(torso, [...light, [20, TY + 1, 16, 7, c.plate], [20, TY + 1, 16, 1, HL], [26, TY + 3, 4, 4, c.face], [27, TY + 4, 2, 2, glow(c.glow)],
+          [21, TY + 9, 14, 1, c.face], [23, TY + 11, 2, 1, c.face], [31, TY + 11, 2, 1, c.face], [21, TY + 2, 1, 1, '#7a808e'], [34, TY + 2, 1, 1, '#7a808e']]);
         break;
       case 'shirt':
         g(torso, [...light, [26, TY, 4, 2, col.dark], [27, TY + 2, 2, 6, col.main], [27, TY + 4, 2, 1, SH], [22, TY, 4, 2, '#ffffff'], [30, TY, 4, 2, '#ffffff'],
@@ -188,18 +206,18 @@
     // --- Head: wide and flat.
     const headRects = (color) => [[16, 18 + HY, 26, 18, color], [14, 20 + HY, 30, 14, color], [15, 19 + HY, 28, 16, color]];
     const eyes = (color = PAL.eye) => (sleeping
-      ? [[29, 29 + HY, 4, 1, color], [37, 29 + HY, 4, 1, color]]
-      : [[30, 26 + HY, 2, 3, color], [38, 26 + HY, 2, 3, color]]);
-    const cheeks = [[26, 31 + HY, 3, 2, PAL.blush], [41, 31 + HY, 2, 2, PAL.blush]];
+      ? [[24, 28 + HY, 4, 1, color], [38, 28 + HY, 4, 1, color]]
+      : [[25, 27 + HY, 2, 2, color], [39, 27 + HY, 2, 2, color]]);
+    const cheeks = [[22, 30 + HY, 3, 2, PAL.blush], [41, 30 + HY, 3, 2, PAL.blush]];
     const faceShade = [[15, 33 + HY, 28, 2, SH], [42, 22 + HY, 1, 8, HL]];
     switch (sk.head) {
       case 'face':
-        g(headRects(c.skin), [...faceShade, ...eyes(), ...cheeks, [34, 31 + HY, 2, 1, '#b0705a'], [17, 26 + HY, 3, 4, '#e8b48c']]);
+        g(headRects(c.skin), [...faceShade, ...eyes(), ...cheeks, [32, 31 + HY, 2, 1, '#b0705a'], [17, 26 + HY, 3, 4, '#e8b48c']]);
         break;
       case 'cat':
         g([[16, 12 + HY, 7, 9, c.body], [35, 12 + HY, 7, 9, c.body]], [[18, 14 + HY, 3, 5, '#f6b8b8'], [37, 14 + HY, 3, 5, '#f6b8b8']], [], [[17, 10 + HY, 4, 2, c.body], [36, 10 + HY, 4, 2, c.body]]);
-        g(headRects(c.body), [...faceShade, ...eyes('#3a3020'), [31, 30 + HY, 10, 4, c.belly], [35, 30 + HY, 2, 1, '#e07a7a'], [34, 32 + HY, 1, 1, '#b07050'], [37, 32 + HY, 1, 1, '#b07050'],
-          [26, 18 + HY, 1, 3, c.bodyShade], [29, 18 + HY, 1, 4, c.bodyShade], [32, 18 + HY, 1, 3, c.bodyShade], [26, 31 + HY, 3, 2, PAL.blush],
+        g(headRects(c.body), [...faceShade, ...eyes('#3a3020'), [28, 30 + HY, 10, 4, c.belly], [32, 30 + HY, 2, 1, '#e07a7a'], [31, 32 + HY, 1, 1, '#b07050'], [34, 32 + HY, 1, 1, '#b07050'],
+          [26, 18 + HY, 1, 3, c.bodyShade], [29, 18 + HY, 1, 4, c.bodyShade], [32, 18 + HY, 1, 3, c.bodyShade], [22, 30 + HY, 3, 2, PAL.blush],
           [42, 29 + HY, 4, 1, '#8a6a50'], [42, 32 + HY, 4, 1, '#8a6a50']]);
         break;
       case 'robot':
@@ -211,12 +229,45 @@
         [31, 29 + HY, 4, 1, 'rgba(94,240,255,0.5)'], [16, 19 + HY, 8, 1, HL], [42, 20 + HY, 1, 14, SH], [14, 25 + HY, 2, 4, c.bodyShade], [17, 21 + HY, 24, 1, 'rgba(94,240,255,0.12)']]);
         break;
       case 'ninja':
-        g(headRects(c.head), [...faceShade, [20, 24 + HY, 24, 9, c.skin], ...eyes(), [27, 31 + HY, 3, 1, PAL.blush], [14, 20 + HY, 30, 3, col.main], [14, 20 + HY, 30, 1, HL]]);
+        g(headRects(c.head), [...faceShade, [20, 24 + HY, 24, 9, c.skin], ...eyes(), [22, 30 + HY, 3, 1, PAL.blush], [14, 20 + HY, 30, 3, col.main], [14, 20 + HY, 30, 1, HL]]);
         g([[8, 21 + HY, 8, 2, col.main], [6 + frame, 24 + HY, 6, 2, col.main]], [[8, 22 + HY, 8, 1, col.dark]]);
+        break;
+      case 'helmet': {
+        // The closed knight's helm with a T visor; bean eyes glint in the slit, the plume trails behind.
+        const px = -sway;
+        g([[27, 9 + HY, 6, 8, c.plume], [20 + px, 6 + HY, 11, 5, c.plume], [13 + px * 2, 7 + HY, 9, 4, c.plume], [8 + px * 2, 9 + HY, 6, 3, c.plume], [5 + px * 3, 11 + HY, 4, 2, c.plume]],
+          [[21 + px, 6 + HY, 9, 1, HL], [27, 11 + HY, 1, 6, c.plumeDark], [13 + px * 2, 10 + HY, 9, 1, c.plumeDark], [8 + px * 2, 11 + HY, 6, 1, c.plumeDark], [17 + px, 8 + HY, 1, 2, c.plumeDark]]);
+        g([[16, 15 + HY, 26, 21, c.helmet], [14, 18 + HY, 30, 16, c.helmet], [15, 16 + HY, 28, 19, c.helmet]], [
+          [14, 20 + HY, 2, 12, c.helmetShade], [15, 33 + HY, 28, 3, c.helmetShade], [19, 17 + HY, 10, 1, HL2], [16, 19 + HY, 1, 4, HL2],
+          [20, 24 + HY, 24, 5, PAL.line], [33, 29 + HY, 3, 5, PAL.line],
+          ...(sleeping ? [] : [[25, 26 + HY, 2, 2, PAL.shine], [39, 26 + HY, 2, 2, PAL.shine]]),
+          [39, 31 + HY, 1, 1, c.helmetShade], [41, 31 + HY, 1, 1, c.helmetShade], [39, 33 + HY, 1, 1, c.helmetShade], [41, 33 + HY, 1, 1, c.helmetShade],
+          [18, 27 + HY, 1, 1, c.helmetShade], [18, 31 + HY, 1, 1, c.helmetShade], [28, 16 + HY, 1, 7, c.helmetShade],
+        ]);
+        break;
+      }
+      case 'droid': {
+        // A scary robot: horn antennae, angry slanted eyes, a grille of teeth.
+        const E = glow(c.glow);
+        g([[17, 12 + HY, 3, 7, c.plate], [18, 8 + HY, 2, 4, c.plate], [38, 12 + HY, 3, 7, c.plate], [38, 8 + HY, 2, 4, c.plate]], [[18, 8 + HY, 2, 1, E], [38, 8 + HY, 2, 1, E], [17, 12 + HY, 1, 7, HL]]);
+        g([[14, 17 + HY, 30, 16, c.head], [16, 15 + HY, 26, 2, c.head], [18, 33 + HY, 22, 4, c.head]], [
+          [17, 20 + HY, 26, 10, c.face],
+          ...(sleeping ? [[22, 26 + HY, 6, 1, '#5a6070'], [35, 26 + HY, 6, 1, '#5a6070']]
+            : [[21, 22 + HY, 3, 2, E], [23, 23 + HY, 3, 2, E], [25, 24 + HY, 3, 2, E], [34, 24 + HY, 3, 2, E], [36, 23 + HY, 3, 2, E], [38, 22 + HY, 3, 2, E]]),
+          [16, 16 + HY, 10, 1, HL], [14, 29 + HY, 2, 4, c.headShade], [18, 35 + HY, 22, 2, c.headShade],
+          [21, 32 + HY, 16, 4, c.face], [22, 32 + HY, 2, 2, '#c9ced8'], [26, 33 + HY, 2, 2, '#c9ced8'], [30, 32 + HY, 2, 2, '#c9ced8'], [34, 33 + HY, 2, 2, '#c9ced8'],
+          [15, 22 + HY, 1, 1, '#7a808e'], [15, 26 + HY, 1, 1, '#7a808e'], [39, 16 + HY, 1, 3, c.headShade], [40, 18 + HY, 1, 2, c.headShade],
+        ]);
+        break;
+      }
+      case 'platypus':
+        g(headRects(c.body), [...faceShade, ...(sleeping ? [[23, 27 + HY, 4, 1, PAL.eye], [34, 27 + HY, 4, 1, PAL.eye]] : [[24, 25 + HY, 2, 2, PAL.eye], [35, 25 + HY, 2, 2, PAL.eye]]),
+          [20, 28 + HY, 3, 2, PAL.blush], [18, 19 + HY, 8, 1, HL], [26, 19 + HY, 1, 3, c.bodyShade], [30, 19 + HY, 1, 3, c.bodyShade]]);
+        g([[37, 28 + HY, 15, 5, c.bill], [39, 27 + HY, 11, 1, c.bill]], [[39, 28 + HY, 11, 1, HL], [37, 32 + HY, 15, 1, c.billDark], [46, 29 + HY, 1, 1, c.billDark], [49, 29 + HY, 1, 1, c.billDark]]);
         break;
       case 'astronaut':
         g([[16, 15 + HY, 26, 22, c.head], [13, 18 + HY, 32, 16, c.head], [14, 16 + HY, 30, 20, c.head]], [
-          [18, 21 + HY, 24, 12, '#2a3b66'], [20, 22 + HY, 6, 1, '#6a84c0'], [19, 23 + HY, 1, 3, '#6a84c0'], ...eyes('#dfe8ff'), [26, 31 + HY, 3, 1, 'rgba(245,163,163,0.6)'],
+          [18, 21 + HY, 24, 12, '#2a3b66'], [20, 22 + HY, 6, 1, '#6a84c0'], [19, 23 + HY, 1, 3, '#6a84c0'], ...eyes('#dfe8ff'), [22, 30 + HY, 3, 1, 'rgba(245,163,163,0.6)'],
           [14, 34 + HY, 30, 2, '#c3c9d6'], [13, 24 + HY, 2, 4, glow('#ff5f5f')], [43, 20 + HY, 1, 12, SH]]);
         break;
     }
@@ -234,20 +285,10 @@
         g([[13, 19 + HY, 5, 9, c.hair]], [[13, 20 + HY, 1, 6, HL]]);
         g([[18, 6 + HY, 22, 13, '#ffffff'], [15, 3 + HY, 28, 7, '#ffffff']], [[24, 8 + HY, 1, 8, '#e3e6ec'], [30, 6 + HY, 1, 10, '#e3e6ec'], [36, 8 + HY, 1, 8, '#e3e6ec'], [18, 16 + HY, 22, 3, '#e8eaf0'], [17, 4 + HY, 10, 1, PAL.shine]], [], [[18, 1 + HY, 22, 2, '#ffffff']]);
         break;
-      case 'helmet':
-        // Black commander's helmet framing the face: crest, brow visor glowing red, cheek guard.
-        g([[15, 12 + HY, 28, 9, c.helmet], [13, 15 + HY, 32, 6, c.helmet], [12, 19 + HY, 7, 14, c.helmet], [41, 21 + HY, 4, 9, c.helmet]], [
-          [15, 20 + HY, 30, 2, '#1c1d26'], [17, 21 + HY, 24, 1, glow(c.glow)], [28, 15 + HY, 4, 3, PAL.gold], [28, 15 + HY, 1, 1, PAL.shine],
-          [17, 13 + HY, 10, 1, HL], [14, 16 + HY, 1, 3, HL], [13, 24 + HY, 1, 1, '#5a5e72'], [13, 28 + HY, 1, 1, '#5a5e72'], [42, 23 + HY, 2, 1, c.red],
-        ]);
-        // The crest trails a frame behind the body.
-        const cx = -sway;
-        g([[22 + cx, 8 + HY, 18, 4, c.red], [27 + cx, 6 + HY, 12, 2, c.red], [34 + cx * 2, 4 + HY, 6, 2, c.red]], [[24 + cx, 8 + HY, 10, 1, HL], [22 + cx, 11 + HY, 18, 1, c.redDark], [36 + cx * 2, 4 + HY, 4, 1, HL]]);
-        break;
     }
     if (sk.specs) {
       const ring = (x) => [[x - 2, 24 + HY, 6, 1, '#5a4a3a'], [x - 2, 29 + HY, 6, 1, '#5a4a3a'], [x - 2, 24 + HY, 1, 6, '#5a4a3a'], [x + 3, 24 + HY, 1, 6, '#5a4a3a'], [x - 1, 25 + HY, 1, 1, HL2]];
-      g([], [...ring(30), ...ring(38), [34, 26 + HY, 2, 1, '#5a4a3a'], [19, 26 + HY, 9, 1, '#5a4a3a']]);
+      g([], [...ring(25), ...ring(39), [29, 26 + HY, 8, 1, '#5a4a3a'], [17, 26 + HY, 6, 1, '#5a4a3a']]);
     }
 
     // --- Front arm and whatever it holds.
@@ -325,7 +366,8 @@
         arm([[38 + swing, 37 + F, 4, 6]], [40 + swing, 41 + F, 4, 4]);
       }
     }
-    if (sk.body === 'armor') g([[36, 37 + F, 7, 4, c.plate]], [[36, 37 + F, 7, 1, HL], [36, 40 + F, 7, 1, c.red], [41, 38 + F, 1, 1, PAL.gold]]);
+    if (sk.body === 'armor') g([[36, 37 + F, 7, 4, c.plate]], [[36, 37 + F, 7, 1, HL], [36, 40 + F, 7, 1, c.trim], [41, 38 + F, 1, 1, c.trim]]);
+    if (sk.spikes) g([[36, 37 + F, 7, 4, c.plate], [37, 33 + F, 2, 4, c.plate], [40, 34 + F, 2, 3, c.plate]], [[36, 37 + F, 7, 1, HL], [36, 40 + F, 7, 1, c.face]]);
 
     // --- Accessory on top of everything.
     const A = F;
@@ -338,11 +380,11 @@
         break;
       case 'glasses': {
         const ring = (x) => [[x - 2, 24 + A, 6, 1, PAL.line], [x - 2, 29 + A, 6, 1, PAL.line], [x - 2, 24 + A, 1, 6, PAL.line], [x + 3, 24 + A, 1, 6, PAL.line], [x - 1, 25 + A, 4, 4, 'rgba(191,227,255,0.4)'], [x - 1, 25 + A, 1, 1, PAL.shine]];
-        g([], [...ring(30), ...ring(38), [34, 26 + A, 2, 1, PAL.line], [19, 26 + A, 9, 1, PAL.line]]);
+        g([], [...ring(25), ...ring(39), [29, 26 + A, 8, 1, PAL.line], [17, 26 + A, 6, 1, PAL.line]]);
         break;
       }
       case 'sunglasses':
-        g([], [[28, 25 + A, 6, 4, '#1c1c26'], [36, 25 + A, 6, 4, '#1c1c26'], [34, 26 + A, 2, 1, '#1c1c26'], [19, 26 + A, 9, 1, '#1c1c26'], [29, 26 + A, 2, 1, '#6a6a7a'], [37, 26 + A, 1, 1, '#6a6a7a']]);
+        g([], [[22, 25 + A, 7, 4, '#1c1c26'], [36, 25 + A, 7, 4, '#1c1c26'], [29, 26 + A, 7, 1, '#1c1c26'], [17, 26 + A, 5, 1, '#1c1c26'], [23, 26 + A, 2, 1, '#6a6a7a'], [37, 26 + A, 1, 1, '#6a6a7a']]);
         break;
       case 'headphones':
         g([[17, 13 + A, 24, 2, '#3a3a46'], [15, 15 + A, 3, 8, '#3a3a46']], [[19, 13 + A, 18, 1, HL]]);
@@ -387,9 +429,11 @@
 
     if (sk.cape) {
       const flap = pose === 'walk' ? WALK_FLAP[step % 4] / 2 : 0;
-      g([[4 - flap, 19 + F, 5 + flap, 9, c.red]], [[4 - flap, 19 + F, 2, 9, c.redDark]]);
+      g([[4 - flap, 19 + F, 5 + flap, 6, c.cape], [3 - flap, 25 + F, 2, 3 + (step % 2), c.cape], [6 - flap, 25 + F, 2, 4 - (step % 2), c.cape], [8 - flap, 25 + F, 1, 2, c.cape]],
+        [[4 - flap, 19 + F, 1, 6, c.capeDark], [6 - flap, 21 + F, 1, 3, c.capeDark]]);
     }
-    if (sk.tail) g([[3, 18 + F, 2, 7, c.body]], [[3, 20 + F, 2, 1, c.bodyShade]]);
+    if (sk.tail === 'flat') g([[1, 23 + F, 8, 3, c.bodyShade]], [[2, 23 + F, 6, 1, HL]]);
+    else if (sk.tail) g([[3, 18 + F, 2, 7, c.body]], [[3, 20 + F, 2, 1, c.bodyShade]]);
     if (sk.backpack) g([[4, 18 + F, 4, 8, c.body]], [[5, 21 + F, 2, 2, '#8a93a6']]);
 
     const armsUp = pose === 'dangle' || pose === 'done' || (pose === 'dance' && !frame);
@@ -401,7 +445,8 @@
 
     const torso = sk.body === 'labcoat' ? [[8, TY, 10, 10, c.body]] : [[8, TY, 10, 8, c.body]];
     const torsoDetail = {
-      armor: [[10, TY + 1, 6, 4, c.plate], [12, TY + 2, 2, 2, PAL.gold], [8, TY + 5, 10, 1, c.boot], [8, TY + 7, 10, 1, c.red]],
+      armor: [[10, TY + 1, 6, 4, c.plate], [12, TY + 1, 2, 4, c.bodyShade], [8, TY + 5, 10, 1, c.boot], [12, TY + 5, 2, 1, c.trim]],
+      mech: [[10, TY + 1, 6, 5, c.plate], [12, TY + 2, 2, 2, glow(c.glow)], [8, TY + 7, 10, 1, c.face]],
       shirt: [[12, TY, 2, 5, col.main], [10, TY, 2, 1, '#ffffff'], [14, TY, 2, 1, '#ffffff'], [8, TY + 6, 10, 1, '#3b3b45']],
       labcoat: [[11, TY, 4, 4, col.main], [10, TY, 1, 9, c.bodyShade], [15, TY, 1, 9, c.bodyShade], [16, TY + 3, 1, 2, '#e0405a']],
       fur: [[10, TY + 2, 6, 5, c.belly], [8, TY, 10, 1, col.main], [12, TY + 1, 2, 2, PAL.gold]],
@@ -413,23 +458,43 @@
     g(torso, [...torsoDetail, [8, TY, 1, 8, c.bodyShade], [17, TY + 1, 1, 6, HL], [8, TY + 7, 10, 1, SH]]);
 
     const head = (color) => [[6, 6 + HY, 16, 12, color], [4, 8 + HY, 20, 8, color], [5, 7 + HY, 18, 10, color]];
-    const eyes = (color = PAL.eye) => (sleeping ? [[13, 13 + HY, 3, 1, color], [18, 13 + HY, 3, 1, color]] : [[14, 11 + HY, 2, 3, color], [19, 11 + HY, 2, 3, color]]);
-    const cheeks = [[11, 15 + HY, 2, 1, PAL.blush], [21, 15 + HY, 2, 1, PAL.blush]];
+    const eyes = (color = PAL.eye) => (sleeping ? [[10, 12 + HY, 3, 1, color], [18, 12 + HY, 3, 1, color]] : [[11, 11 + HY, 2, 2, color], [19, 11 + HY, 2, 2, color]]);
+    const cheeks = [[8, 14 + HY, 2, 1, PAL.blush], [21, 14 + HY, 2, 1, PAL.blush]];
     switch (sk.head) {
       case 'face':
         g(head(c.skin), [...eyes(), ...cheeks, [5, 16 + HY, 18, 1, SH]]);
         break;
       case 'cat':
         g([[6, 2 + HY, 4, 6, c.body], [17, 2 + HY, 4, 6, c.body]], [[7, 4 + HY, 2, 3, '#f6b8b8'], [18, 4 + HY, 2, 3, '#f6b8b8']]);
-        g(head(c.body), [...eyes('#3a3020'), [15, 14 + HY, 6, 3, c.belly], [17, 14 + HY, 2, 1, '#e07a7a'], [11, 15 + HY, 2, 1, PAL.blush], [12, 7 + HY, 1, 2, c.bodyShade], [15, 7 + HY, 1, 2, c.bodyShade]]);
+        g(head(c.body), [...eyes('#3a3020'), [13, 14 + HY, 6, 3, c.belly], [15, 14 + HY, 2, 1, '#e07a7a'], [8, 14 + HY, 2, 1, PAL.blush], [12, 7 + HY, 1, 2, c.bodyShade], [15, 7 + HY, 1, 2, c.bodyShade]]);
         break;
       case 'robot':
         g([[13, 2 + HY, 2, 4, c.bodyShade]], [[13, 1 + HY, 2, 2, glow(col.main)]], [], [[12, 0 + HY, 4, 3, col.main]]);
         g([[4, 6 + HY, 20, 12, c.head]], [[6, 8 + HY, 16, 8, '#1b2b3a'], ...(sleeping ? [[12, 12 + HY, 3, 1, glow('#5ef0ff')], [17, 12 + HY, 3, 1, glow('#5ef0ff')]] : [[13, 10 + HY, 2, 3, glow('#5ef0ff')], [18, 10 + HY, 2, 3, glow('#5ef0ff')]]), [5, 7 + HY, 6, 1, HL]]);
         break;
       case 'ninja':
-        g(head(c.head), [[7, 10 + HY, 16, 6, c.skin], ...eyes(), [11, 15 + HY, 2, 1, PAL.blush], [4, 8 + HY, 20, 2, col.main]]);
+        g(head(c.head), [[7, 10 + HY, 16, 6, c.skin], ...eyes(), [8, 14 + HY, 2, 1, PAL.blush], [4, 8 + HY, 20, 2, col.main]]);
         g([[0 + frame, 9 + HY, 4, 2, col.main]]);
+        break;
+      case 'helmet': {
+        const px = pose === 'walk' ? -WALK_SWAY[step % 4] : 0;
+        g([[12, 2 + HY, 3, 4, c.plume], [7 + px, 1 + HY, 7, 2, c.plume], [3 + px, 2 + HY, 5, 2, c.plume]], [[3 + px, 3 + HY, 5, 1, c.plumeDark]]);
+        g(head(c.helmet).concat([[6, 5 + HY, 16, 2, c.helmet]]), [[4, 8 + HY, 2, 7, c.helmetShade], [5, 16 + HY, 18, 2, c.helmetShade], [7, 6 + HY, 5, 1, HL2],
+          [7, 10 + HY, 16, 3, PAL.line], [15, 13 + HY, 2, 3, PAL.line], ...(sleeping ? [] : [[11, 11 + HY, 1, 1, PAL.shine], [19, 11 + HY, 1, 1, PAL.shine]]), [20, 14 + HY, 1, 1, c.helmetShade]]);
+        break;
+      }
+      case 'droid': {
+        const E = glow(c.glow);
+        g([[6, 2 + HY, 2, 4, c.plate], [20, 2 + HY, 2, 4, c.plate]], [[6, 2 + HY, 2, 1, E], [20, 2 + HY, 2, 1, E]]);
+        g([[4, 6 + HY, 20, 10, c.head], [5, 5 + HY, 18, 1, c.head], [7, 16 + HY, 14, 2, c.head]], [[6, 8 + HY, 16, 6, c.face],
+          ...(sleeping ? [[9, 11 + HY, 4, 1, '#5a6070'], [16, 11 + HY, 4, 1, '#5a6070']] : [[8, 9 + HY, 2, 1, E], [10, 10 + HY, 2, 1, E], [18, 9 + HY, 2, 1, E], [16, 10 + HY, 2, 1, E]]),
+          [9, 15 + HY, 10, 2, c.face], [10, 15 + HY, 1, 1, '#c9ced8'], [13, 16 + HY, 1, 1, '#c9ced8'], [16, 15 + HY, 1, 1, '#c9ced8'], [5, 6 + HY, 5, 1, HL], [7, 17 + HY, 14, 1, c.headShade]]);
+        break;
+      }
+      case 'platypus':
+        g(head(c.body), [...(sleeping ? [[9, 12 + HY, 3, 1, PAL.eye], [15, 12 + HY, 3, 1, PAL.eye]] : [[10, 10 + HY, 2, 2, PAL.eye], [16, 10 + HY, 2, 2, PAL.eye]]),
+          [7, 13 + HY, 2, 1, PAL.blush], [5, 16 + HY, 18, 1, SH]]);
+        g([[18, 12 + HY, 8, 3, c.bill]], [[18, 12 + HY, 8, 1, HL], [23, 13 + HY, 1, 1, c.billDark]]);
         break;
       case 'astronaut':
         g([[6, 4 + HY, 16, 15, c.head], [4, 6 + HY, 20, 11, c.head], [5, 5 + HY, 18, 13, c.head]], [[7, 8 + HY, 14, 8, '#2a3b66'], ...eyes('#dfe8ff'), [8, 9 + HY, 3, 1, '#6a84c0']]);
@@ -439,12 +504,8 @@
       case 'hair': g([[5, 4 + HY, 18, 5, c.hair], [4, 7 + HY, 4, 7, c.hair]], [[8, 5 + HY, 6, 1, HL]], [], [[10, 9 + HY, 6, 1, c.hair]]); break;
       case 'messy': g([[5, 4 + HY, 18, 4, c.hair], [4, 7 + HY, 4, 6, c.hair]], [[8, 5 + HY, 6, 1, HL2]], [], [[7, 2 + HY, 3, 2, c.hair], [13, 1 + HY, 4, 3, c.hair], [21, 5 + HY, 3, 3, c.hair]]); break;
       case 'chef': g([[7, 0 + HY, 14, 7, '#ffffff'], [5, 6 + HY, 18, 2, '#ffffff']], [[11, 1 + HY, 1, 5, '#e3e6ec'], [16, 1 + HY, 1, 5, '#e3e6ec']]); break;
-      case 'helmet':
-        g([[5, 3 + HY, 18, 6, c.helmet], [3, 6 + HY, 5, 8, c.helmet], [21, 8 + HY, 3, 5, c.helmet]], [[5, 8 + HY, 18, 1, glow(c.glow)], [12, 4 + HY, 3, 2, PAL.gold], [6, 4 + HY, 5, 1, HL]]);
-        g([[10, 1 + HY, 10, 3, c.red], [16, 0 + HY, 5, 1, c.red]], [[10, 3 + HY, 10, 1, c.redDark]]);
-        break;
     }
-    if (sk.specs) g([], [[13, 10 + HY, 4, 1, '#5a4a3a'], [18, 10 + HY, 4, 1, '#5a4a3a'], [17, 11 + HY, 1, 1, '#5a4a3a'], [9, 11 + HY, 4, 1, '#5a4a3a']]);
+    if (sk.specs) g([], [[10, 10 + HY, 4, 1, '#5a4a3a'], [18, 10 + HY, 4, 1, '#5a4a3a'], [14, 11 + HY, 4, 1, '#5a4a3a'], [6, 11 + HY, 4, 1, '#5a4a3a']]);
 
     const arm = (rects, hand) => g([...rects.map((r) => [...r, c.body]), [...hand, c.hand]]);
     const spark = (pts) => g([], pts.flatMap(([x, y, color]) => twinkle(x, y, color)));
@@ -483,14 +544,15 @@
         if (sk.item === 'wrench') g([[21, 14 + F, 2, 10, PAL.steel], [20, 12 + F, 4, 2, PAL.steel]]);
         arm([[18, 19 + F, 2, 4]], [18, 23 + F, 3, 2]);
     }
-    if (sk.body === 'armor') g([[16, 18 + F, 5, 3, c.plate]], [[16, 20 + F, 5, 1, c.red]]);
+    if (sk.body === 'armor') g([[16, 18 + F, 5, 3, c.plate]], [[16, 20 + F, 5, 1, c.trim]]);
+    if (sk.spikes) g([[16, 18 + F, 5, 3, c.plate], [18, 16 + F, 2, 2, c.plate]], [[16, 20 + F, 5, 1, c.face]]);
 
     const A = F;
     switch (opts.accessory) {
       case 'partyhat': g([[13, 0 + A, 2, 2, col.main], [11, 2 + A, 6, 5, col.main]], [[12, 4 + A, 4, 1, '#ffffff']]); break;
       case 'flower': g([[19, 4 + A, 3, 3, '#ff8fb1']], [[20, 5 + A, 1, 1, '#ffe066']]); break;
-      case 'glasses': g([], [[13, 10 + A, 4, 1, PAL.line], [18, 10 + A, 4, 1, PAL.line], [13, 14 + A, 4, 1, PAL.line], [18, 14 + A, 4, 1, PAL.line], [17, 11 + A, 1, 1, PAL.line], [8, 11 + A, 5, 1, PAL.line]]); break;
-      case 'sunglasses': g([], [[13, 11 + A, 4, 3, '#1c1c26'], [18, 11 + A, 4, 3, '#1c1c26'], [17, 11 + A, 1, 1, '#1c1c26'], [8, 11 + A, 5, 1, '#1c1c26'], [14, 11 + A, 1, 1, '#6a6a7a']]); break;
+      case 'glasses': g([], [[10, 10 + A, 4, 1, PAL.line], [18, 10 + A, 4, 1, PAL.line], [10, 13 + A, 4, 1, PAL.line], [18, 13 + A, 4, 1, PAL.line], [14, 11 + A, 4, 1, PAL.line], [6, 11 + A, 4, 1, PAL.line]]); break;
+      case 'sunglasses': g([], [[10, 10 + A, 4, 3, '#1c1c26'], [18, 10 + A, 4, 3, '#1c1c26'], [14, 11 + A, 4, 1, '#1c1c26'], [6, 11 + A, 4, 1, '#1c1c26'], [11, 11 + A, 1, 1, '#6a6a7a']]); break;
       case 'headphones': g([[6, 4 + A, 16, 1, '#3a3a46']]); g([[3, 9 + A, 4, 6, col.main]], [[3, 9 + A, 1, 6, col.dark]]); break;
       case 'halo': g([], [[8, 1 + A, 12, 1, glow('#ffe066')], [7, 2 + A, 1, 1, glow('#ffe066')], [20, 2 + A, 1, 1, glow('#ffe066')]]); break;
       case 'bow': g([[17, 4 + A, 3, 3, '#ff6fa8'], [21, 4 + A, 3, 3, '#ff6fa8']], [[20, 5 + A, 1, 2, '#e0508a']]); break;

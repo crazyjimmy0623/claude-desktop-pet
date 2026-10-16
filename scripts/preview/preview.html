@@ -39,7 +39,7 @@ if (mode === 'chars') {
   });
 } else if (mode === 'anim') {
   // Every frame of the walk cycle and the idle breath, full size and room size.
-  const skins = ['commander', 'office', 'scientist', 'cat'];
+  const skins = ['commander', 'droid', 'platypus', 'whitecat'];
   const seq = [['walk', 4], ['rest', 8]];
   c.width = 12 * (SW + 6) + 70; c.height = skins.length * (SH + 8 + 18 * 6 + 8) + 10;
   ctx.fillStyle = '#3b4a5a'; ctx.fillRect(0,0,c.width,c.height);
