@@ -88,15 +88,9 @@ function layout() {
   rebuildNav();
 }
 
-// Upgrades bought with coins open more layers; the level lives in progress, not in the saved room.
-function applyLevel(room) {
-  Object.defineProperty(room, 'level', { value: state.progress?.roomLevel || 0, writable: true, configurable: true, enumerable: false });
-  Iso.resetCells(room);
-}
-
 function setRoom(room, { save = false, relayout = true } = {}) {
   state.room = room;
-  applyLevel(room);
+  Iso.resetCells(room);
   if (relayout) layout(); else rebuildNav();
   if (save) {
     clearTimeout(setRoom.timer);
@@ -727,10 +721,6 @@ function applySettings(s) {
 function applyProgress(p) {
   state.progress = p;
   coinsEl.textContent = `Lv.${p.level} · ${p.coins} 🪙`;
-  if (state.room && state.room.level !== (p.roomLevel || 0)) {
-    applyLevel(state.room);
-    layout();
-  }
   window.RoomEditor?.refresh();
 }
 
@@ -759,7 +749,6 @@ desk.invoke('init').then((init) => {
   const saved = Iso.migrate(init.room && clone(init.room));
   if (saved) state.room = saved;
   if (saved?.iso !== init.room?.iso || !saved) desk.invoke('room:set', state.room);
-  applyLevel(state.room);
   layout();
   syncActors(init.actors);
   window.RoomEditor?.refresh();

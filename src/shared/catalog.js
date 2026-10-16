@@ -101,6 +101,19 @@
     { id: 'obj:planter', type: 'furniture', rarity: 'starter', name: '花台' },
     { id: 'obj:cauldron', type: 'furniture', rarity: 'rare', name: '魔藥鍋' },
     { id: 'obj:potions', type: 'furniture', rarity: 'common', name: '藥水架' },
+    { id: 'obj:crate', type: 'furniture', rarity: 'starter', name: '木箱' },
+    { id: 'obj:barrel', type: 'furniture', rarity: 'starter', name: '木桶' },
+    { id: 'obj:chair', type: 'furniture', rarity: 'starter', name: '椅子' },
+    { id: 'obj:stool', type: 'furniture', rarity: 'starter', name: '吧台椅' },
+    { id: 'obj:books', type: 'furniture', rarity: 'starter', name: '書堆' },
+    { id: 'obj:signboard', type: 'furniture', rarity: 'common', name: '立牌' },
+    { id: 'obj:watertank', type: 'furniture', rarity: 'common', name: '水塔' },
+    { id: 'obj:antenna', type: 'furniture', rarity: 'common', name: '天線' },
+    { id: 'obj:walllamp', type: 'furniture', rarity: 'starter', name: '壁燈' },
+    { id: 'obj:meter', type: 'furniture', rarity: 'starter', name: '電錶箱' },
+    { id: 'obj:ivy', type: 'furniture', rarity: 'common', name: '爬藤' },
+    { id: 'obj:windowbox', type: 'furniture', rarity: 'common', name: '窗台花箱' },
+    { id: 'obj:banner', type: 'furniture', rarity: 'common', name: '掛旗' },
     { id: 'obj:easel', type: 'furniture', rarity: 'common', name: '畫架' },
     { id: 'obj:rug', type: 'furniture', rarity: 'common', name: '小地毯' },
     { id: 'obj:lamp', type: 'furniture', rarity: 'common', name: '立燈' },
@@ -142,13 +155,5 @@
   const PULL_COST = 10;
   const DUPLICATE_REFUND = 3;
 
-  // Room upgrades, bought in order with coins: each one opens another layer of the room.
-  const ROOM_UPGRADES = [
-    // What each step opens depends on the blueprint: its zones carry the level.
-    { level: 1, name: '第一次擴建', desc: '打開藍圖裡的下一層', cost: 60 },
-    { level: 2, name: '第二次擴建', desc: '再加蓋一層', cost: 150 },
-    { level: 3, name: '第三次擴建', desc: '最後一層，蓋到完整', cost: 300 },
-  ];
-
-  return { STATIONS, RARITY, ITEMS, ACHIEVEMENTS, PULL_COST, DUPLICATE_REFUND, ROOM_UPGRADES };
+  return { STATIONS, RARITY, ITEMS, ACHIEVEMENTS, PULL_COST, DUPLICATE_REFUND };
 });

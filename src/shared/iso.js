@@ -615,7 +615,92 @@
         P.dot(4 + i * 5, 8, 17 + (i % 2) * 2, ['#ff8fb1', '#c27bff', '#ffd65a'][i % 3], 1, 1);
       }
     } },
+    crate: { w: 1, d: 1, h: 20, draw: (P) => {
+      P.box(2, 3, 0, 12, 11, 11, { t: '#c99a62', l: '#b98a56', r: '#9a7046' }, false);
+      P.left(2, 5, 12, 1, '#8a6038', 14);
+      P.left(7, 0, 1, 11, '#8a6038', 14);
+      P.box(4, 5, 11, 8, 7, 6, { t: '#d6b07a', l: '#c99a62', r: '#a97c4e' }, false);
+    } },
+    barrel: { w: 1, d: 1, h: 20, draw: (P) => {
+      P.disc(8, 8, 2, 5.5, '#6e4428');
+      P.box(3, 3, 0, 10, 10, 15, { t: '#9a6640', l: '#8a5a36', r: '#6e4428' }, false);
+      P.left(3, 3, 10, 1, '#4a4f5e', 13);
+      P.left(3, 11, 10, 1, '#4a4f5e', 13);
+      P.top(4, 4, 8, 8, '#a87048', 15);
+    } },
+    chair: { w: 1, d: 1, h: 22, draw: (P) => {
+      for (const [x, y] of [[4, 5], [11, 5], [4, 11], [11, 11]]) P.box(x, y, 0, 1, 1, 8, WOOD_D, false);
+      P.box(3, 4, 8, 10, 9, 2, WOOD);
+      P.box(3, 3, 10, 10, 2, 10, WOOD);
+    } },
+    stool: { w: 1, d: 1, h: 16, draw: (P) => {
+      P.box(7, 7, 0, 2, 2, 10, '#5a6075', false);
+      P.box(5, 9, 3, 6, 1, 1, '#5a6075', false);
+      P.disc(8, 8, 11, 4.5, '#c25b4f');
+      P.top(5, 6, 6, 4, '#d6705f', 12);
+    } },
+    signboard: { w: 1, d: 1, h: 24, draw: (P) => {
+      P.box(3, 7, 0, 10, 2, 20, { t: '#3a2a24', l: '#2a2b33', r: '#1c1d22' }, false);
+      P.left(4, 3, 8, 14, '#1f2a24', 9);
+      P.left(5, 13, 6, 1, '#f4efe4', 9.5);
+      P.left(5, 10, 4, 1, '#ffd65a', 9.5);
+      P.left(5, 7, 5, 1, '#f4efe4', 9.5);
+    } },
+    watertank: { w: 1, d: 1, h: 46, draw: (P) => {
+      for (const [x, y] of [[3, 3], [12, 3], [3, 12], [12, 12]]) P.box(x, y, 0, 1, 1, 14, '#4a4f5e', false);
+      P.box(2, 2, 14, 12, 12, 2, '#5a6075', false);
+      P.disc(8, 8, 18, 6, '#9aa6b8');
+      P.box(2, 2, 16, 12, 12, 20, { t: '#b8c2d0', l: '#9aa6b8', r: '#7f8a9c' }, false);
+      P.left(2, 22, 12, 1, '#7f8a9c', 14);
+      P.left(2, 29, 12, 1, '#7f8a9c', 14);
+      P.disc(8, 8, 37, 5, '#c9d1dc');
+    } },
+    antenna: { anim: true, w: 1, d: 1, h: 56, draw: (P, s) => {
+      P.box(6, 6, 0, 4, 4, 2, '#4a4f5e', false);
+      P.box(7, 7, 2, 1, 1, 46, '#6a7080', false);
+      for (const z of [24, 34, 42]) P.box(3, 7, z, 10, 1, 1, '#6a7080', false);
+      P.dot(7, 7, 49, s.frame % 4 < 2 ? '*#ff5a5a' : '#6a2a2a', 2, 2);
+      if (s.frame % 4 < 2) P.glow(7, 7, 49, 6, 'rgba(255,90,90,0.4)');
+    } },
+    books: { w: 1, d: 1, h: 14, draw: (P) => {
+      const c = ['#c2453f', '#5aa7ff', '#7cc47f', '#ffd65a', '#c27bff'];
+      for (let i = 0; i < 5; i++) P.box(4 + (i % 2), 5 - (i % 2), i * 2.4, 8, 6, 2.4, c[i], false);
+      P.box(11, 9, 0, 3, 3, 6, '#e8e4d8', false);
+    } },
     // Wall-mounted: mount height z, drawn on the plane y = 0; `top` is the highest point drawn.
+    walllamp: { anim: true, w: 1, d: 0, h: 50, top: 46, wall: true, z: 28, draw: (P, s) => {
+      P.box(7, 0, 34, 2, 4, 1, '#3a3f50', false);
+      P.box(5, 3, 28, 6, 4, 8, '#2e3240', false);
+      P.left(6, 29, 4, 6, s.hour >= 17 || s.hour < 7 ? '*#ffe7a8' : '#d9c9a0', 7.5);
+      P.box(5, 3, 36, 6, 4, 2, '#2e3240', false);
+      P.glow(8, 6, 32, 16, 'rgba(255,214,140,0.45)');
+    } },
+    meter: { w: 1, d: 0, h: 34, top: 30, wall: true, z: 10, draw: (P) => {
+      P.box(3, 0, 12, 10, 3, 14, { t: '#9aa0aa', l: '#8a909c', r: '#6e7480' }, false);
+      P.left(5, 19, 6, 4, '#e8e4d8', 3.5);
+      P.left(6, 21, 3, 1, '#2a2b33', 3.6);
+      P.box(7, 1, 0, 1, 1, 12, '#2a2b33', false);
+      P.box(11, 1, 26, 1, 1, 4, '#2a2b33', false);
+    } },
+    ivy: { w: 1, d: 0, h: 60, top: 56, wall: true, z: 0, draw: (P) => {
+      for (let i = 0; i < 16; i++) P.left((i * 5) % 13, 2 + ((i * 11) % 50), 4, 3, ['#3f7a3a', '#4f8f45', '#62a656'][i % 3], 0.6);
+      for (let v = 2; v < 52; v += 6) P.left(6 + Math.round(2 * Math.sin(v / 6)), v, 1, 6, '#5a4a2a', 0.5);
+    } },
+    windowbox: { w: 1, d: 0, h: 36, top: 32, wall: true, z: 14, draw: (P) => {
+      P.left(2, 20, 12, 12, '#3a2a24', 0.5);
+      P.left(3, 21, 10, 10, '#ffd9a0', 0.6);
+      P.left(8, 21, 1, 10, '#3a2a24', 0.7);
+      P.box(1, 0, 14, 14, 4, 4, { t: '#5a3a24', l: '#8a5a36', r: '#6e4428' }, false);
+      for (let i = 0; i < 4; i++) P.disc(3 + i * 3.4, 2, 19, 2, i % 2 ? '#4f8f45' : '#62a656');
+      P.dot(4, 2, 21, '#ff8fb1', 1, 1);
+      P.dot(11, 2, 21, '#ffd65a', 1, 1);
+    } },
+    banner: { w: 1, d: 0, h: 60, top: 56, wall: true, z: 24, draw: (P) => {
+      P.box(2, 0, 54, 12, 3, 1, '#5a4a3a', false);
+      P.left(4, 26, 8, 28, '#3f7f8a', 2);
+      P.left(4, 26, 4, 3, '#f4efe4', 2.1);
+      P.left(6, 40, 4, 6, '#ffd65a', 2.1);
+    } },
     potions: { anim: true, w: 1, d: 0, h: 60, top: 58, wall: true, z: 30, draw: (P, s) => {
       P.box(1, 0, 34, 14, 6, 2, WOOD, false);
       P.box(1, 0, 46, 14, 6, 2, WOOD, false);
@@ -749,7 +834,6 @@
   //     kind 'room' grows walls on its back edges, 'outdoor' and 'street' stay open;
   //     thin: a floor on joists over the space below (else a solid brick base to the ground);
   //     rails: railing on open edges; lights: fairy lights on them;
-  //     level: the room upgrade that unlocks it; keep: its base shows while still locked.
   //   tiles: [x, y, zone] - one per floor tile.
   //   flights: stairs between zones, bottom step first.
   // From these the engine derives everything else (see derive): rects to draw, walls on back
@@ -760,18 +844,18 @@
 
   // Blueprints: finished little worlds to start from, like showrooms - shape, materials and
   // furniture - for anyone who would rather move in than build. Zones are given as rects;
-  // objects as [zone, type, x, y, flip]. Each keeps three layers for the coin upgrades.
+  // objects as [zone, type, x, y, flip].
   const BLUEPRINTS = {
     shop: {
       name: '街角小店',
-      desc: '墊高一層的磚造小店，樓下是街道，露台、閣樓和屋頂花園可以一路加蓋',
+      desc: '墊高一層的磚造小店，樓下是街道，上面有露台、閣樓和屋頂花園',
       zones: [
         { name: '街道', z: 0, kind: 'street', wall: 'brick', floor: 'stone', rects: [[2, 6, 5, 2], [0, 8, 7, 1]] },
         { name: '樓梯平台', z: 32, kind: 'outdoor', wall: 'brick', floor: 'stone', rects: [[0, 6, 2, 2]] },
         { name: '店內', z: 64, kind: 'room', wall: 'brick', floor: 'terra', rects: [[0, 0, 2, 3], [2, 0, 5, 6], [7, 1, 2, 3]] },
-        { name: '露台', z: 128, kind: 'outdoor', level: 1, keep: true, rails: true, lights: true, wall: 'navy', floor: 'stone', rects: [[0, 3, 2, 3]] },
-        { name: '閣樓', z: 128, kind: 'room', level: 2, thin: true, rails: true, wall: 'cream', floor: 'wood', rects: [[2, 0, 5, 3], [2, 3, 1, 1]] },
-        { name: '屋頂花園', z: 192, kind: 'outdoor', level: 3, thin: true, rails: true, lights: true, wall: 'navy', floor: 'grass', rects: [[3, 0, 3, 2]] },
+        { name: '露台', z: 128, kind: 'outdoor', rails: true, lights: true, wall: 'navy', floor: 'stone', rects: [[0, 3, 2, 3]] },
+        { name: '閣樓', z: 128, kind: 'room', thin: true, rails: true, wall: 'cream', floor: 'wood', rects: [[2, 0, 5, 3], [2, 3, 1, 1]] },
+        { name: '屋頂花園', z: 192, kind: 'outdoor', thin: true, rails: true, lights: true, wall: 'navy', floor: 'grass', rects: [[3, 0, 3, 2]] },
       ],
       flights: [
         // The front stairs switch back: up from the street to the landing, then on into the shop.
@@ -784,6 +868,7 @@
       ],
       door: [6, 7],
       objects: [
+        [0, 'signboard', 3, 8], [0, 'crate', 2, 8], [2, 'stool', 6, 5], [4, 'walllamp', 2, 2, true], [5, 'antenna', 5, 1],
         // Street: a little shop under the big one, two vending machines, a lamp and the bins.
         [0, 'shopdoor', 6, 6], [0, 'sign', 6, 6], [0, 'vending', 4, 6], [0, 'vending', 5, 6],
         [0, 'streetlamp', 6, 8], [0, 'bin', 0, 8], [0, 'plant', 1, 8],
@@ -802,13 +887,13 @@
     },
     cottage: {
       name: '森林小屋',
-      desc: '草地上的木頭小屋，有壁爐和閣樓，旁邊一座瞭望台，再擴建出一片花園',
+      desc: '草地上的木頭小屋，有壁爐和閣樓，旁邊一座瞭望台和一片花園',
       zones: [
         { name: '草地', z: 0, kind: 'outdoor', wall: 'brick', floor: 'grass', rects: [[0, 5, 7, 3]] },
         { name: '小屋', z: 32, kind: 'room', wall: 'cream', floor: 'wood', rects: [[0, 0, 5, 5], [5, 0, 1, 3]] },
-        { name: '瞭望台', z: 96, kind: 'outdoor', level: 1, keep: true, rails: true, lights: true, wall: 'navy', floor: 'stone', rects: [[5, 3, 2, 2]] },
-        { name: '閣樓', z: 96, kind: 'room', level: 2, thin: true, rails: true, wall: 'plum', floor: 'carpet', rects: [[0, 0, 5, 2]] },
-        { name: '花園', z: 0, kind: 'outdoor', level: 3, wall: 'brick', floor: 'grass', rects: [[7, 0, 2, 8]] },
+        { name: '瞭望台', z: 96, kind: 'outdoor', rails: true, lights: true, wall: 'navy', floor: 'stone', rects: [[5, 3, 2, 2]] },
+        { name: '閣樓', z: 96, kind: 'room', thin: true, rails: true, wall: 'plum', floor: 'carpet', rects: [[0, 0, 5, 2]] },
+        { name: '花園', z: 0, kind: 'outdoor', wall: 'brick', floor: 'grass', rects: [[7, 0, 2, 8]] },
       ],
       flights: [
         { from: 0, to: 1, style: 'solid', cells: [[2, 5]], bottom: [2, 6], top: [2, 4] },
@@ -817,6 +902,7 @@
       ],
       door: [6, 7],
       objects: [
+        [0, 'meter', 4, 5], [1, 'walllamp', 5, 0], [3, 'walllamp', 0, 1, true], [4, 'crate', 8, 7], [4, 'barrel', 8, 6],
         [0, 'plant', 0, 5], [0, 'sofa', 0, 6, true], [0, 'bell', 4, 5], [0, 'streetlamp', 6, 5],
         [1, 'lamp', 0, 0], [1, 'fireplace', 1, 0], [1, 'desk', 0, 1, true], [1, 'bookshelf', 0, 3, true], [1, 'table', 2, 2],
         [1, 'coffee', 3, 0], [1, 'clock', 1, 0], [1, 'window', 3, 0], [1, 'poster', 0, 1, true],
@@ -827,14 +913,14 @@
     },
     cyber: {
       name: '賽博公寓',
-      desc: '霓虹街道上方的公寓，附發光陽台，可以加蓋頂樓、小房間和後巷',
+      desc: '霓虹街道上方的公寓，附發光陽台、頂樓、加蓋小房和後巷',
       zones: [
         { name: '街道', z: 0, kind: 'street', wall: 'navy', floor: 'stone', rects: [[0, 5, 8, 3]] },
         { name: '公寓', z: 64, kind: 'room', wall: 'cyber', floor: 'cyber', rects: [[0, 0, 6, 5]] },
         { name: '陽台', z: 64, kind: 'outdoor', rails: true, lights: true, wall: 'synth', floor: 'neon', rects: [[6, 1, 2, 4]] },
-        { name: '頂樓', z: 128, kind: 'outdoor', level: 1, thin: true, rails: true, lights: true, wall: 'synth', floor: 'neon', rects: [[0, 0, 3, 2]] },
-        { name: '加蓋小房', z: 128, kind: 'room', level: 2, thin: true, rails: true, wall: 'synth', floor: 'carpet', rects: [[3, 0, 3, 2]] },
-        { name: '後巷', z: 0, kind: 'street', level: 3, wall: 'navy', floor: 'stone', rects: [[8, 0, 2, 8]] },
+        { name: '頂樓', z: 128, kind: 'outdoor', thin: true, rails: true, lights: true, wall: 'synth', floor: 'neon', rects: [[0, 0, 3, 2]] },
+        { name: '加蓋小房', z: 128, kind: 'room', thin: true, rails: true, wall: 'synth', floor: 'carpet', rects: [[3, 0, 3, 2]] },
+        { name: '後巷', z: 0, kind: 'street', wall: 'navy', floor: 'stone', rects: [[8, 0, 2, 8]] },
       ],
       flights: [
         { from: 0, to: 2, style: 'solid', cells: [[6, 6], [6, 5]], bottom: [6, 7], top: [6, 4] },
@@ -842,6 +928,7 @@
       ],
       door: [1, 7],
       objects: [
+        [0, 'meter', 1, 5], [0, 'walllamp', 2, 5], [3, 'watertank', 2, 0], [5, 'barrel', 9, 7], [5, 'crate', 8, 7],
         [0, 'vending', 0, 5], [0, 'shopdoor', 3, 5], [0, 'sign', 3, 5], [0, 'neon', 4, 5], [0, 'streetlamp', 7, 5], [0, 'bin', 5, 5],
         [1, 'workstation', 3, 0], [1, 'server', 5, 0], [1, 'screens', 3, 0], [1, 'bed', 0, 0, true], [1, 'tv', 0, 3, true],
         [1, 'arcade', 5, 2], [1, 'neon', 0, 1, true], [1, 'window', 1, 0], [1, 'poster', 0, 3, true],
@@ -853,15 +940,15 @@
     },
     lake: {
       name: '湖畔溫室',
-      desc: '湖面上的高腳木平台，玻璃溫室裡種滿植物，可以加蓋側翼溫室、釣魚碼頭和屋頂露台',
+      desc: '湖面上的高腳木平台，兩間玻璃溫室種滿植物，還有釣魚碼頭和屋頂露台',
       zones: [
         { name: '湖', z: 0, kind: 'water', depth: 40, wall: 'brick', floor: 'stone', rects: [[0, 0, 9, 9]] },
         { name: '下層平台', z: 24, kind: 'outdoor', thin: true, base: 'stilts', rails: true, wall: 'wood', floor: 'plank', rects: [[2, 5, 4, 3]] },
         { name: '木平台', z: 48, kind: 'outdoor', thin: true, base: 'stilts', rails: true, wall: 'wood', floor: 'plank', rects: [[3, 0, 3, 3], [0, 3, 6, 2]] },
         { name: '溫室', z: 48, kind: 'room', thin: true, base: 'stilts', wall: 'glass', floor: 'plank', rects: [[0, 0, 3, 3]] },
-        { name: '側翼溫室', z: 48, kind: 'room', level: 1, thin: true, base: 'stilts', wall: 'glass', floor: 'plank', rects: [[6, 0, 3, 3]] },
-        { name: '釣魚碼頭', z: 24, kind: 'outdoor', level: 2, thin: true, base: 'stilts', rails: true, lights: true, wall: 'wood', floor: 'plank', rects: [[6, 3, 3, 4]] },
-        { name: '屋頂露台', z: 112, kind: 'outdoor', level: 3, thin: true, rails: true, lights: true, wall: 'wood', floor: 'plank', rects: [[0, 0, 4, 2]] },
+        { name: '側翼溫室', z: 48, kind: 'room', thin: true, base: 'stilts', wall: 'glass', floor: 'plank', rects: [[6, 0, 3, 3]] },
+        { name: '釣魚碼頭', z: 24, kind: 'outdoor', thin: true, base: 'stilts', rails: true, lights: true, wall: 'wood', floor: 'plank', rects: [[6, 3, 3, 4]] },
+        { name: '屋頂露台', z: 112, kind: 'outdoor', thin: true, rails: true, lights: true, wall: 'wood', floor: 'plank', rects: [[0, 0, 4, 2]] },
       ],
       flights: [
         { from: 1, to: 2, style: 'open', cells: [[3, 5]], bottom: [3, 6], top: [3, 4] },
@@ -869,6 +956,7 @@
       ],
       door: [5, 7, 1],
       objects: [
+        [5, 'barrel', 8, 4], [3, 'walllamp', 2, 0], [4, 'walllamp', 8, 0],
         [0, 'lilypad', 0, 6], [0, 'lilypad', 1, 7], [0, 'lilypad', 7, 7], [0, 'lilypad', 8, 2], [0, 'boat', 5, 8],
         [3, 'lamp', 0, 0], [3, 'bookshelf', 1, 0], [3, 'desk', 0, 1, true],
         [2, 'table', 4, 0], [2, 'coffee', 0, 3, true], [2, 'plant', 0, 4],
@@ -880,13 +968,13 @@
     },
     tower: {
       name: '魔法塔',
-      desc: '一層疊一層的小塔：底下是發光的實驗室，往上蓋臥室、書房和觀星台',
+      desc: '一層疊一層的小塔：底下是發光的實驗室，往上是臥室、書房和觀星台',
       zones: [
         { name: '門廊', z: 0, kind: 'outdoor', wall: 'wood', floor: 'plank', rects: [[0, 5, 5, 2]] },
         { name: '實驗室', z: 0, kind: 'room', wall: 'stone', floor: 'stone', rects: [[0, 0, 5, 5]] },
-        { name: '臥室', z: 80, kind: 'room', level: 1, thin: true, rails: true, wall: 'plum', floor: 'carpet', rects: [[0, 0, 4, 4]] },
-        { name: '書房', z: 160, kind: 'room', level: 2, thin: true, rails: true, wall: 'wood', floor: 'stone', rects: [[0, 0, 3, 3]] },
-        { name: '觀星台', z: 160, kind: 'outdoor', level: 3, thin: true, rails: true, lights: true, wall: 'wood', floor: 'plank', rects: [[3, 0, 2, 2]] },
+        { name: '臥室', z: 80, kind: 'room', thin: true, rails: true, wall: 'plum', floor: 'carpet', rects: [[0, 0, 4, 4]] },
+        { name: '書房', z: 160, kind: 'room', thin: true, rails: true, wall: 'wood', floor: 'stone', rects: [[0, 0, 3, 3]] },
+        { name: '觀星台', z: 160, kind: 'outdoor', thin: true, rails: true, lights: true, wall: 'wood', floor: 'plank', rects: [[3, 0, 2, 2]] },
       ],
       flights: [
         { from: 1, to: 2, style: 'open', cells: [[4, 3], [4, 2], [4, 1], [4, 0]], bottom: [4, 4], top: [3, 0] },
@@ -894,6 +982,7 @@
       ],
       door: [4, 6, 0],
       objects: [
+        [1, 'walllamp', 0, 4, true], [1, 'meter', 4, 0], [2, 'walllamp', 0, 1, true], [3, 'books', 2, 2], [0, 'barrel', 0, 5],
         [0, 'streetlamp', 0, 6], [0, 'plant', 1, 6], [0, 'bell', 2, 5],
         [1, 'workstation', 1, 0], [1, 'server', 3, 0], [1, 'screens', 1, 0], [1, 'potions', 0, 2, true],
         [1, 'holo', 0, 3, true], [1, 'cauldron', 2, 3], [1, 'plant', 0, 0],
@@ -904,14 +993,14 @@
     },
     treehouse: {
       name: '樹屋',
-      desc: '樹林裡高腳木平台上的小屋，可以接出側平台、加蓋二樓和陽台',
+      desc: '樹林裡高腳木平台上的小屋，有側平台、二樓和陽台',
       zones: [
         { name: '草地', z: 0, kind: 'outdoor', base: 'earth', wall: 'brick', floor: 'grass', rects: [[0, 0, 8, 8]] },
         { name: '平台', z: 48, kind: 'outdoor', thin: true, base: 'stilts', rails: true, wall: 'wood', floor: 'plank', rects: [[2, 2, 5, 5]] },
         { name: '房間', z: 48, kind: 'room', thin: true, base: 'stilts', wall: 'cream', floor: 'plank', rects: [[2, 0, 5, 2]] },
-        { name: '側平台', z: 48, kind: 'outdoor', level: 1, thin: true, base: 'stilts', rails: true, wall: 'wood', floor: 'plank', rects: [[7, 2, 2, 4]] },
-        { name: '二樓', z: 112, kind: 'room', level: 2, thin: true, rails: true, wall: 'cream', floor: 'wood', rects: [[2, 0, 3, 2]] },
-        { name: '陽台', z: 112, kind: 'outdoor', level: 3, thin: true, rails: true, lights: true, wall: 'wood', floor: 'plank', rects: [[2, 2, 3, 2]] },
+        { name: '側平台', z: 48, kind: 'outdoor', thin: true, base: 'stilts', rails: true, wall: 'wood', floor: 'plank', rects: [[7, 2, 2, 4]] },
+        { name: '二樓', z: 112, kind: 'room', thin: true, rails: true, wall: 'cream', floor: 'wood', rects: [[2, 0, 3, 2]] },
+        { name: '陽台', z: 112, kind: 'outdoor', thin: true, rails: true, lights: true, wall: 'wood', floor: 'plank', rects: [[2, 2, 3, 2]] },
       ],
       flights: [
         { from: 0, to: 1, style: 'open', cells: [[1, 6], [1, 5], [1, 4]], bottom: [1, 7], top: [2, 4] },
@@ -919,6 +1008,7 @@
       ],
       door: [6, 7, 0],
       objects: [
+        [2, 'walllamp', 6, 0], [2, 'banner', 2, 1, true], [2, 'barrel', 6, 1], [4, 'walllamp', 2, 1, true], [5, 'antenna', 2, 3], [0, 'barrel', 7, 6], [0, 'crate', 6, 0],
         [0, 'tree', 0, 0], [0, 'tree', 0, 1], [0, 'bush', 0, 2], [0, 'tree', 7, 7], [0, 'bush', 2, 7], [0, 'streetlamp', 4, 7], [0, 'bush', 7, 0],
         [2, 'workstation', 2, 0], [2, 'server', 4, 0], [2, 'plant', 6, 0], [2, 'window', 3, 0],
         [1, 'table', 3, 4], [1, 'coffee', 6, 5], [1, 'plant', 2, 6],
@@ -929,13 +1019,13 @@
     },
     witch: {
       name: '魔女小屋',
-      desc: '圍著小燈籠籬笆的魔女小屋，有魔藥鍋和星星地毯，可以加蓋閣樓、藥草園和前院',
+      desc: '圍著小燈籠籬笆的魔女小屋，有魔藥鍋、星星地毯、閣樓、藥草園和前院',
       zones: [
         { name: '庭院', z: 0, kind: 'outdoor', base: 'earth', rails: true, lights: true, wall: 'brick', floor: 'stone', rects: [[0, 0, 7, 1], [0, 1, 1, 6], [6, 1, 1, 6], [1, 5, 5, 2]] },
         { name: '小屋', z: 32, kind: 'room', wall: 'brick', floor: 'magic', rects: [[1, 1, 5, 4]] },
-        { name: '閣樓', z: 96, kind: 'room', level: 1, thin: true, rails: true, wall: 'wood', floor: 'carpet', rects: [[1, 1, 3, 2]] },
-        { name: '藥草園', z: 0, kind: 'outdoor', level: 2, base: 'earth', rails: true, wall: 'brick', floor: 'grass', rects: [[7, 0, 2, 7]] },
-        { name: '前院', z: 0, kind: 'outdoor', level: 3, base: 'earth', rails: true, lights: true, wall: 'brick', floor: 'grass', rects: [[0, 7, 9, 2]] },
+        { name: '閣樓', z: 96, kind: 'room', thin: true, rails: true, wall: 'wood', floor: 'carpet', rects: [[1, 1, 3, 2]] },
+        { name: '藥草園', z: 0, kind: 'outdoor', base: 'earth', rails: true, wall: 'brick', floor: 'grass', rects: [[7, 0, 2, 7]] },
+        { name: '前院', z: 0, kind: 'outdoor', base: 'earth', rails: true, lights: true, wall: 'brick', floor: 'grass', rects: [[0, 7, 9, 2]] },
       ],
       flights: [
         { from: 0, to: 1, style: 'solid', cells: [[3, 5]], bottom: [3, 6], top: [3, 4] },
@@ -943,6 +1033,7 @@
       ],
       door: [5, 6, 0],
       objects: [
+        [0, 'meter', 5, 5], [0, 'windowbox', 2, 5], [1, 'walllamp', 1, 2, true], [2, 'walllamp', 2, 1], [4, 'signboard', 7, 8],
         [0, 'streetlamp', 0, 6], [0, 'streetlamp', 6, 6], [0, 'plant', 4, 0], [0, 'catbed', 3, 0],
         [1, 'bookshelf', 1, 1], [1, 'potions', 3, 1], [1, 'fireplace', 1, 3, true], [1, 'desk', 2, 3, true], [1, 'cauldron', 5, 1],
         [1, 'window', 4, 1],
@@ -1093,14 +1184,11 @@
 
   const levels = (room) => (room.zones || []).length;
   const floorZ = (room, f) => room.zones?.[f]?.z || 0;
-  // The room's upgrade level comes from progress; a zone is open once its level is reached.
-  const isOpen = (room, f) => (room.zones?.[f]?.level || 0) <= (room.level || 0);
-  const flightOpen = (room, fl) => isOpen(room, fl.from) && isOpen(room, fl.to);
   const floorOf = (room, f) => room.zones?.[f] || { wall: 'brick', floor: 'stone' };
 
   // Every place a character can stand: open area tiles and each step of every open flight.
   function cells(room) {
-    const key = `${layoutOf(room).id}|${room.level || 0}`;
+    const key = layoutOf(room).id;
     if (room._cells && room._cells.key === key) return room._cells;
     const L = layoutOf(room);
     const list = [];
@@ -1118,7 +1206,7 @@
     const taken = (x, y, f) => L.flights.some((fl) => fl.cells.some(([cx, cy]) => cx === x && cy === y)
       && (fl.style === 'solid' ? L.areas[f].z <= L.areas[fl.from].z : L.areas[f].z >= L.areas[fl.from].z && L.areas[f].z < L.areas[fl.to].z));
     L.areas.forEach((a, f) => {
-      if (!isOpen(room, f) || a.kind === 'water') return;
+      if (a.kind === 'water') return;
       for (const r of a.rects) {
         for (let y = r[1]; y < r[1] + r[3]; y++) for (let x = r[0]; x < r[0] + r[2]; x++) {
           if (!taken(x, y, f)) add({ x, y, z: a.z, f, kind: 'floor' });
@@ -1139,7 +1227,6 @@
       for (const [dx, dy] of [[1, 0], [0, 1]]) for (const o of at.get(`${c.x + dx},${c.y + dy}`) || []) if (o.kind === 'floor' && o.z === c.z) link(c, o);
     }
     for (const fl of L.flights) {
-      if (!flightOpen(room, fl)) continue;
       const z0 = L.areas[fl.from].z;
       const z1 = L.areas[fl.to].z;
       const rise = (z1 - z0) / (fl.cells.length + 1);
@@ -1173,7 +1260,7 @@
   // The wall of area f that holds a wall item at (x, y): flipped items hang on 'x' walls.
   function wallFor(room, f, x, y, flip, w) {
     const a = layoutOf(room).areas[f];
-    if (!a || !isOpen(room, f)) return null;
+    if (!a) return null;
     return a.walls.find(([plane, at, from, to]) => (flip
       ? plane === 'x' && at === x && y >= from && y + w <= to
       : plane === 'y' && at === y && x >= from && x + w <= to)) || null;
@@ -1201,7 +1288,7 @@
     for (let ty = fp.y; ty < fp.y + fp.d; ty++) {
       for (let tx = fp.x; tx < fp.x + fp.w; tx++) {
         const ok = def.onWater
-          ? lay.areas[f]?.kind === 'water' && isOpen(room, f) && lay.tilesAt(tx, ty).some((t) => t.f === f)
+          ? lay.areas[f]?.kind === 'water' && lay.tilesAt(tx, ty).some((t) => t.f === f)
           : cellAt(room, tx, ty, f);
         if (!ok) return false;
       }
@@ -1234,7 +1321,7 @@
     const spots = [];
     room.objects.forEach((o, index) => {
       const def = OBJECTS[o.type];
-      if (!def?.stations || !isOpen(room, o.f || 0)) return;
+      if (!def?.stations) return;
       for (const st of def.stations) {
         const x = o.x + (o.flip ? st.dy : st.dx);
         const y = o.y + (o.flip ? st.dx : st.dy);
@@ -1253,11 +1340,10 @@
   // A fresh room from a blueprint, furnished on every layer; locked layers keep their furniture.
   function generateRoom(id = 'shop') {
     const bp = BLUEPRINTS[id] || BLUEPRINTS.shop;
-    const room = { iso: 5, blueprint: BLUEPRINTS[id] ? id : 'shop', theme: null, ...fromSpec(bp), objects: [], level: 99 };
+    const room = { iso: 5, blueprint: BLUEPRINTS[id] ? id : 'shop', theme: null, ...fromSpec(bp), objects: [] };
     for (const [f, type, x, y, flip = false] of bp.objects) {
       if (canPlace(room, type, x, y, flip, f)) room.objects.push({ type, x, y, flip, f });
     }
-    delete room.level;
     resetCells(room);
     return room;
   }
@@ -1361,7 +1447,7 @@
     room.flights = room.flights.filter((fl) => has(fl.bottom[0], fl.bottom[1], fl.from) && has(fl.top[0], fl.top[1], fl.to)
       && Math.abs(room.zones[fl.to].z - room.zones[fl.from].z) / (fl.cells.length + 1) <= STEP_Z + 1);
     resetCells(room);
-    room.objects = room.objects.filter((o, i) => !isOpen(room, o.f || 0) || canPlace(room, o.type, o.x, o.y, o.flip, o.f || 0, i));
+    room.objects = room.objects.filter((o, i) => canPlace(room, o.type, o.x, o.y, o.flip, o.f || 0, i));
     if (!has(room.door[0], room.door[1], 0)) {
       const t = room.tiles.filter((tt) => tt[2] === 0).sort((p, q) => (q[0] + q[1]) - (p[0] + p[1]))[0];
       if (t) room.door = [t[0], t[1]];
@@ -1386,7 +1472,7 @@
   // The open layer for this kind of block at height z, made if need be.
   function zoneFor(room, id, z) {
     const b = BLOCKS[id] || BLOCKS.brick;
-    const found = room.zones.findIndex((zn, f) => zn.z === z && isOpen(room, f) && (zn.block === id
+    const found = room.zones.findIndex((zn) => zn.z === z && (zn.block === id
       || (!zn.block && zn.kind === b.kind && !!zn.thin === !!b.thin && (zn.base || '') === (b.base || '') && (zn.kind !== 'room' || zn.wall === b.wall))));
     if (found >= 0) return found;
     const { name, ...props } = b;
@@ -1412,7 +1498,7 @@
     const consider = (hit, score) => { if (!best || score > best.score) best = { ...hit, score }; };
     for (const [x, y, f] of room.tiles) {
       const zn = room.zones[f];
-      if (!zn || !isOpen(room, f)) continue;
+      if (!zn) continue;
       const z = zn.z;
       const low = zn.kind === 'water' ? z - (zn.depth || 40) : zn.thin ? z - SLAB : Math.min(-SLAB, z - STEP_Z);
       const score = (x + y) * 1000 + z;
@@ -1469,7 +1555,7 @@
     for (let n = 1; n <= 8; n++) {
       const bx = hit.x + dx * (n + 1);
       const by = hit.y + dy * (n + 1);
-      const below = room.tiles.filter((t) => t[0] === bx && t[1] === by && room.zones[t[2]].z < hit.z && isOpen(room, t[2]) && room.zones[t[2]].kind !== 'water')
+      const below = room.tiles.filter((t) => t[0] === bx && t[1] === by && room.zones[t[2]].z < hit.z && room.zones[t[2]].kind !== 'water')
         .sort((p, q) => room.zones[q[2]].z - room.zones[p[2]].z)[0];
       if (!below) continue;
       if ((hit.z - room.zones[below[2]].z) / (n + 1) > STEP_Z) continue;
@@ -1505,7 +1591,6 @@
     const L = layoutOf(room);
     let top = 0; let bottom = 0; let left = 0; let right = 0;
     for (const [f, a] of L.areas.entries()) {
-      if (!isOpen(room, f) && !a.keep) continue;
       const walls = a.walls.filter((w) => !w[5]);
       const tall = walls.length ? Math.max(...walls.map((w) => w[4])) + 3 : a.rails ? 16 : 4;
       for (const [x, y, w, d] of a.rects) {
@@ -1546,7 +1631,14 @@
   function objectSprite(type, flip, s) {
     const def = OBJECTS[type];
     const key = `${type}|${flip ? 1 : 0}|${def.anim || def.wall ? `${s.active ? 1 : 0}|${s.frame % 8}|${s.hour}|${s.meeting ? 1 : 0}` : ''}`;
-    return cached(key, () => renderSprite(def.w, Math.max(def.d, 1), def.h, (P) => def.draw(P, s), flip));
+    return cached(key, () => renderSprite(def.w, Math.max(def.d, 1), def.h, (P) => {
+      // A soft contact shadow on the floor under anything that stands on it.
+      if (!def.wall && !def.flat && !def.onWater) {
+        P.top(0, 1, def.w * TU, def.d * TU - 1, 'rgba(12,8,30,0.18)', 0);
+        P.top(2, 3, def.w * TU - 4, def.d * TU - 5, 'rgba(12,8,30,0.22)', 0);
+      }
+      def.draw(P, s);
+    }, flip));
   }
 
   // Brick courses on the two visible faces of a raised base, h units tall below its top.
@@ -1573,7 +1665,7 @@
     const lay = layoutOf(room);
     const a = lay.areas[f];
     const wallOn = (plane, atv, u) => a.walls.some((w) => !w[5] && w[0] === plane && w[1] === atv && u >= w[2] && u < w[3]);
-    const above = (x, y) => lay.tilesAt(x, y).some((t) => t.z > a.z && isOpen(room, t.f) && (room.zones[t.f].thin));
+    const above = (x, y) => lay.tilesAt(x, y).some((t) => t.z > a.z && room.zones[t.f].thin);
     const dim = (k) => (c) => dk(c, k);
     for (let y = r[1]; y < r[1] + r[3]; y++) {
       for (let x = r[0]; x < r[0] + r[2]; x++) {
@@ -1650,6 +1742,51 @@
     P.right(1, -depth, 1, depth, 'rgba(235,250,255,0.45)', L);
   }
 
+  // City clutter on a tall brick base, so a plain wall reads as lived-in: a drainpipe, an aircon
+  // box, a vent, a lit window, sagging cables and a patch of ivy - picked by the rect's position
+  // so the same wall always looks the same.
+  function facadeDetail(P, w, d, h, seed) {
+    if (h < 40) return;
+    const L = w * TU;
+    const D = d * TU;
+    const pick = (k) => (seed * 31 + k * 17) % 97;
+    const metal = { t: '#7a8091', l: '#5a6075', r: '#474c5e' };
+    // Drainpipe down the front corner, with brackets.
+    P.box(L - 5, D, -h, 2, 2, h - 3, metal, false);
+    for (let v = 10; v < h - 6; v += 16) P.box(L - 6, D, -h + v, 4, 1, 1, '#3a3f50', false);
+    // Aircon on a long wall.
+    if (L >= 48) {
+      const u = 6 + (pick(1) % Math.max(1, L - 30));
+      const v = -h + 10 + (pick(2) % Math.max(1, h - 30));
+      P.box(u, D, v, 13, 5, 9, { t: '#e2e4ea', l: '#c9ccd4', r: '#a9adb8' }, false);
+      for (let i = 0; i < 4; i++) P.left(u + 2, v + 2 + i * 2, 6, 1, '#9a9eaa', D + 5);
+      P.disc(u + 10, D + 5, v + 4.5, 2.2, '#8a8e9a');
+      P.box(u + 11, D + 1, -h + 1, 1, 1, v + h - 1, '#6a7080', false);
+    }
+    // A lit window on a tall wall.
+    if (h >= 56 && L >= 32) {
+      const u = 4 + (pick(3) % Math.max(1, L - 22));
+      P.left(u - 1, -24, 10, 13, '#3a2a24', D);
+      P.left(u, -23, 8, 11, '#ffd9a0', D);
+      P.left(u + 4, -23, 1, 11, '#3a2a24', D);
+      P.left(u, -18, 8, 1, '#3a2a24', D);
+      P.glow(u + 4, D + 2, -17, 10, 'rgba(255,200,120,0.3)');
+    }
+    // A vent grille on the side.
+    if (D >= 32) {
+      const u = 6 + (pick(4) % Math.max(1, D - 16));
+      P.right(D - u, -h + 22, 7, 7, '#3a3f50', L);
+      for (let i = 0; i < 3; i++) P.right(D - u - 1, -h + 23 + i * 2, 5, 1, '#5a6075', L);
+    }
+    // Cables sagging across the top of the front.
+    if (L >= 32) for (let u = 0; u < L; u++) P.left(u, -7 - Math.round(3 * Math.sin((u / L) * Math.PI)), 1, 1, '#2a2b33', D + 0.5);
+    // Ivy climbing from the ground.
+    if (pick(5) % 2) {
+      const u = pick(6) % Math.max(1, L - 12);
+      for (let i = 0; i < 7; i++) P.left(u + ((i * 5) % 11), -h + 2 + ((i * 7) % 18), 3, 3, i % 2 ? '#4f8f45' : '#3f7a3a', D + 0.3);
+    }
+  }
+
   // One rect of an area: its floor and, for raised areas, the brick base down to the ground.
   function slabSprite(room, f, r) {
     const a = layoutOf(room).areas[f];
@@ -1661,7 +1798,7 @@
     const depth = a.depth || 40;
     const h = a.kind === 'water' ? depth + SLAB : stilts ? a.z + SLAB : a.thin ? SLAB : a.z + SLAB;
     const lay = layoutOf(room);
-    return cached(`slab|${lay.id}|${f}|${r}|${floor}|${base}|${room.level || 0}`, () => renderSprite(w, d, 8, (P) => {
+    return cached(`slab|${lay.id}|${f}|${r}|${floor}|${base}`, () => renderSprite(w, d, 8, (P) => {
       if (a.kind === 'water') { waterBox(P, w, d, depth, r); return; }
       if (a.thin) { // a floor on joists: a timber edge with a beam showing underneath
         if (stilts) stiltPosts(P, w, d, a.z);
@@ -1669,7 +1806,10 @@
         P.left(0, -SLAB, w * TU, 2, '#3a2418', d * TU);
         P.right(d * TU, -SLAB, d * TU, 2, '#2e1c13', w * TU);
       } else if (a.z > 0 && a.base === 'earth') earthFaces(P, w, d, h, floor === 'grass');
-      else if (a.z > 0) brickFaces(P, w, d, h, base);
+      else if (a.z > 0) {
+        brickFaces(P, w, d, h, base);
+        facadeDetail(P, w, d, h - SLAB, r[0] * 7 + r[1] * 13 + f);
+      }
       else if (a.base === 'earth') earthFaces(P, w, d, SLAB + 6, floor === 'grass');
       else P.box(0, 0, -SLAB, w * TU, d * TU, SLAB, { t: fl.base, l: dk(fl.base, 0.3), r: dk(fl.base, 0.45) }, false);
       for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) fl.draw(P, x, y, 0);
@@ -1717,6 +1857,9 @@
         P.box(0, -5, 0, L, 5, h, { t: lt(w.trim, 0.25), l: w.base, r: w.trim }, false);
         w.paint((u, v, ww, hh, c) => P.left(u, v, ww, hh, c, 0), L, h);
         P.left(0, 0, L, 5, w.trim, 0);
+        P.left(0, 5, L, 1, lt(w.trim, 0.2), 0);
+        P.left(0, 22, L, 2, dk(w.base, 0.14), 0);
+        P.left(0, 24, L, 1, lt(w.base, 0.12), 0);
         P.left(0, 0, 3, h, dk(w.base, 0.12), 0);
         P.box(L - 4, -1, 0, 4, 2, h, cap, false);
         P.box(-1, -6, h, L + 1, 7, 3, { t: lt(cap, 0.15), l: cap, r: dk(cap, 0.25) }, false);
@@ -1724,6 +1867,9 @@
         P.box(-5, -5, 0, 5, L + 5, h, { t: lt(w.trim, 0.25), l: w.trim, r: dk(w.base, 0.08) }, false);
         w.paint((u, v, ww, hh, c) => P.right(L - u, v, ww, hh, c, 0), L, h);
         P.right(L, 0, L, 5, w.trim, 0);
+        P.right(L, 5, L, 1, lt(w.trim, 0.15), 0);
+        P.right(L, 22, L, 2, dk(w.base, 0.2), 0);
+        P.right(L, 24, L, 1, lt(w.base, 0.06), 0);
         P.box(-1, L - 4, 0, 2, 4, h, dk(cap, 0.1), false);
         P.box(-6, -6, h, 7, L + 6, 3, { t: lt(cap, 0.15), l: dk(cap, 0.1), r: dk(cap, 0.3) }, false);
       }
@@ -1790,14 +1936,11 @@
     const e = 0.02;
     const C = cells(room);
     L.areas.forEach((a, f) => {
-      const open = isOpen(room, f);
-      if (!open && !a.keep) return;
       for (const r of a.rects) {
         const [x, y, w, d] = r;
         const z0 = a.kind === 'water' ? a.z - (a.depth || 40) - SLAB : a.thin ? a.z - SLAB : -SLAB;
         items.push({ x0: x, y0: y, x1: x + w - e, y1: y + d - e, z0, z1: a.z, sprite: () => slabSprite(room, f, r), wx: x * TU, wy: y * TU, wz: a.z });
       }
-      if (!open) return;
       for (const wall of a.walls) {
         if (wall[5]) continue;
         const [plane, at, from, to, h] = wall;
@@ -1836,7 +1979,7 @@
     }
     room.objects.forEach((o, i) => {
       const def = OBJECTS[o.type];
-      if (!def || !isOpen(room, o.f || 0)) return;
+      if (!def) return;
       const z = floorZ(room, o.f || 0);
       const sprite = () => objectSprite(o.type, o.flip, s(i));
       if (def.wall) {
@@ -1870,11 +2013,12 @@
     const p = project(room, wx, wy, wz);
     ctx.drawImage(sp.canvas, Math.round((p.x - sp.ax) * z), Math.round((p.y - sp.ay) * z), sp.canvas.width * z, sp.canvas.height * z);
   }
-  function glows(ctx, room, sp, wx, wy, wz, z) {
+  function glows(ctx, room, sp, wx, wy, wz, z, alpha = 1) {
     if (!sp.glows.length) return;
     const p = project(room, wx, wy, wz);
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = alpha;
     for (const g of sp.glows) {
       const x = (p.x - sp.ax + g.x) * z;
       const y = (p.y - sp.ay + g.y) * z;
@@ -1887,8 +2031,17 @@
     ctx.restore();
   }
 
+  // Light by the hour: night sinks the room into blue and lets every lamp and screen bloom;
+  // dusk and dawn warm it; the day is plain and the lamps fade.
+  function lightFor(hour) {
+    if (hour >= 20 || hour < 5) return { tint: 'rgba(14,18,56,0.46)', glow: 1.7 };
+    if (hour >= 18 || hour < 6) return { tint: 'rgba(60,30,90,0.24)', warm: 'rgba(255,130,70,0.10)', glow: 1.3 };
+    if (hour >= 16) return { warm: 'rgba(255,170,90,0.09)', glow: 0.9 };
+    return { glow: 0.75 };
+  }
+
   // Draw the whole room. `extra` are more sortable boxes {x0..z1, draw(ctx)} (characters, parcels).
-  function drawRoom(ctx, room, z, objState, extra) {
+  function drawRoom(ctx, room, z, objState, extra, light = lightFor(objState(0).hour ?? 12)) {
     const lights = [];
     for (const it of sortItems([...sceneItems(room, objState), ...extra])) {
       if (it.draw) { it.draw(ctx); continue; }
@@ -1896,7 +2049,18 @@
       blit(ctx, room, sp, it.wx, it.wy, it.wz, z);
       if (sp.glows.length) lights.push([sp, it]);
     }
-    for (const [sp, it] of lights) glows(ctx, room, sp, it.wx, it.wy, it.wz, z);
+    // Tint only what is drawn, then add the light on top.
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-atop';
+    for (const c of [light.tint, light.warm]) {
+      if (!c) continue;
+      ctx.fillStyle = c;
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    }
+    ctx.restore();
+    for (let pass = light.glow; pass > 0; pass -= 1) {
+      for (const [sp, it] of lights) glows(ctx, room, sp, it.wx, it.wy, it.wz, z, Math.min(1, pass));
+    }
   }
 
   // Screen point (fine px) to the topmost area tile under it.
@@ -1921,7 +2085,6 @@
     const sy = fy - o.y;
     let best = null;
     layoutOf(room).areas.forEach((a, f) => {
-      if (!isOpen(room, f)) return;
       for (const [plane, at, from, to, h] of a.walls) {
         const A = at * TU;
         // On plane y = A: x = sx + A; on plane x = A: y = A - sx.
@@ -1940,7 +2103,7 @@
   // Click-through mask: the diorama's silhouette at 1 fine pixel per pixel.
   let mask = { key: '', data: null, w: 0 };
   function solidAt(room, fx, fy) {
-    const key = `${layoutOf(room).id}|${room.level || 0}`;
+    const key = layoutOf(room).id;
     if (mask.key !== key) {
       const S = size(room);
       const c = makeCanvas(S.w, S.h);
@@ -1955,7 +2118,7 @@
   // Dev preview: the street corner unbuilt and built, the other blueprints fully built, plus every
   // object on its own.
   function preview(canvas, z = 2) {
-    const rooms = [['lake', 3], ['tower', 3], ['treehouse', 3], ['witch', 3]].map(([id, level]) => Object.assign(generateRoom(id), { level }));
+    const rooms = Object.keys(BLUEPRINTS).map((id) => generateRoom(id));
     const S = rooms.map(size).reduce((m, q) => ({ w: Math.max(m.w, q.w), h: Math.max(m.h, q.h) }));
     const themes = rooms;
     canvas.width = S.w * z * themes.length;
@@ -1982,7 +2145,7 @@
   }
 
   return {
-    TU, SLAB, STEP_Z, LAND, ZONE_KINDS, FLOORS, WALLS, OBJECTS, THEMES, BLUEPRINTS, applyTheme, isOpen, migrate, derive,
+    TU, SLAB, STEP_Z, LAND, ZONE_KINDS, FLOORS, WALLS, OBJECTS, THEMES, BLUEPRINTS, applyTheme, migrate, derive,
     pick, addZone, addTile, removeTile, addFlight, removeFlightAt, setZoneZ,
     BLOCKS, pickBlock, blockTarget, placeBlock, removeBlock, stairsFrom, blockSprite,
     size, origin, project, floorZ, levels, cells, resetCells, cellAt, neighbours, door, walkable, footprint, canPlace, stationSpots,

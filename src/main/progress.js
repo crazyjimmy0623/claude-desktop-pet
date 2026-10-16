@@ -1,7 +1,7 @@
 // Coins, XP, stats, achievements and the recruit (gacha) machine.
 // Currency is only ever earned by working — there is no way to buy it.
 const { EventEmitter } = require('events');
-const { ITEMS, RARITY, ACHIEVEMENTS, PULL_COST, DUPLICATE_REFUND, ROOM_UPGRADES } = require('../shared/catalog');
+const { ITEMS, RARITY, ACHIEVEMENTS, PULL_COST, DUPLICATE_REFUND } = require('../shared/catalog');
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const READ_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'NotebookRead']);
@@ -25,7 +25,7 @@ class Progress extends EventEmitter {
     const p = this.p;
     const level = levelFor(p.xp);
     return {
-      coins: p.coins, xp: p.xp, level, roomLevel: p.roomLevel || 0,
+      coins: p.coins, xp: p.xp, level,
       levelFloor: 50 * (level - 1) ** 2, levelCeil: 50 * level ** 2,
       owned: p.owned, achievements: p.achievements, stats: p.stats, days: p.days,
     };
@@ -155,19 +155,6 @@ class Progress extends EventEmitter {
   onUfo() {
     this.p.stats.ufos += 1;
     this.commit();
-  }
-
-  // ---- Room upgrades -----------------------------------------------------------
-
-  upgradeRoom() {
-    const p = this.p;
-    const next = ROOM_UPGRADES.find((u) => u.level === (p.roomLevel || 0) + 1);
-    if (!next) return { error: '房間已經全部升級完了' };
-    if (p.coins < next.cost) return { error: `金幣不足（需要 ${next.cost} 🪙）` };
-    p.coins -= next.cost;
-    p.roomLevel = next.level;
-    this.commit();
-    return { level: p.roomLevel, name: next.name };
   }
 
   // ---- Recruiting ------------------------------------------------------------

@@ -21,8 +21,9 @@
 
   const HINTS = {
     furniture: '點家具放進房間；R 或右下按鈕換方向；點房間裡的家具可搬動，右鍵刪除',
-    terrain: '左鍵：點方塊頂面往上疊、點側面往旁邊接、點空地鋪地面；右鍵：拆掉一顆',
-    stairs: '樓梯：點高台的側面，會一路往下接到前面比較低的地板；右鍵點樓梯拆掉',
+    terrain: '半透明的方塊就是會放下去的位置：點頂面往上疊、點側面往旁邊接、點空地鋪地面',
+    stairs: '樓梯：點高台的側面，會一路往下接到前面比較低的地板',
+    erase: '刪除：指到的方塊會變紅，點一下拆掉一顆（實心的變矮一層），也可以拆樓梯',
     floor: '選樓層，再點一下換那層的地板',
     wall: '選樓層，再點一下換那層的牆面',
     room: '換整體風格，或重設成預設房間',
@@ -70,7 +71,7 @@
 
   function refresh() {
     if (!state.editing) return;
-    hint.textContent = tab === 'terrain' && build.tool === 'stairs' ? HINTS.stairs : HINTS[tab];
+    hint.textContent = tab === 'terrain' && build.tool !== 'block' ? HINTS[build.tool] : HINTS[tab];
     tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
     palette.replaceChildren();
     if (tab === 'furniture') {
@@ -89,9 +90,9 @@
       const key = tab;
       const row = document.createElement('div');
       row.className = 'row';
-      if (!Iso.isOpen(room(), storey)) storey = 0;
+      if (!room().zones[storey]) storey = 0;
       room().zones.forEach((zn, i) => {
-        if (Iso.isOpen(room(), i)) row.append(button(zn.name || `${i + 1}F`, null, storey === i, () => { storey = i; refresh(); }));
+        row.append(button(zn.name || `${i + 1}F`, null, storey === i, () => { storey = i; refresh(); }));
       });
       palette.append(row);
       const set = key === 'floor' ? Iso.FLOORS : Iso.WALLS;
@@ -133,24 +134,6 @@
         }));
       }
       palette.append(row);
-      // Upgrades: spend coins to open the next layer of the room.
-      const up = document.createElement('div');
-      up.className = 'row';
-      const level = state.progress?.roomLevel || 0;
-      const next = Catalog.ROOM_UPGRADES.find((u) => u.level === level + 1);
-      if (next) {
-        const opens = room().zones.filter((zn) => zn.level === next.level).map((zn) => zn.name).join('、') || next.name;
-        const b = button(`擴建：${opens}（${next.cost} 🪙）`, null, false, async () => {
-          const res = await desk.invoke('room:upgrade');
-          hint.textContent = res?.error || `擴建完成：${opens}！`;
-        });
-        b.title = next.desc;
-        if ((state.progress?.coins || 0) < next.cost) b.classList.add('locked');
-        up.append(b);
-      } else {
-        up.append(button('房間已全部升級 ✨', null, false, () => {}));
-      }
-      palette.append(up);
     }
   }
 
@@ -165,6 +148,10 @@
     }
     row.append(button('🪜 樓梯', null, build.tool === 'stairs', () => {
       build.tool = build.tool === 'stairs' ? 'block' : 'stairs';
+      refresh();
+    }));
+    row.append(button('🗑 刪除', null, build.tool === 'erase', () => {
+      build.tool = build.tool === 'erase' ? 'block' : 'erase';
       refresh();
     }));
     palette.append(row);
@@ -182,7 +169,6 @@
   function blueprintThumb(id) {
     if (!thumbs.has(id)) {
       const r = Object.assign(Iso.generateRoom(id), {});
-      Object.defineProperty(r, 'level', { value: 3, enumerable: false });
       const S = Iso.size(r);
       const full = document.createElement('canvas');
       full.width = S.w;
@@ -260,7 +246,8 @@
   function terrainDown(e) {
     const r = room();
     const hit = buildHit(e);
-    if (e.button === 2) {
+    if (e.button !== 0) return;
+    if (build.tool === 'erase') {
       if (!hit.ground) terrain(Iso.removeBlock(r, hit));
       return;
     }
@@ -353,6 +340,17 @@
     }
   }
 
+  // A bright outline round the top of tile (x, y) at height h.
+  function outline(ctx, z, x, y, h) {
+    const P = (px, py) => { const q = Iso.project(room(), px * TU, py * TU, h); return [q.x * z, q.y * z]; };
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = Math.max(1, z);
+    ctx.beginPath();
+    [P(x, y), P(x + 1, y), P(x + 1, y + 1), P(x, y + 1)].forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
+    ctx.closePath();
+    ctx.stroke();
+  }
+
   // Diamond outline of a footprint, in device pixels.
   function diamond(ctx, z, f, h, color) {
     const pts = [[f.x, f.y], [f.x + f.w, f.y], [f.x + f.w, f.y + f.d], [f.x, f.y + f.d]].map(([x, y]) => Iso.project(room(), x * TU, y * TU, h));
@@ -369,13 +367,31 @@
     if (tab === 'terrain') {
       const h = build.hover;
       if (!h) return;
-      if (build.tool === 'stairs') {
-        if (!h.ground && !h.stair) ghost(ctx, z, h.x, h.y, h.z, h.z - Iso.STEP_Z, 'rgba(255,214,90,0.35)');
+      const r = room();
+      if (build.tool === 'erase') {
+        // The block that would go, in red.
+        if (h.stair) ghost(ctx, z, h.x, h.y, h.z, h.z - h.stair.rise, 'rgba(235,60,80,0.5)');
+        else if (!h.ground) {
+          const zn = r.zones[h.f];
+          const low = zn.kind === 'water' ? h.z - (zn.depth || 40) : zn.thin ? h.z - Iso.SLAB : Math.max(h.z - Iso.STEP_Z, -Iso.SLAB);
+          ghost(ctx, z, h.x, h.y, h.z, low, 'rgba(235,60,80,0.5)');
+        }
         return;
       }
+      if (build.tool === 'stairs') {
+        if (!h.ground && !h.stair && h.face !== 'top') ghost(ctx, z, h.x, h.y, h.z, h.z - Iso.STEP_Z, 'rgba(255,214,90,0.4)');
+        return;
+      }
+      // The block in hand, see-through, exactly where it would land, with its tile outlined.
       const t = targetOf(h);
+      if (!t) return;
       const b = Iso.BLOCKS[build.block];
-      if (t) ghost(ctx, z, t.x, t.y, b.kind === 'water' ? 0 : t.z, b.thin ? t.z - Iso.SLAB : Math.min(t.z - Iso.STEP_Z, -Iso.SLAB), 'rgba(124,196,255,0.35)');
+      const tz = b.kind === 'water' ? 0 : t.z;
+      ctx.save();
+      ctx.globalAlpha = 0.6;
+      Iso.blit(ctx, r, Iso.blockSprite(build.block), t.x * TU, t.y * TU, tz, z);
+      ctx.restore();
+      outline(ctx, z, t.x, t.y, tz);
       return;
     }
     if (!hover) return;
