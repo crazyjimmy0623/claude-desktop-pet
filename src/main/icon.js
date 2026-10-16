@@ -1,4 +1,4 @@
-// 16x16 knight's helm for the tray, built from a pixel map so no image file is needed.
+// The knight's helm as the app icon, built from a pixel map so no image file is needed.
 const { nativeImage } = require('electron');
 
 const MAP = [
@@ -29,18 +29,19 @@ const COLORS = {
   '.': [0, 0, 0, 0],
 };
 
-function buildTrayIcon() {
-  const size = 16;
+// The 16x16 map scaled up by whole pixels, so the icon stays crisp at taskbar sizes.
+function buildIcon(scale = 1) {
+  const size = 16 * scale;
   const buf = Buffer.alloc(size * size * 4);
-  MAP.forEach((row, y) => {
-    [...row].forEach((ch, x) => {
-      const [r, g, b, a] = COLORS[ch] || COLORS['.'];
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const [r, g, b, a] = COLORS[MAP[Math.floor(y / scale)][Math.floor(x / scale)]] || COLORS['.'];
       const i = (y * size + x) * 4;
       // createFromBitmap expects BGRA
       buf[i] = b; buf[i + 1] = g; buf[i + 2] = r; buf[i + 3] = a;
-    });
-  });
+    }
+  }
   return nativeImage.createFromBitmap(buf, { width: size, height: size });
 }
 
-module.exports = { buildTrayIcon };
+module.exports = { buildIcon };

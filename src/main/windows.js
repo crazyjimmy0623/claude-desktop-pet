@@ -1,5 +1,6 @@
 // All Deskmates windows: the taskbar strip, the room, settings and the guild book.
 const { BrowserWindow, screen } = require('electron');
+const { buildIcon } = require('./icon');
 const path = require('path');
 
 const PRELOAD = path.join(__dirname, '..', 'preload.js');
@@ -30,7 +31,7 @@ class Windows {
   }
 
   all() {
-    return [this.strip, this.room, this.settings, this.guild].filter((w) => w && !w.isDestroyed());
+    return [this.strip, this.room, this.settings, this.guild, this.hub].filter((w) => w && !w.isDestroyed());
   }
 
   broadcast(channel, data) {
@@ -175,7 +176,7 @@ class Windows {
       return existing;
     }
     const w = new BrowserWindow({
-      show: false, autoHideMenuBar: true, backgroundColor: '#f6f2ea', title: 'Deskmates',
+      show: false, autoHideMenuBar: true, backgroundColor: '#f6f2ea', title: 'Deskmates', icon: buildIcon(4),
       webPreferences: { preload: PRELOAD }, ...opts,
     });
     this[name] = w;

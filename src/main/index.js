@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 app.setName('Deskmates');
+if (process.platform === 'win32') app.setAppUserModelId('com.crazyjimmy0623.deskmates');
 if (!app.requestSingleInstanceLock()) app.exit(0);
 
 const { Store } = require('./store');
@@ -12,7 +13,7 @@ const { Fx } = require('./fx');
 const { Focus } = require('./focus');
 const { ActivityMonitor } = require('./activity');
 const { Windows } = require('./windows');
-const { createTray, loginItemOptions } = require('./tray');
+const { createHub, loginItemOptions } = require('./hub');
 const { startServer } = require('./server');
 const { summarize } = require('./summarize');
 const { runDemo } = require('./demo');
@@ -178,7 +179,10 @@ function boot() {
   const modeArg = process.argv.find((arg) => /^--mode=(room|strip)$/.test(arg));
   if (modeArg) store.updateSettings({ mode: modeArg.slice(7) });
   windows.applyMode();
-  createTray(ctx);
+  ctx.hub = createHub(ctx);
+  windows.hub = ctx.hub.window;
+  handle('hub:state', () => ctx.hub.state());
+  handle('hub:action', (name) => ctx.hub.action(name));
   screen.on('display-metrics-changed', () => windows.placeStrip());
   screen.on('display-added', () => windows.placeStrip());
   screen.on('display-removed', () => windows.placeStrip());
@@ -190,9 +194,9 @@ function boot() {
   }
 }
 
-app.on('second-instance', () => ctx?.windows.setHidden(false));
+app.on('second-instance', () => { ctx?.windows.setHidden(false); ctx?.hub.show(); });
 app.whenReady().then(boot);
-// Keep running in the tray when panels close.
+// Keep running in the taskbar when panels close.
 app.on('window-all-closed', () => {});
 app.on('before-quit', () => {
   ctx?.store.flush();
