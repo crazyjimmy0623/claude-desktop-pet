@@ -29,7 +29,7 @@ function createTray(ctx) {
       f
         ? { label: `🍅 停止番茄鐘（${f.phase === 'focus' ? '專注' : '休息'} ${mmss(Math.max(0, f.endsAt - Date.now()))}）`, click: () => focus.stop() }
         : { label: `🍅 開始專注 ${s.pomodoro.focus} 分鐘`, click: () => focus.start() },
-      { label: '📖 公會手冊（收集・招募・成就）', click: () => windows.openGuild() },
+      { label: '📖 夥伴手冊（收集・招募・成就）', click: () => windows.openGuild() },
       { label: '⚙️ 設定…', click: () => windows.openSettings() },
       { type: 'separator' },
       { label: '結束', click: () => app.quit() },

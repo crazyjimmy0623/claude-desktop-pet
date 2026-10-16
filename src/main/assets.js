@@ -15,7 +15,7 @@ function ensureFolders() {
       'Deskmates 自訂素材',
       '',
       'characters/<角色名稱>/  放一張 PNG sprite sheet 和 Aseprite 匯出的 JSON。',
-      '  建議每格 32x28，用 frame tag 命名動作：idle, walk, work, type, hammer, read, paint, wait, done, sleep, dangle, dance。',
+      '  建議每格 32x28，用 frame tag 命名動作：idle, walk, work, type, command, game, read, paint, wait, done, sleep, dangle, dance。',
       '  缺少的動作會用 work 或 idle 代替。',
       '',
       'tiles/  放 PNG，每 16x16 像素一格，會出現在房間編輯器的「自訂地板」。',

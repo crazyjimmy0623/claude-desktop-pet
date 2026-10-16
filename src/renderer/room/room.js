@@ -338,23 +338,23 @@ function drawView(v, now) {
     frame = Math.floor(now / 300) % 2;
   }
   if (fighting && !v.moving) {
-    pose = 'hammer';
+    pose = 'command';
     frame = Math.floor(now / 200) % 2;
   }
   const tl = v.dragging ? { x: snap(v.dragX / unit() - 7), y: snap(v.dragY / unit() - 3) } : spriteTopLeft(v, v.facing);
   const y = tl.y - snap(v.drop) + v.seat * unit();
   if (v.gone) ctx.globalAlpha = 0.4;
-  // Helpers stand beside their owner, hammering away.
+  // Helpers stand beside their owner, typing away.
   for (let i = 0; i < Math.min(a.helpers, 3); i++) {
     const side = i % 2 ? 1 : -1;
     const off = (9 + Math.floor(i / 2) * 7) * unit() * side;
-    Common.drawMiniAt(ctx, unit(), tl.x + off, y + unit(), a, 'hammer', (Math.floor(now / 240) + i) % 2, side > 0 ? -1 : 1, now);
+    Common.drawMiniAt(ctx, unit(), tl.x + off, y + unit(), a, 'command', (Math.floor(now / 240) + i) % 2, side > 0 ? -1 : 1, now);
   }
   Common.drawMiniAt(ctx, unit(), tl.x, y, a, pose, frame, v.facing, now);
   ctx.globalAlpha = 1;
   if (fighting) {
     const gx = v.facing > 0 ? tl.x + 12 * unit() : tl.x - 14 * unit();
-    Sprites.drawFxAt(ctx, unit(), gx, y + 2 * unit(), 'goblin', Math.floor(now / 200) % 2, v.facing > 0 ? -1 : 1);
+    Sprites.drawFxAt(ctx, unit(), gx, y + 2 * unit(), 'bug', Math.floor(now / 200) % 2, v.facing > 0 ? -1 : 1);
   }
   return { x: (tl.x + 7 * unit()) / DPR, top: y / DPR + (a.state === 'sleep' ? 2 : 0) * cssUnit(), bottom: (y + M.feet * unit()) / DPR };
 }
@@ -449,14 +449,14 @@ function onFx(f) {
         v.decideAt = 0;
       }
       break;
-    case 'goblin': if (v) v.fightUntil = Date.now() + f.duration; break;
+    case 'bug': if (v) v.fightUntil = Date.now() + f.duration; break;
     case 'chest': {
       if (!v) break;
       const around = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1]].map(([dx, dy]) => ({ x: Math.round(v.x) + dx, y: Math.round(v.y) + dy }));
       const tile = around.find((t) => walkable(t.x, t.y)) || { x: Math.round(v.x), y: Math.round(v.y) };
       const hit = document.createElement('div');
       hit.className = 'chest-hit';
-      hit.title = '打開寶箱';
+      hit.title = '打開包裹';
       hit.addEventListener('click', () => desk.invoke('chest:open', f.id));
       overlay.append(hit);
       state.fx.push({ type: 'chest', id: f.id, x: tile.x, y: tile.y, open: false, hit });
@@ -486,8 +486,8 @@ function onFx(f) {
       state.fx = state.fx.filter((e) => e !== c);
       break;
     }
-    case 'dragon':
-      state.fx.push({ type: 'dragon', start: Date.now() });
+    case 'ufo':
+      state.fx.push({ type: 'ufo', start: Date.now() });
       break;
   }
 }
@@ -556,11 +556,11 @@ function draw(now) {
   for (const d of drawables) d.draw();
 
   state.fx = state.fx.filter((f) => {
-    if (f.type !== 'dragon') return true;
+    if (f.type !== 'ufo') return true;
     const t = (now - f.start) / 6000;
     if (t >= 1) return false;
     const x = snap((canvas.width / u) * (1 - t) - 32 * t);
-    Sprites.drawFxAt(ctx, u, x, snap(6 + Math.sin(t * 12) * 4), 'dragon', Math.floor(now / 200) % 2, -1);
+    Sprites.drawFxAt(ctx, u, x, snap(6 + Math.sin(t * 12) * 4), 'ufo', Math.floor(now / 200) % 2, -1);
     return true;
   });
 

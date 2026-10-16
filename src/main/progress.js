@@ -61,7 +61,7 @@ class Progress extends EventEmitter {
     p.xp += xp;
     if (coins > 0) this.emit('coins', { actorId, amount: coins });
     const after = levelFor(p.xp);
-    if (after > before) this.emit('toast', { text: `🎉 公會升到 Lv.${after}！`, actorId });
+    if (after > before) this.emit('toast', { text: `🎉 團隊升到 Lv.${after}！`, actorId });
   }
 
   commit() {
@@ -138,8 +138,8 @@ class Progress extends EventEmitter {
     this.commit();
   }
 
-  onGoblin(actorId) {
-    this.p.stats.goblins += 1;
+  onBug(actorId) {
+    this.p.stats.bugs += 1;
     this.earn(1, 3, actorId);
     this.commit();
   }
@@ -152,8 +152,8 @@ class Progress extends EventEmitter {
     return coins;
   }
 
-  onDragon() {
-    this.p.stats.dragons += 1;
+  onUfo() {
+    this.p.stats.ufos += 1;
     this.commit();
   }
 

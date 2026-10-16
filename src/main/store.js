@@ -10,7 +10,7 @@ const STARTER_ITEMS = ITEMS.filter((i) => i.rarity === 'starter').map((i) => i.i
 const DEFAULTS = {
   settings: {
     mode: 'strip', // strip | room
-    layoutVersion: 4,
+    layoutVersion: 5,
     alwaysOnTop: true,
     hideInFullscreen: true,
     scale: 3,
@@ -20,7 +20,7 @@ const DEFAULTS = {
     idleMinutes: 5,
     appMap: {}, // process name (lower case) -> station id or 'ignore'; overrides the built-in table
     characters: {
-      user: { skin: 'knight', accessory: null },
+      user: { skin: 'commander', accessory: null },
       ai: { skin: 'auto', accessory: null }, // 'auto' = a different owned character per session
       projects: {}, // project name -> { skin, accessory }
     },
@@ -35,7 +35,7 @@ const DEFAULTS = {
     achievements: {}, // id -> unlock timestamp
     stats: {
       turns: 0, toolCalls: 0, edits: 0, reads: 0, failures: 0, permissions: 0, subagents: 0, maxHelpers: 0,
-      nightTurns: 0, earlyTurns: 0, goblins: 0, focus: 0, chests: 0, dragons: 0, pulls: 0, activeMinutes: 0, streak: 0,
+      nightTurns: 0, earlyTurns: 0, bugs: 0, focus: 0, chests: 0, ufos: 0, pulls: 0, activeMinutes: 0, streak: 0,
     },
     days: {}, // 'YYYY-MM-DD' -> { turns, tools, activeMinutes, focus, projects: {}, toolsBy: {} }
   },
@@ -77,6 +77,31 @@ class Store extends EventEmitter {
       s.roomZoom = 2;
     }
     delete s.roomBounds;
+    // v5 drops the medieval set: knight -> commander, mage -> scientist, crown -> VR, goblin/dragon -> bug/UFO.
+    if ((raw.settings?.layoutVersion || 0) < 5) {
+      s.layoutVersion = 5;
+      const RENAME = { 'skin:knight': 'skin:commander', 'skin:mage': 'skin:scientist', 'acc:crown': 'acc:vr' };
+      const p = this.data.progress;
+      p.owned = [...new Set(p.owned.map((id) => RENAME[id] || id))];
+      const slot = (c) => {
+        if (!c) return;
+        if (c.skin === 'knight') c.skin = 'commander';
+        if (c.skin === 'mage') c.skin = 'scientist';
+        if (c.accessory === 'crown') c.accessory = 'vr';
+      };
+      slot(s.characters.user);
+      slot(s.characters.ai);
+      Object.values(s.characters.projects || {}).forEach(slot);
+      const st = p.stats;
+      st.bugs = (st.bugs || 0) + (st.goblins || 0);
+      st.ufos = (st.ufos || 0) + (st.dragons || 0);
+      delete st.goblins;
+      delete st.dragons;
+      for (const [from, to] of [['goblins_10', 'bugs_10'], ['dragon', 'ufo']]) {
+        if (p.achievements[from]) p.achievements[to] = p.achievements[from];
+        delete p.achievements[from];
+      }
+    }
     // Rooms from before themes existed switch to the cyberpunk look once.
     if (this.data.room && !this.data.room.theme) Object.assign(this.data.room, { theme: 'cyber', wall: 'cyber', floor: 'cyber' });
     this.saveTimer = null;

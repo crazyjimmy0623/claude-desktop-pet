@@ -9,7 +9,9 @@
     idle: '待命', think: '思考中', work: '工作中', wait: '等你批准', done: '完成！', sleep: '睡覺中', leaving: '下班',
   };
 
-  const POSE_SPEED = { hammer: 220, type: 180, read: 600, paint: 400, dance: 300, rest: 700, sleep: 1400, wait: 250, done: 200, walk: 160 };
+  const POSE_SPEED = { command: 220, game: 260, type: 180, read: 600, paint: 400, dance: 300, rest: 160, sleep: 1400, wait: 250, done: 200, walk: 110 };
+  // Walking is a 4-step cycle and idling an 8-frame breath; everything else flips between two frames.
+  const POSE_FRAMES = { walk: 4, rest: 8 };
 
   function poseFor(actor, { moving, dragging, now, atStation = true }) {
     let pose = 'rest';
@@ -29,8 +31,8 @@
         default: pose = 'rest';
       }
     }
-    const speed = actor.state === 'think' && pose === 'rest' ? 900 : POSE_SPEED[pose] || 700;
-    return { pose, frame: Math.floor(now / speed) % 2, station };
+    const speed = actor.state === 'think' && pose === 'rest' ? 220 : POSE_SPEED[pose] || 700;
+    return { pose, frame: Math.floor(now / speed) % (POSE_FRAMES[pose] || 2), station };
   }
 
   const mmss = (ms) => `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, '0')}`;
@@ -86,7 +88,7 @@
     if (actor.skin?.startsWith('custom:') && sheets.has(actor.skin)) {
       Sprites.drawCustomAt(ctx, unit, x, y, sheets.get(actor.skin), pose, now, facing);
     } else {
-      Sprites.drawCharacterAt(ctx, unit, x, y, actor.skin || 'knight', pose, frame, colors, facing, { accessory: actor.accessory, ...opts });
+      Sprites.drawCharacterAt(ctx, unit, x, y, actor.skin || 'commander', pose, frame, colors, facing, { accessory: actor.accessory, ...opts });
     }
   }
 
@@ -97,7 +99,7 @@
       Sprites.drawCustomAt(ctx, half, x + (Sprites.MINI.W * unit - Sprites.W * half) / 2, y + (Sprites.MINI.H * unit - Sprites.H * half), sheets.get(actor.skin), pose, now, facing);
       return;
     }
-    Sprites.drawMiniAt(ctx, unit, x, y, actor.skin || 'knight', pose, frame, Sprites.colorsFor(actor.hue ?? actor.id), facing, { accessory: actor.accessory });
+    Sprites.drawMiniAt(ctx, unit, x, y, actor.skin || 'commander', pose, frame, Sprites.colorsFor(actor.hue ?? actor.id), facing, { accessory: actor.accessory });
   }
 
   const colorOf = (actor) => Sprites.colorsFor(actor.hue ?? actor.id);

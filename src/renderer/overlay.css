@@ -270,7 +270,7 @@ html, body {
   to { opacity: 0; translate: 0 -40px; }
 }
 
-.goblin {
+.bug {
   position: absolute;
   bottom: 14px;
   left: 100%;
@@ -279,7 +279,7 @@ html, body {
   animation: shake 0.3s steps(2) infinite;
 }
 
-.goblin.poof {
+.bug.poof {
   animation: poof 0.4s forwards;
 }
 
@@ -302,7 +302,7 @@ html, body {
   50% { translate: 0 -4px; }
 }
 
-.dragon {
+.ufo {
   position: absolute;
   top: 10px;
   left: 0;

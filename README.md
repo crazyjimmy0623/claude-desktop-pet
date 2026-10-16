@@ -25,17 +25,17 @@
 
 ## 收集
 
-- **金幣只能靠工作賺**：AI 完成回合、完成番茄鐘、陪伴時間、打倒哥布林、開寶箱。沒有任何付費管道
+- **金幣只能靠工作賺**：AI 完成回合、完成番茄鐘、陪伴時間、抓 bug、拆包裹。沒有任何付費管道
 - **招募**：10 🪙 抽一次，抽角色、配件、家具、地板、牆面；重複退 3 🪙，十連保底稀有以上
 - **圖鑑、成就、每週戰績卡**（可存成圖片分享）
-- **隨機事件**：工具失敗時冒出哥布林、長任務完成掉寶箱、context 壓縮時巨龍飛過
+- **隨機事件**：工具失敗時跑出一隻 bug、長任務完成送來包裹、context 壓縮時 UFO 飛過
 
 ## 自訂
 
-- 8 種內建角色（騎士、上班族、法師、貓貓、機器人、忍者、廚師、太空人）和 8 種配件
+- 8 種內建角色（黑甲將軍、上班族、研究員、貓貓、機器人、忍者、廚師、太空人）和 8 種配件
 - 房間編輯器：擺家具、塗地板、換牆面、調高度
 - 自己的素材放進 `%APPDATA%\Deskmates\custom\`：
-  - `characters/<名稱>/`：Aseprite 匯出的 PNG + JSON，用 frame tag 命名動作（idle、walk、work、read、wait、done、sleep…）
+  - `characters/<名稱>/`：Aseprite 匯出的 PNG + JSON，用 frame tag 命名動作（idle、walk、work、type、command、game、read、wait、done、sleep…）
   - `tiles/`：16x16 PNG，房間編輯器的「自訂地板」可以直接塗
 
 ## 開發
@@ -54,10 +54,10 @@ npm run preview -- chars out.png   # 輸出角色/家具預覽圖（chars | fx |
 src/main/        主程式：actors（角色狀態）、progress（金幣/成就/招募）、fx（隨機事件）、
                  focus（番茄鐘）、activity（前景程式偵測）、server（HTTP）、windows、tray、store
 src/shared/      主程式和畫面共用：catalog（物品/成就）、sprites（角色）、furniture（房間）
-src/renderer/    strip（工作列）、room（房間 + 編輯器）、settings、guild（公會手冊）
+src/renderer/    strip（工作列）、room（房間 + 編輯器）、settings、guild（夥伴手冊）
 ```
 
-美術全部用程式畫，沒有外部素材。所有圖都畫在兩倍細的網格上（角色 64x56、地磚 32x32 細格），大小不變但細節多一倍。
+美術全部用程式畫，沒有外部素材。所有圖都畫在兩倍細的網格上（角色 64x56、地磚 32x32 細格）；不用黑色描邊，每個部位的邊用它自己顏色的深一階來收，角色是大頭、扁臉、豆豆眼。
 
 ## 授權
 

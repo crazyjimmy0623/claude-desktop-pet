@@ -154,13 +154,13 @@ function animateEquip() {
   c.style.width = `${c.width / DPR}px`;
   c.style.height = `${c.height / DPR}px`;
   const ctx = c.getContext('2d');
-  const poses = ['rest', 'type', 'hammer', 'read', 'done', 'dance'];
+  const poses = ['rest', 'type', 'command', 'read', 'done', 'dance'];
   const tickEquip = () => {
     if (settings && tab === 'equip') {
       const now = Date.now();
       const slot = slotFor(target);
       const pose = poses[Math.floor(now / 2500) % poses.length];
-      const skin = slot.skin === 'auto' ? ['office', 'mage', 'cat', 'robot'][Math.floor(now / 2500) % 4] : slot.skin;
+      const skin = slot.skin === 'auto' ? ['office', 'scientist', 'cat', 'robot'][Math.floor(now / 2500) % 4] : slot.skin;
       const fake = { id: target, hue: 210, skin, accessory: slot.accessory };
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, c.width, c.height);
@@ -293,7 +293,7 @@ function renderShare() {
   crew.push(user || { id: 'user', hue: 35, skin: settings.characters.user.skin, accessory: settings.characters.user.accessory });
   for (const a of actors.filter((x) => x.kind !== 'user').slice(0, 3)) crew.push(a);
   if (crew.length < 3) crew.push({ id: 'ai', hue: 200, skin: settings.characters.ai.skin, accessory: settings.characters.ai.accessory });
-  const poses = ['done', 'hammer', 'read', 'type'];
+  const poses = ['done', 'command', 'read', 'type'];
   crew.forEach((a, i) => {
     const scale = 4;
     Common.drawActorAt(ctx, scale, 50 + i * 130, floorY - Sprites.H * scale + 6, a, poses[i % poses.length], 1, 1, { prop: false }, Date.now());
@@ -306,7 +306,7 @@ function renderShare() {
   ctx.fillStyle = '#c9bfe6';
   ctx.font = font(24, 400);
   const fmt = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
-  ctx.fillText(`${fmt(w.from)} – ${fmt(w.to)}・公會 Lv.${progress.level}・連續上工 ${progress.stats.streak} 天`, 52, 134);
+  ctx.fillText(`${fmt(w.from)} – ${fmt(w.to)}・團隊 Lv.${progress.level}・連續上工 ${progress.stats.streak} 天`, 52, 134);
 
   const stats = [
     ['完成回合', w.turns],

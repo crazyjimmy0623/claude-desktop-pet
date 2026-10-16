@@ -163,7 +163,7 @@ function renderMinis(v, now) {
     m.key = key;
     m.ctx.setTransform(1, 0, 0, 1, 0, 0);
     m.ctx.clearRect(0, 0, m.canvas.width, m.canvas.height);
-    Common.drawActorAt(m.ctx, devUnit(miniScale), 0, 0, v.actor, 'hammer', frame, 1, { prop: true }, now);
+    Common.drawActorAt(m.ctx, devUnit(miniScale), 0, 0, v.actor, 'command', frame, 1, { prop: false }, now);
   });
   let more = v.helpersEl.querySelector('.more');
   if (v.actor.helpers > MAX_MINIS) {
@@ -359,13 +359,13 @@ function onFx(f) {
         v.talkUntil = Date.now() + f.duration;
       }
       break;
-    case 'goblin': {
+    case 'bug': {
       if (!v) break;
-      const c = fxCanvas('goblin', scale);
-      c.className = 'goblin';
+      const c = fxCanvas('bug', scale);
+      c.className = 'bug';
       v.el.append(c);
-      animateFx(c, 'goblin', scale, f.duration, -1);
-      v.goblinUntil = Date.now() + f.duration;
+      animateFx(c, 'bug', scale, f.duration, -1);
+      v.bugUntil = Date.now() + f.duration;
       setTimeout(() => {
         c.classList.add('poof');
         setTimeout(() => c.remove(), 400);
@@ -402,11 +402,11 @@ function onFx(f) {
       chests.get(f.id)?.remove();
       chests.delete(f.id);
       break;
-    case 'dragon': {
-      const c = fxCanvas('dragon', scale);
-      c.className = 'dragon';
+    case 'ufo': {
+      const c = fxCanvas('ufo', scale);
+      c.className = 'ufo';
       stage.append(c);
-      animateFx(c, 'dragon', scale, 6000, -1);
+      animateFx(c, 'ufo', scale, 6000, -1);
       setTimeout(() => c.remove(), 6000);
       break;
     }

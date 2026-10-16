@@ -1,7 +1,7 @@
-// Random events: goblins on failures, treasure chests after long turns, a dragon on context compaction.
+// Random events: a bug on failures, a delivery box after long turns, a UFO on context compaction.
 const { EventEmitter } = require('events');
 
-const GOBLIN_MS = 3500;
+const BUG_MS = 3500;
 const CHEST_TTL_MS = 15 * 60 * 1000;
 const LONG_TURN_MS = 10 * 60 * 1000;
 
@@ -13,24 +13,24 @@ class Fx extends EventEmitter {
     this.progress = progress;
     this.chests = new Map();
     this.seq = 0;
-    actors.on('failure', (a) => this.goblin(a));
+    actors.on('failure', (a) => this.bug(a));
     actors.on('turn', (a, { duration }) => {
       if (duration >= LONG_TURN_MS) this.chest(a);
     });
-    actors.on('compact', (a) => this.dragon(a));
+    actors.on('compact', (a) => this.ufo(a));
   }
 
   get enabled() { return this.store.settings.ambient; }
 
   nextId(kind) { return `${kind}-${Date.now()}-${++this.seq}`; }
 
-  goblin(a) {
+  bug(a) {
     if (!this.enabled) return;
-    this.emit('fx', { type: 'goblin', id: this.nextId('goblin'), actorId: a.id, duration: GOBLIN_MS });
+    this.emit('fx', { type: 'bug', id: this.nextId('bug'), actorId: a.id, duration: BUG_MS });
     setTimeout(() => {
-      this.progress.onGoblin(a.id);
-      this.actors.say(a, '⚔️ 打倒哥布林！', 2000);
-    }, GOBLIN_MS);
+      this.progress.onBug(a.id);
+      this.actors.say(a, '🐛 抓到 bug！', 2000);
+    }, BUG_MS);
   }
 
   chest(a) {
@@ -38,7 +38,7 @@ class Fx extends EventEmitter {
     const id = this.nextId('chest');
     this.chests.set(id, a.id);
     this.emit('fx', { type: 'chest', id, actorId: a.id });
-    this.actors.say(a, '🎁 撿到寶箱！點我打開', 4000);
+    this.actors.say(a, '📦 包裹送到！點我打開', 4000);
     setTimeout(() => {
       if (this.chests.delete(id)) this.emit('fx', { type: 'chest-gone', id });
     }, CHEST_TTL_MS);
@@ -53,10 +53,10 @@ class Fx extends EventEmitter {
     return coins;
   }
 
-  dragon(a) {
+  ufo(a) {
     if (!this.enabled) return;
-    this.emit('fx', { type: 'dragon', id: this.nextId('dragon'), actorId: a?.id });
-    this.progress.onDragon();
+    this.emit('fx', { type: 'ufo', id: this.nextId('ufo'), actorId: a?.id });
+    this.progress.onUfo();
   }
 }
 
