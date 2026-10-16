@@ -9,17 +9,17 @@
 </head>
 <body class="settings">
   <header class="top">
-    <h1>⚙️ 設定</h1>
+    <h1>設定</h1>
     <span class="spacer"></span>
     <span id="version" class="pill"></span>
   </header>
   <main>
     <section class="card">
-      <h2>🖥️ 顯示</h2>
+      <h2>顯示</h2>
       <div class="field"><label class="name">顯示模式</label>
         <div class="segmented" id="mode">
-          <button data-mode="strip">🧍 工作列<small>站在工作列上</small></button>
-          <button data-mode="room">🏠 房間<small>桌角的一間小屋</small></button>
+          <button data-mode="strip">工作列<small>站在工作列上</small></button>
+          <button data-mode="room">房間<small>桌角的一間小屋</small></button>
         </div>
       </div>
       <div class="field"><label class="name">一直在最上面</label><input type="checkbox" id="alwaysOnTop"><span class="help">不會被其他視窗蓋住</span></div>
@@ -40,7 +40,7 @@
     </section>
 
     <section class="card">
-      <h2>🔌 夥伴看什麼</h2>
+      <h2>夥伴看什麼</h2>
       <p class="desc">這裡開了什麼，夥伴就演什麼。沒在用 AI 的話，開「電腦活動」就夠了。</p>
       <div class="field"><label class="name">Claude Code</label>
         <input type="checkbox" id="src-claude">
@@ -57,7 +57,7 @@
     </section>
 
     <section class="card">
-      <h2>🗂️ 哪個程式做什麼</h2>
+      <h2>哪個程式做什麼</h2>
       <p class="desc">你用什麼程式，角色就做什麼事。常用的程式都設好了，你在這裡加的會優先。程式名稱可以在工作管理員找到，不用打 .exe。</p>
       <table class="map"><thead><tr><th>程式名稱</th><th>活動</th><th></th></tr></thead><tbody id="map-rows"></tbody></table>
       <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
@@ -68,7 +68,7 @@
     </section>
 
     <section class="card">
-      <h2>🍅 番茄鐘與提醒</h2>
+      <h2>番茄鐘與提醒</h2>
       <div class="field"><label class="name">專注（分鐘）</label><input type="number" id="pomo-focus" min="1" max="180"></div>
       <div class="field"><label class="name">休息（分鐘）</label><input type="number" id="pomo-break" min="1" max="60"></div>
       <div class="field"><label class="name">番茄鐘</label><button class="btn primary" id="pomo-toggle"></button></div>
@@ -77,7 +77,7 @@
     </section>
 
     <section class="card">
-      <h2>🎨 自己的圖</h2>
+      <h2>自己的圖</h2>
       <p class="desc">自己畫的角色和地板圖，丟進這個資料夾就能用。角色要用 Aseprite 匯出，地板是 16x16 的 PNG。</p>
       <div class="field"><label class="name">資料夾</label>
         <button class="btn" id="assets-open">開啟資料夾</button>
@@ -87,10 +87,10 @@
     </section>
 
     <section class="card">
-      <h2>🧰 其他</h2>
+      <h2>其他</h2>
       <div class="field"><label class="name">開機自動啟動</label><input type="checkbox" id="autostart"></div>
       <div class="field"><label class="name">小工具</label>
-        <button class="btn" id="run-demo">▶ 播放示範</button>
+        <button class="btn" id="run-demo">播放示範</button>
         <button class="btn" id="regroup">大家站好</button>
         <button class="btn" id="clear-ai">AI 夥伴全部下班</button>
       </div>
@@ -98,7 +98,7 @@
 
     <section class="card">
       <details>
-        <summary>🛠️ 進階：給會寫程式的人</summary>
+        <summary>進階：給會寫程式的人</summary>
         <p class="desc">任何程式只要把 JSON POST 到本機的 Deskmates，就能讓一位夥伴動起來。</p>
         <pre id="api-example"></pre>
         <p class="desc">Codex CLI：在 <code>~/.codex/config.toml</code> 加上下面這行，每次 Codex 做完事，夥伴就會歡呼。</p>

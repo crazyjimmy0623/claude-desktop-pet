@@ -1,65 +1,79 @@
-/* Deskmates UI: one warm, quiet look for every surface - the strip's dock, the room's toolbar,
-   the drawer, the editor, the guild book and settings, bubbles and cards over the characters.
-   Warm dark surfaces that sit well on any wallpaper, soft rounded shapes, one amber accent.
+/* Deskmates UI: a pixel-game handbook. Cream paper with ink outlines and hard, unblurred
+   shadows, so the chrome looks like it comes from the same world as the sprites. Corners stay
+   nearly square, buttons have a pressed-down edge, and colour is saved for what matters: the
+   one thing to press (tomato), coins (gold), and danger.
    Every page links this first; page stylesheets only lay things out with these tokens. */
 :root {
-  --bg: #1f1a17;
-  --surface: #2a2420;
-  --surface-2: #342d28;
-  --surface-3: #403731;
-  --line: rgba(255, 236, 214, 0.09);
-  --line-strong: rgba(255, 236, 214, 0.18);
-  --text: #f4ece2;
-  --text-2: #bfb0a0;
-  --text-3: #8c7f72;
-  --accent: #f0b54d;
-  --accent-ink: #2b1c04;
-  --accent-soft: rgba(240, 181, 77, 0.16);
-  --danger: #e8685c;
-  --danger-soft: rgba(232, 104, 92, 0.18);
-  --good: #86c47e;
-  --good-soft: rgba(134, 196, 126, 0.16);
-  --paper: #fbf5ea;
-  --paper-ink: #2a221c;
-  --r-s: 7px;
-  --r: 11px;
-  --r-l: 16px;
-  --shadow: 0 8px 28px rgba(0, 0, 0, 0.38);
-  --shadow-s: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --ink: #2e231a;
+  --paper: #f6eedb;
+  --paper-2: #ebdfc3;
+  --paper-3: #dfcfab;
+  --field: #fffaf0;
+  --text: #2e231a;
+  --text-2: #6e5a46;
+  --text-3: #9b8670;
+  --line: rgba(46, 35, 26, 0.18);
+  --line-strong: var(--ink);
+  --accent: #e2603a;
+  --accent-hover: #ec7049;
+  --accent-ink: #fff;
+  --accent-soft: #f9d8c6;
+  --gold: #f3b63d;
+  --danger: #c4412f;
+  --danger-soft: #f5d3ca;
+  --good: #4f9446;
+  --good-soft: #d5eac8;
+  --stage: #cddcd7;
+  --r-s: 2px;
+  --r: 3px;
+  --r-l: 4px;
+  --shadow: 4px 4px 0 rgba(46, 35, 26, 0.3);
+  --shadow-s: 2px 2px 0 rgba(46, 35, 26, 0.25);
+  --bevel: inset 0 -3px 0 rgba(46, 35, 26, 0.14);
   --font: "Microsoft JhengHei UI", "Microsoft JhengHei", "Segoe UI", system-ui, sans-serif;
+  --mono: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
   /* Older names, kept so page styles still resolve. */
-  --ink: var(--text);
+  --bg: var(--paper-2);
+  --surface: var(--paper);
+  --surface-2: var(--paper-2);
+  --surface-3: var(--paper-3);
   --muted: var(--text-2);
-  --card: var(--surface);
+  --card: var(--paper);
+  --paper-ink: var(--ink);
 }
 
 * { box-sizing: border-box; }
 
-/* ---- Buttons --------------------------------------------------------------------- */
+:focus-visible { outline: 2px dashed var(--accent); outline-offset: 2px; }
+
+/* ---- Buttons: paper keys with a pressed-down edge ------------------------------- */
 .btn, .ui button {
   font: inherit;
   color: var(--text);
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: var(--r-s);
-  padding: 4px 11px;
+  background: var(--field);
+  border: 2px solid var(--ink);
+  border-radius: var(--r);
+  padding: 3px 11px 5px;
+  box-shadow: var(--bevel);
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 
-.btn:hover, .ui button:hover { background: var(--surface-3); border-color: var(--line-strong); }
+.btn:hover, .ui button:hover { background: #fff; }
+.btn:active, .ui button:active { box-shadow: none; padding-top: 4px; padding-bottom: 4px; }
 .btn:disabled, .ui button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .btn.primary, .ui button.primary {
   background: var(--accent);
-  border-color: var(--accent);
   color: var(--accent-ink);
   font-weight: 700;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.22);
 }
 
-.btn.primary:hover, .ui button.primary:hover { filter: brightness(1.06); }
+.btn.primary:hover, .ui button.primary:hover { background: var(--accent-hover); }
+.btn.primary:active, .ui button.primary:active { box-shadow: none; }
 
-.btn.danger { background: var(--danger-soft); border-color: transparent; color: #ffc9c2; }
+.btn.danger { color: var(--danger); }
+.btn.danger:hover { background: var(--danger-soft); }
 
 /* A square button holding one icon. */
 .icon-btn {
@@ -72,52 +86,54 @@
   line-height: 1;
 }
 
-/* Tabs: a row of quiet labels, the chosen one in a soft pill. */
+/* Pixel icons from icons.js sit beside their label. */
+[data-icon] { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.px-icon { flex: none; display: block; }
+
+/* A few joined choices, the chosen one inked in. */
 .seg {
   display: inline-flex;
-  gap: 2px;
-  padding: 3px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: calc(var(--r-s) + 3px);
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+  border-radius: var(--r);
+  overflow: hidden;
 }
 
 .seg > button {
   border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
   background: transparent !important;
   color: var(--text-2) !important;
-  padding: 4px 12px;
-  border-radius: var(--r-s);
-  font-weight: 600;
+  padding: 3px 13px !important;
+  font-weight: 700;
 }
 
-.seg > button:hover { color: var(--text) !important; background: var(--surface-2) !important; }
+.seg > button + button { border-left: 2px solid var(--ink) !important; }
+.seg > button:hover { color: var(--text) !important; background: var(--paper-3) !important; }
+.seg > button.active, .seg > button.on { background: var(--ink) !important; color: var(--paper) !important; }
 
-.seg > button.active, .seg > button.on {
-  background: var(--surface-3) !important;
-  color: var(--text) !important;
-  box-shadow: var(--shadow-s);
-}
-
-/* Small rounded labels: coins, level, counts. */
+/* Small labels: coins, level, counts. */
 .pill, .badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 1px 9px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
+  padding: 0 7px;
+  border-radius: var(--r-s);
+  background: var(--field);
+  border: 2px solid var(--ink);
   color: var(--text);
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.badge.coin { color: #ffd77a; background: rgba(240, 181, 77, 0.12); border-color: rgba(240, 181, 77, 0.22); }
+.badge.coin { background: var(--ink); color: var(--gold); }
 
 .hidden { display: none !important; }
 
-/* Scrollbars that don't shout. */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 8px; }
+/* Chunky scrollbars, so it's obvious when a row keeps going. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--paper-3); border: 2px solid var(--ink); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: var(--gold); }
 ::-webkit-scrollbar-track { background: transparent; }

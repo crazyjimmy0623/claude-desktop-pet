@@ -313,7 +313,7 @@ function renderStudio() {
   }
   $('studio-delete').classList.toggle('hidden', !studio.id);
   $('studio-wear').classList.toggle('hidden', !studio.id);
-  $('studio-save').textContent = studio.id && studio.saved ? '✓ 已存好' : '✨ 完成';
+  $('studio-save').textContent = studio.id && studio.saved ? '已存好' : '完成';
 }
 
 // Your characters, dressed-up and drawn, and a fresh one.
@@ -384,8 +384,8 @@ $('studio-save').addEventListener('click', async () => { await saveStudio(); ren
 $('studio-wear').addEventListener('click', async () => {
   const id = studio.saved ? studio.id : await saveStudio();
   if (id) desk.invoke('equip', { target: 'user', skin: `mix:${id}` });
-  $('studio-wear').textContent = '👕 穿上了！';
-  setTimeout(() => { $('studio-wear').textContent = '👕 我要穿'; }, 1800);
+  $('studio-wear').textContent = '穿上了！';
+  setTimeout(() => { $('studio-wear').textContent = '我要穿'; }, 1800);
 });
 $('studio-delete').addEventListener('click', () => {
   if (!studio.id || !window.confirm('確定刪掉這個角色嗎？')) return;

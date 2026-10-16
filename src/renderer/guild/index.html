@@ -10,25 +10,25 @@
 </head>
 <body class="guild">
   <header class="top">
-    <h1>📖 夥伴手冊</h1>
+    <h1>夥伴手冊</h1>
     <span class="spacer"></span>
     <span id="level" class="pill"></span>
     <span id="coins" class="pill"></span>
   </header>
   <nav class="tabs">
-    <button data-tab="equip" class="active">🧑‍🤝‍🧑 夥伴</button>
-    <button data-tab="studio">✨ 創角</button>
-    <button data-tab="friends">💌 朋友</button>
-    <button data-tab="gacha">🎰 招募</button>
-    <button data-tab="book">📚 圖鑑</button>
-    <button data-tab="achievements">🏆 成就</button>
-    <button data-tab="stats">📊 戰績卡</button>
+    <button data-tab="equip" class="active">夥伴</button>
+    <button data-tab="studio">創角</button>
+    <button data-tab="friends">朋友</button>
+    <button data-tab="gacha">招募</button>
+    <button data-tab="book">圖鑑</button>
+    <button data-tab="achievements">成就</button>
+    <button data-tab="stats">戰績卡</button>
   </nav>
   <main>
     <div id="tab-equip" class="tab">
       <section class="card">
-        <h2>🧑‍🤝‍🧑 選擇夥伴</h2>
-        <p class="desc">「你」就是你自己。🏡 居民住在房間裡過自己的日子，不用 AI 也能邀請。AI 夥伴可以統一換裝，也能每個專案各用一個角色。</p>
+        <h2>選一位夥伴</h2>
+        <p class="desc">「你」就是你自己。居民住在房間裡過自己的日子，不用 AI 也能邀請。AI 夥伴可以統一換裝，也能每個專案各用一個角色。</p>
         <div id="targets" class="targets"></div>
       </section>
       <section class="card equip-panel">
@@ -57,10 +57,10 @@
         <canvas id="studio-canvas" class="pixel"></canvas>
         <div class="studio-controls">
           <input type="text" id="studio-name" maxlength="12" placeholder="幫他取個名字">
-          <button class="btn big" id="studio-random" title="隨機變一個">🎲 隨機</button>
-          <button class="btn primary big" id="studio-save">✨ 完成</button>
+          <button class="btn big" id="studio-random" title="隨機變一個">隨機</button>
+          <button class="btn primary big" id="studio-save">完成</button>
           <div class="studio-actions">
-            <button class="btn" id="studio-wear" title="讓代表你的角色穿上">👕 我要穿</button>
+            <button class="btn" id="studio-wear" title="讓代表你的角色穿上">我要穿</button>
             <button class="btn danger" id="studio-delete" title="刪掉這個角色">🗑</button>
           </div>
         </div>
@@ -76,12 +76,12 @@
         <canvas id="paint-preview" class="pixel"></canvas>
         <div class="studio-controls">
           <input type="text" id="paint-name" maxlength="12" placeholder="幫他取個名字">
-          <button class="btn primary big" id="paint-save">✨ 完成</button>
+          <button class="btn primary big" id="paint-save">完成</button>
           <div class="studio-actions">
-            <button class="btn" id="paint-wear" title="讓代表你的角色穿上">👕 我要穿</button>
+            <button class="btn" id="paint-wear" title="讓代表你的角色穿上">我要穿</button>
             <button class="btn danger" id="paint-delete" title="刪掉這個角色">🗑</button>
           </div>
-          <button class="btn" id="paint-send">💌 送給朋友</button>
+          <button class="btn" id="paint-send">送給朋友</button>
         </div>
       </section>
       <section class="card paint-tools mode-draw hidden">
@@ -89,9 +89,9 @@
         <div id="paint-toggles" class="tool-row"></div>
         <div id="paint-palette" class="palette"></div>
         <div class="start-row">重新開始：
-          <button class="chip" data-start="blank">⬜ 空白</button>
-          <button class="chip" data-start="person">🧍 人形</button>
-          <button class="chip" data-start="dress">👗 換裝角色</button>
+          <button class="chip" data-start="blank">空白</button>
+          <button class="chip" data-start="person">人形</button>
+          <button class="chip" data-start="dress">換裝角色</button>
         </div>
       </section>
       <section class="card paint-poses-card mode-draw hidden">
@@ -100,7 +100,7 @@
       </section>
       <section class="card photo-in mode-photo hidden">
         <label class="dropzone">
-          <span class="ico">📷</span>
+          <span class="ico" data-icon="photo" data-px="3"></span>
           <b>把照片或圖拖進來</b>
           <small>娃娃、公仔、手繪都可以・也能 Ctrl+V 貼上</small>
           <span class="btn">選一張圖</span>
@@ -118,45 +118,45 @@
             <b>去背景</b><div id="photo-cut" class="chips"></div>
             <b>大小</b><div id="photo-size" class="chips"></div>
             <div class="studio-actions">
-              <button class="btn" id="photo-edit">🖌️ 修一修</button>
-              <button class="btn primary" id="photo-done">✨ 直接完成</button>
+              <button class="btn" id="photo-edit">修一修</button>
+              <button class="btn primary" id="photo-done">直接完成</button>
             </div>
           </div>
         </div>
       </section>
       <section class="card studio-mine">
-        <h2>🧸 我的角色</h2>
+        <h2>我的角色</h2>
         <div id="studio-list" class="studio-list"></div>
       </section>
     </div>
 
     <div id="tab-friends" class="tab hidden">
       <section class="card friends-send">
-        <h2>💌 送角色給朋友</h2>
+        <h2>送角色給朋友</h2>
         <div id="send-list" class="studio-list"></div>
       </section>
       <section class="card friends-card">
         <div id="card-preview" class="card-preview"></div>
         <div id="card-actions" class="card-actions">
-          <button class="btn primary" id="card-copy">📋 複製圖片<small>貼到 LINE、Discord</small></button>
-          <button class="btn" id="card-file">💾 存成檔案</button>
+          <button class="btn primary" id="card-copy">複製圖片<small>貼到 LINE、Discord</small></button>
+          <button class="btn" id="card-file">存成檔案</button>
           <p class="desc">朋友把這張圖拖到他的房間上，角色就會搬進去住。</p>
         </div>
       </section>
       <section class="card room-share">
-        <h2>🏠 分享我的房間</h2>
+        <h2>分享我的房間</h2>
         <div class="room-card-row">
-        <div id="room-card" class="room-card-preview"><button class="btn primary" id="room-card-make">📸 做成房間卡</button></div>
+        <div id="room-card" class="room-card-preview"><button class="btn primary" id="room-card-make">做成房間卡</button></div>
         <div id="room-card-actions" class="card-actions hidden">
-          <button class="btn primary" id="room-card-copy">📋 複製圖片<small>貼到 LINE、Discord</small></button>
-          <button class="btn" id="room-card-file">💾 存成檔案</button>
+          <button class="btn primary" id="room-card-copy">複製圖片<small>貼到 LINE、Discord</small></button>
+          <button class="btn" id="room-card-file">存成檔案</button>
           <p class="desc">朋友把它拖到房間上就能來參觀，零件都有的話還能照著蓋。</p>
         </div>
         </div>
       </section>
       <section class="card friends-get">
         <label class="dropzone">
-          <span class="ico">📥</span>
+          <span class="ico" data-icon="inbox" data-px="3"></span>
           <b>收到角色卡？</b>
           <small>拖到房間上就會搬進來・拖到這裡只收進圖鑑</small>
           <span class="btn">選檔案</span>
@@ -165,21 +165,21 @@
         <p id="friend-status" class="status-line"></p>
       </section>
       <section class="card friends-book">
-        <h2>👫 朋友圖鑑 <span id="friend-count" class="pill"></span></h2>
+        <h2>朋友圖鑑 <span id="friend-count" class="pill"></span></h2>
         <div id="friend-list" class="studio-list"></div>
       </section>
     </div>
 
     <div id="tab-gacha" class="tab hidden">
       <section class="card gacha">
-        <h2>🎰 招募新成員</h2>
+        <h2>招募新成員</h2>
         <div class="gacha-top">
           <canvas id="gacha-machine" class="pixel"></canvas>
           <div>
             <p class="desc">金幣靠平常用電腦慢慢存：AI 做完事、你專心工作、番茄鐘、每天簽到、抓 bug、拆包裹都有。抽到重複的會退你 3 🪙；一次抽 10 個，至少會有一個稀有的。</p>
             <div class="gacha-buttons">
-              <button class="btn primary" id="pull-1">🎲 招募 ×1<small>10 🪙</small></button>
-              <button class="btn primary" id="pull-10">🎁 招募 ×10<small>100 🪙</small></button>
+              <button class="btn primary" id="pull-1">抽 1 次<small>10 🪙</small></button>
+              <button class="btn primary" id="pull-10">抽 10 次<small>100 🪙</small></button>
               <span id="gacha-error" class="status off"></span>
             </div>
           </div>
@@ -205,12 +205,12 @@
 
     <div id="tab-stats" class="tab hidden">
       <section class="card">
-        <h2>📊 本週戰績</h2>
+        <h2>本週戰績</h2>
         <p class="desc">存成一張圖，拿去炫耀一下。</p>
         <canvas id="share" class="share"></canvas>
         <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
-          <button class="btn primary" id="share-save">💾 儲存圖片</button>
-          <button class="btn" id="share-copy">📋 複製到剪貼簿</button>
+          <button class="btn primary" id="share-save">存成圖片</button>
+          <button class="btn" id="share-copy">複製</button>
           <span id="share-status" class="help"></span>
         </div>
       </section>
@@ -221,6 +221,7 @@
   <script src="../../shared/sprites.js"></script>
   <script src="../../shared/iso.js"></script>
   <script src="../common.js"></script>
+  <script src="../icons.js"></script>
   <script src="pixels.js"></script>
   <script src="guild.js"></script>
   <script src="draw.js"></script>

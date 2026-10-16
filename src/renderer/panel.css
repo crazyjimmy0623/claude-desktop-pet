@@ -1,8 +1,8 @@
-/* Settings and the guild book: pages of cards, on their own or docked in the drawer. Colours,
-   buttons and tabs come from theme.css. */
+/* Settings and the guild book: pages laid out on handbook paper, on their own or docked in the
+   drawer. Colours, buttons and tabs come from theme.css. */
 html, body {
   margin: 0;
-  background: var(--surface);
+  background: var(--paper);
   color: var(--text);
   font: 13px/1.5 var(--font);
 }
@@ -13,21 +13,22 @@ header.top {
   z-index: 5;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 10px 18px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+  border-bottom: 2px solid var(--ink);
 }
 
 header.top h1 { margin: 0; font-size: 17px; }
 header.top .spacer { flex: 1; }
 
+/* Second-level tabs: plain labels, the chosen one underlined in tomato. */
 nav.tabs {
   display: flex;
-  gap: 2px;
-  padding: 0 14px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
+  gap: 4px;
+  padding: 0 12px;
+  background: var(--paper);
+  border-bottom: 2px solid var(--line);
   position: sticky;
   top: 53px;
   z-index: 4;
@@ -35,16 +36,17 @@ nav.tabs {
 
 nav.tabs button {
   font: inherit;
-  padding: 7px 12px 6px;
+  padding: 6px 10px 5px;
+  margin-bottom: -2px;
   border: none;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
   background: transparent;
   color: var(--text-2);
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
 }
 
-nav.tabs button:hover { color: var(--text); }
+nav.tabs button:hover { color: var(--text); border-bottom-color: var(--paper-3); }
 nav.tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
 
 main {
@@ -53,56 +55,75 @@ main {
   margin: 0 auto;
 }
 
+/* Sections are plain stretches of the page, not boxes in boxes. */
 section.card {
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: var(--r-l);
-  padding: 14px 16px;
+  padding: 4px 0 14px;
   margin-bottom: 14px;
+  border-bottom: 2px dashed var(--line);
 }
 
-section.card h2 { margin: 0 0 10px; font-size: 14px; }
-section.card p.desc { margin: -4px 0 10px; color: var(--text-2); }
+section.card h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* A little square bullet, like the dot before a line in a game menu. */
+section.card h2::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+section.card h2 small { font-weight: 500; color: var(--text-3); font-size: 11px; }
+section.card p.desc { margin: 0 0 10px; color: var(--text-2); }
 
 .field {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 7px 0;
-  border-top: 1px solid var(--line);
+  border-top: 1px dashed var(--line);
 }
 
 .field:first-of-type { border-top: none; }
-.field label.name { flex: none; width: 150px; font-weight: 600; }
+.field label.name { flex: none; width: 150px; font-weight: 700; }
 .field .help { color: var(--text-3); font-size: 12px; }
 
 input[type="text"], input[type="number"], select {
   font: inherit;
   color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--line-strong);
+  background: var(--field);
+  border: 2px solid var(--ink);
   border-radius: var(--r-s);
-  padding: 4px 8px;
+  padding: 2px 7px;
+  box-shadow: inset 0 2px 0 rgba(46, 35, 26, 0.08);
   outline: none;
 }
 
+input::placeholder { color: var(--text-3); }
 input[type="text"]:focus, input[type="number"]:focus, select:focus { border-color: var(--accent); }
 input[type="number"] { width: 72px; }
-select option { background: var(--surface); }
+select option { background: var(--field); }
 
-/* Checkboxes drawn as small switches. */
+/* Checkboxes drawn as small pixel switches. */
 input[type="checkbox"] {
   appearance: none;
   flex: none;
-  width: 34px;
-  height: 19px;
+  width: 36px;
+  height: 20px;
   margin: 0;
-  border-radius: 999px;
-  background: var(--surface-3);
-  border: 1px solid var(--line-strong);
+  border-radius: var(--r-s);
+  background: var(--paper-3);
+  border: 2px solid var(--ink);
   position: relative;
   cursor: pointer;
-  transition: background 0.15s;
 }
 
 input[type="checkbox"]::after {
@@ -110,25 +131,25 @@ input[type="checkbox"]::after {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: var(--text-2);
-  transition: left 0.15s, background 0.15s;
+  width: 12px;
+  height: 12px;
+  background: var(--field);
+  box-shadow: 0 0 0 2px var(--ink);
+  transition: left 0.1s steps(2);
 }
 
-input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
-input[type="checkbox"]:checked::after { left: 17px; background: var(--accent-ink); }
+input[type="checkbox"]:checked { background: var(--good); }
+input[type="checkbox"]:checked::after { left: 18px; }
 
 .status { font-weight: 700; }
 .status.ok { color: var(--good); }
 .status.off { color: var(--danger); }
 
-code, pre { font-family: "Cascadia Code", Consolas, monospace; font-size: 12px; }
+code, pre { font-family: var(--mono); font-size: 12px; }
 
 pre {
-  background: var(--bg);
-  border: 1px solid var(--line);
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
   border-radius: var(--r-s);
   padding: 8px 10px;
   overflow-x: auto;
@@ -136,11 +157,12 @@ pre {
   word-break: break-all;
 }
 
-details summary { cursor: pointer; color: var(--text-2); }
+details summary { cursor: pointer; color: var(--text-2); font-weight: 700; }
+details summary:hover { color: var(--text); }
 
 table.map { width: 100%; border-collapse: collapse; }
-table.map td, table.map th { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); }
-table.map th { color: var(--text-3); font-weight: 600; }
+table.map td, table.map th { text-align: left; padding: 4px 6px; border-bottom: 1px dashed var(--line); }
+table.map th { color: var(--text-3); font-weight: 700; font-size: 12px; }
 
 canvas.pixel { image-rendering: pixelated; }
 
@@ -152,11 +174,10 @@ canvas.pixel { image-rendering: pixelated; }
 /* Two or three big choices side by side. */
 .segmented {
   display: inline-flex;
-  gap: 4px;
-  padding: 3px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: calc(var(--r) + 3px);
+  border: 2px solid var(--ink);
+  border-radius: var(--r);
+  background: var(--paper-2);
+  overflow: hidden;
 }
 
 .segmented button {
@@ -165,49 +186,52 @@ canvas.pixel { image-rendering: pixelated; }
   flex-direction: column;
   align-items: center;
   min-width: 130px;
-  padding: 7px 16px;
+  padding: 6px 16px;
   border: none;
-  border-radius: var(--r);
   background: transparent;
   color: var(--text-2);
   font-weight: 700;
   cursor: pointer;
 }
 
+.segmented button + button { border-left: 2px solid var(--ink); }
 .segmented button small { font-weight: 400; color: var(--text-3); }
-.segmented button:hover { color: var(--text); }
-.segmented button.active { background: var(--surface-3); color: var(--text); box-shadow: var(--shadow-s); }
-.segmented button.active small { color: var(--text-2); }
+.segmented button:hover { color: var(--text); background: var(--paper-3); }
+.segmented button.active { background: var(--ink); color: var(--paper); }
+.segmented button.active small { color: var(--paper-3); }
 
-/* In the drawer: no header, cards side by side in one row that scrolls sideways. */
+/* In the drawer: no header, sections side by side in one row that scrolls sideways, with a
+   dashed fold between them like pages of a notebook. */
 html.docked, html.docked body { height: 100%; overflow: hidden; }
-html.docked body { display: flex; flex-direction: column; font-size: 12px; background: var(--surface); }
+html.docked body { display: flex; flex-direction: column; font-size: 12px; }
 html.docked header.top { display: none; }
 html.docked nav.tabs { position: static; flex: none; padding: 0 10px; }
-html.docked nav.tabs button { padding: 6px 10px 5px; }
+html.docked nav.tabs button { padding: 6px 9px 4px; }
 html.docked main {
   flex: 1;
   min-height: 0;
   max-width: none;
   margin: 0;
-  padding: 10px 12px;
+  padding: 10px 0 8px;
   display: flex;
-  gap: 10px;
   overflow-x: auto;
   overflow-y: hidden;
 }
-html.docked main > .tab { display: flex; gap: 10px; height: 100%; }
+html.docked main > .tab { display: flex; height: 100%; }
 html.docked main > .tab.hidden { display: none !important; }
 html.docked section.card {
   flex: none;
   height: 100%;
   margin: 0;
-  padding: 10px 14px;
+  padding: 2px 16px;
+  border-bottom: none;
+  border-left: 2px dashed var(--line);
   overflow: hidden;
 }
+html.docked main > .tab > section.card:first-child { border-left: none; }
 html.docked section.card h2 { font-size: 13px; margin-bottom: 6px; }
 
-/* Settings: each card's fields flow down and then into the next column, so a card grows
+/* Settings: each section's fields flow down and then into the next column, so a section grows
    sideways instead of scrolling. */
 html.docked body.settings section.card {
   width: auto;
@@ -220,7 +244,7 @@ html.docked body.settings section.card > * { flex: none; width: 330px; }
 html.docked body.settings section.card > table.map { width: 330px; }
 html.docked .field { flex-wrap: wrap; gap: 4px 8px; padding: 5px 0; }
 html.docked .field label.name { width: 112px; }
-html.docked .field:first-of-type { border-top: 1px solid var(--line); }
+html.docked .field:first-of-type { border-top: 1px dashed var(--line); }
 html.docked .segmented button { min-width: 0; padding: 4px 10px; }
 
 /* Guild: who to dress, in columns of buttons; the looks in sideways strips. */

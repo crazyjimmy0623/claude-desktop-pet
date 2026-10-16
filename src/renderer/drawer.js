@@ -2,7 +2,7 @@
 // top of the taskbar beside the room (or the strip), instead of opening windows of their own.
 // Guild and settings are their own pages, loaded into frames the first time they are opened.
 (function () {
-  const NAMES = { edit: '✏️ 編輯房間', guild: '📖 夥伴手冊', settings: '⚙️ 設定' };
+  const NAMES = { edit: '編輯房間', guild: '夥伴手冊', settings: '設定' };
 
   function create({ editor = null, onChange = () => {} } = {}) {
     const el = document.createElement('div');
@@ -43,11 +43,12 @@
     const spacer = document.createElement('span');
     spacer.className = 'spacer';
     const shut = document.createElement('button');
-    shut.textContent = '✕';
+    shut.dataset.icon = 'close';
     shut.title = '收起';
     shut.className = 'icon-btn close';
     shut.addEventListener('click', () => api.close());
     bar.append(spacer, shut);
+    window.Icons?.fill(bar);
 
     let current = null;
     const api = {

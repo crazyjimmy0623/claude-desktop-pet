@@ -1,6 +1,6 @@
 :root {
-  --alert: #ffe08a;
-  --success: #d4f2cc;
+  --alert: #ffe27a;
+  --success: #d3efc6;
 }
 
 html, body {
@@ -45,57 +45,59 @@ html, body {
   font-size: 11px;
   font-weight: 700;
   line-height: 15px;
-  color: var(--text);
-  background: rgba(31, 26, 23, 0.82);
+  color: var(--paper);
+  background: var(--ink);
   box-shadow: inset 0 -2px 0 var(--c);
-  border-radius: 999px;
-  padding: 0 8px 1px;
+  border-radius: var(--r-s);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   pointer-events: none;
 }
 
+/* Speech bubbles: white with an ink outline and a stepped tail, like a dialogue box. */
 .bubble {
+  --bub: #fffdf6;
   position: absolute;
-  bottom: calc(100% - 4px);
+  bottom: calc(100% + 2px);
   left: 50%;
   transform: translateX(-50%);
   max-width: 200px;
-  padding: 3px 10px;
+  padding: 2px 8px 3px;
   font-size: 12px;
   line-height: 16px;
-  color: var(--paper-ink);
-  background: var(--paper);
-  border-radius: 10px;
+  color: var(--ink);
+  background: var(--bub);
+  border: 2px solid var(--ink);
+  border-radius: var(--r);
   box-shadow: var(--shadow-s);
   white-space: nowrap;
-  overflow: hidden;
+  overflow: clip;
+  overflow-clip-margin: 8px;
   text-overflow: ellipsis;
   pointer-events: none;
 }
 
-.bubble::after {
+.bubble::before, .bubble::after {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -3px;
-  width: 7px;
-  height: 7px;
-  margin-left: -3.5px;
-  background: inherit;
-  border-radius: 1px;
-  transform: rotate(45deg);
+  top: 100%;
+  border-style: solid;
+  border-color: transparent;
 }
 
+.bubble::before { margin-left: -5px; border-width: 6px 5px 0; border-top-color: var(--ink); }
+.bubble::after { margin-left: -2px; border-width: 3px 2px 0; border-top-color: var(--bub); }
+
 .bubble.alert {
-  background: var(--alert);
+  --bub: var(--alert);
   font-weight: 700;
   animation: pulse 0.6s steps(2) infinite;
 }
 
 .bubble.success {
-  background: var(--success);
+  --bub: var(--success);
   font-weight: 700;
 }
 
@@ -104,7 +106,7 @@ html, body {
 }
 
 @keyframes pulse {
-  50% { transform: translateX(-50%) scale(1.06); }
+  50% { transform: translateX(-50%) translateY(-2px); }
 }
 
 .zzz {
@@ -155,25 +157,26 @@ html, body {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
+/* The little info card when you click a character. */
 .card {
   position: absolute;
   bottom: calc(100% + 2px);
   left: 50%;
   transform: translateX(-50%);
   width: 236px;
-  padding: 10px 12px;
+  padding: 10px 12px 9px;
   font-size: 12px;
   line-height: 18px;
   color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--line-strong);
+  background: var(--paper);
+  border: 2px solid var(--ink);
   border-radius: var(--r);
-  box-shadow: inset 0 3px 0 var(--c), var(--shadow);
+  box-shadow: inset 0 4px 0 var(--c), var(--shadow);
   cursor: default;
 }
 
 .card h3 {
-  margin: 0 0 4px;
+  margin: 2px 0 4px;
   font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
@@ -199,16 +202,19 @@ html, body {
 }
 
 .bubble.focus {
-  background: #ffdcd3;
+  --bub: #ffd9cc;
   font-weight: 700;
 }
 
 .nameplate.user {
-  background: rgba(96, 66, 22, 0.88);
+  color: var(--ink);
+  background: var(--gold);
 }
 
 .card .hint {
-  margin-top: 4px;
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px dashed var(--line);
   font-size: 11px;
   color: var(--text-3);
 }
@@ -218,18 +224,18 @@ html, body {
   top: 8px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 6px 16px;
+  padding: 4px 14px 5px;
   font-size: 13px;
   font-weight: 700;
   color: var(--text);
-  background: var(--surface);
-  border: 1px solid rgba(240, 181, 77, 0.35);
-  border-radius: 999px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--r);
   box-shadow: var(--shadow);
   white-space: nowrap;
   pointer-events: none;
   z-index: 20;
-  animation: drop 0.25s ease-out;
+  animation: drop 0.2s steps(3);
 }
 
 @keyframes drop {
@@ -243,8 +249,8 @@ html, body {
   transform: translateX(-50%);
   font-size: 13px;
   font-weight: 800;
-  color: #ffd77a;
-  text-shadow: 0 1px 0 #3a2a10, 0 0 6px rgba(0, 0, 0, 0.6);
+  color: var(--gold);
+  text-shadow: 1px 0 0 var(--ink), -1px 0 0 var(--ink), 0 1px 0 var(--ink), 0 -1px 0 var(--ink), 1px 2px 0 var(--ink);
   white-space: nowrap;
   pointer-events: none;
   animation: rise 1.6s ease-out forwards;
@@ -330,15 +336,16 @@ html, body {
   100% { translate: var(--to) 0; }
 }
 
-/* The drawer: editor, guild book and settings along the top of the taskbar. */
+/* The drawer: editor, guild book and settings along the top of the taskbar. An ink bar of
+   folder tabs on top, handbook paper underneath. */
 .drawer {
   flex: none;
   display: flex;
   flex-direction: column;
-  background: var(--surface);
+  background: var(--paper);
   color: var(--text);
   font: 12px var(--font);
-  border: 1px solid var(--line-strong);
+  border: 2px solid var(--ink);
   border-bottom: none;
   border-radius: var(--r-l) var(--r-l) 0 0;
   box-shadow: var(--shadow);
@@ -348,21 +355,50 @@ html, body {
 .drawer-tabs {
   flex: none;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
-  padding: 7px 8px 6px 10px;
-  border-bottom: 1px solid var(--line);
+  padding: 6px 6px 0 8px;
+  background: var(--ink);
 }
 
 .drawer-tabs .spacer { flex: 1; }
-.drawer-tabs .seg { font-size: 12px; }
-.drawer-tabs .close { margin-left: 4px; }
+
+.drawer-tabs .seg {
+  gap: 3px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+}
+
+.drawer-tabs .seg > button {
+  padding: 4px 14px 5px !important;
+  border-radius: var(--r) var(--r) 0 0 !important;
+  color: var(--paper-3) !important;
+  background: rgba(255, 250, 240, 0.08) !important;
+}
+
+.drawer-tabs .seg > button + button { border-left: none !important; }
+.drawer-tabs .seg > button:hover { color: var(--paper) !important; background: rgba(255, 250, 240, 0.16) !important; }
+.drawer-tabs .seg > button.active { color: var(--ink) !important; background: var(--paper) !important; }
+
+.drawer-tabs .close {
+  align-self: center;
+  width: 24px;
+  height: 22px;
+  margin: 0 0 4px 4px;
+  color: var(--paper);
+  background: transparent;
+  border-color: rgba(255, 250, 240, 0.3);
+  box-shadow: none;
+}
+
+.drawer-tabs .close:hover { background: var(--danger); border-color: var(--danger); }
 
 .drawer-body {
   flex: 1;
   min-height: 0;
   display: flex;
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .drawer-body .pane {
@@ -380,7 +416,7 @@ html, body {
   right: 6px;
   bottom: 40px;
   z-index: 40;
-  border-bottom: 1px solid var(--line-strong);
+  border-bottom: 2px solid var(--ink);
   border-radius: var(--r-l);
 }
 
@@ -388,10 +424,10 @@ html, body {
 .dockbar {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 3px;
-  background: rgba(31, 26, 23, 0.9);
-  border: 1px solid var(--line-strong);
+  gap: 1px;
+  padding: 2px 3px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
   border-radius: var(--r);
   box-shadow: var(--shadow-s);
   color: var(--text);
@@ -404,10 +440,11 @@ html, body {
   background: transparent;
   border: none;
   border-radius: var(--r-s);
+  box-shadow: none;
   cursor: pointer;
 }
 
-.dockbar button:hover { background: var(--surface-3); }
-.dockbar button.on { background: var(--accent-soft); color: #ffd77a; }
-.dockbar .sep { width: 1px; height: 16px; margin: 0 3px; background: var(--line-strong); }
-.dockbar .badge { font-size: 11px; padding: 1px 8px; }
+.dockbar button:hover { background: var(--paper-3); }
+.dockbar button.on { background: var(--accent-soft); color: var(--accent); }
+.dockbar .sep { width: 2px; height: 16px; margin: 0 4px; background: var(--line); }
+.dockbar .badge { font-size: 11px; padding: 0 6px; }
