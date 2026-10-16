@@ -62,7 +62,9 @@ function rebuildNav() {
     }
   }
   for (const v of state.views.values()) {
-    if (!cellOf(v.cell) || !walkable(v.cell)) {
+    // Cell ids move when an upgrade opens a layer, so check the cell is still where we stand.
+    const c0 = cellOf(v.cell);
+    if (!c0 || !walkable(v.cell) || c0.x !== Math.round(v.x) || c0.y !== Math.round(v.y) || Math.abs(c0.z - v.z) > 20) {
       const c = nearestWalkable(v.x, v.y, v.z);
       if (c) place(v, c);
     }
@@ -86,8 +88,15 @@ function layout() {
   rebuildNav();
 }
 
+// Upgrades bought with coins open more layers; the level lives in progress, not in the saved room.
+function applyLevel(room) {
+  Object.defineProperty(room, 'level', { value: state.progress?.roomLevel || 0, writable: true, configurable: true, enumerable: false });
+  Iso.resetCells(room);
+}
+
 function setRoom(room, { save = false, relayout = true } = {}) {
   state.room = room;
+  applyLevel(room);
   if (relayout) layout(); else rebuildNav();
   if (save) {
     clearTimeout(setRoom.timer);
@@ -718,6 +727,10 @@ function applySettings(s) {
 function applyProgress(p) {
   state.progress = p;
   coinsEl.textContent = `Lv.${p.level} · ${p.coins} 🪙`;
+  if (state.room && state.room.level !== (p.roomLevel || 0)) {
+    applyLevel(state.room);
+    layout();
+  }
   window.RoomEditor?.refresh();
 }
 
@@ -726,7 +739,7 @@ desk.on('settings', applySettings);
 desk.on('progress', applyProgress);
 desk.on('fx', onFx);
 desk.on('room', (room) => {
-  if (room?.iso === 3 && JSON.stringify(room) !== JSON.stringify(state.room)) setRoom(room);
+  if (room?.iso === 4 && JSON.stringify(room) !== JSON.stringify(state.room)) setRoom(room);
 });
 desk.on('assets', (assets) => {
   Common.loadSheets(assets);
@@ -741,8 +754,9 @@ desk.invoke('init').then((init) => {
   state.assets = init.assets;
   Common.loadSheets(init.assets);
   applyProgress(init.progress);
-  if (init.room?.iso === 3) state.room = clone(init.room);
+  if (init.room?.iso === 4) state.room = clone(init.room);
   else desk.invoke('room:set', state.room);
+  applyLevel(state.room);
   layout();
   syncActors(init.actors);
   window.RoomEditor?.refresh();

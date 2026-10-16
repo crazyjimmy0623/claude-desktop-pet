@@ -179,3 +179,7 @@ html, body {
   pointer-events: auto;
   cursor: pointer;
 }
+
+#palette button.locked {
+  opacity: 0.55;
+}

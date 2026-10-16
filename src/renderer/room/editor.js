@@ -82,7 +82,10 @@
       const key = tab;
       const row = document.createElement('div');
       row.className = 'row';
-      room().floors.forEach((_, i) => row.append(button(Iso.FLOOR_NAMES[i] || `${i + 1}F`, null, storey === i, () => { storey = i; refresh(); })));
+      if (!Iso.isOpen(room(), storey)) storey = 0;
+      room().floors.forEach((_, i) => {
+        if (Iso.isOpen(room(), i)) row.append(button(Iso.FLOOR_NAMES[i] || `${i + 1}F`, null, storey === i, () => { storey = i; refresh(); }));
+      });
       palette.append(row);
       const set = key === 'floor' ? Iso.FLOORS : Iso.WALLS;
       for (const id of owned(key)) {
@@ -112,6 +115,23 @@
         refresh();
       }));
       palette.append(row);
+      // Upgrades: spend coins to open the next layer of the room.
+      const up = document.createElement('div');
+      up.className = 'row';
+      const level = state.progress?.roomLevel || 0;
+      const next = Catalog.ROOM_UPGRADES.find((u) => u.level === level + 1);
+      if (next) {
+        const b = button(`升級：${next.name}（${next.cost} 🪙）`, null, false, async () => {
+          const res = await desk.invoke('room:upgrade');
+          hint.textContent = res?.error || `房間升級完成：${res.name}！`;
+        });
+        b.title = next.desc;
+        if ((state.progress?.coins || 0) < next.cost) b.classList.add('locked');
+        up.append(b);
+      } else {
+        up.append(button('房間已全部升級 ✨', null, false, () => {}));
+      }
+      palette.append(up);
     }
   }
 

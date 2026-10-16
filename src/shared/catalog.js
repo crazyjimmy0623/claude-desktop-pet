@@ -86,6 +86,9 @@
     { id: 'obj:shopdoor', type: 'furniture', rarity: 'starter', name: '店門' },
     { id: 'obj:sign', type: 'furniture', rarity: 'starter', name: '招牌' },
     { id: 'obj:bin', type: 'furniture', rarity: 'starter', name: '垃圾桶' },
+    { id: 'obj:streetlamp', type: 'furniture', rarity: 'starter', name: '路燈' },
+    { id: 'obj:aircon', type: 'furniture', rarity: 'starter', name: '冷氣室外機' },
+    { id: 'obj:telescope', type: 'furniture', rarity: 'common', name: '望遠鏡' },
     { id: 'obj:easel', type: 'furniture', rarity: 'common', name: '畫架' },
     { id: 'obj:rug', type: 'furniture', rarity: 'common', name: '小地毯' },
     { id: 'obj:lamp', type: 'furniture', rarity: 'common', name: '立燈' },
@@ -127,5 +130,12 @@
   const PULL_COST = 10;
   const DUPLICATE_REFUND = 3;
 
-  return { STATIONS, RARITY, ITEMS, ACHIEVEMENTS, PULL_COST, DUPLICATE_REFUND };
+  // Room upgrades, bought in order with coins: each one opens another layer of the room.
+  const ROOM_UPGRADES = [
+    { level: 1, name: '屋頂露台', desc: '轉角磚樓頂上的露台，掛滿小燈泡', cost: 60 },
+    { level: 2, name: '二樓閣樓', desc: '店後面加蓋一層木地板閣樓，放得下一張床', cost: 150 },
+    { level: 3, name: '屋頂花園', desc: '閣樓上的小花園，晚上可以看星星', cost: 300 },
+  ];
+
+  return { STATIONS, RARITY, ITEMS, ACHIEVEMENTS, PULL_COST, DUPLICATE_REFUND, ROOM_UPGRADES };
 });

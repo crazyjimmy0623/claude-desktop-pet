@@ -10,7 +10,7 @@ const STARTER_ITEMS = ITEMS.filter((i) => i.rarity === 'starter').map((i) => i.i
 const DEFAULTS = {
   settings: {
     mode: 'strip', // strip | room
-    layoutVersion: 9,
+    layoutVersion: 10,
     alwaysOnTop: true,
     hideInFullscreen: true,
     scale: 3,
@@ -32,6 +32,7 @@ const DEFAULTS = {
   progress: {
     coins: 20,
     xp: 0,
+    roomLevel: 0, // room upgrades bought, see ROOM_UPGRADES
     owned: STARTER_ITEMS,
     achievements: {}, // id -> unlock timestamp
     stats: {
@@ -108,9 +109,11 @@ class Store extends EventEmitter {
       s.layoutVersion = 6;
       if (s.characters.ai?.skin === 'auto') s.characters.ai.skin = 'droid';
     }
-    // v7 replaced the long flat room with the isometric diorama; v8 made it a tower; v9 a street corner.
-    if ((raw.settings?.layoutVersion || 0) < 9) {
-      s.layoutVersion = 9;
+    // v7 replaced the long flat room with the isometric diorama; v8 made it a tower; v9 a street
+    // corner; v10 adds the landing and upgradable layers - earlier players keep the terrace they had.
+    if ((raw.settings?.layoutVersion || 0) < 10) {
+      if ((raw.settings?.layoutVersion || 0) >= 7) this.data.progress.roomLevel = Math.max(1, this.data.progress.roomLevel || 0);
+      s.layoutVersion = 10;
       this.data.room = null;
       s.roomZoom = 2;
     }

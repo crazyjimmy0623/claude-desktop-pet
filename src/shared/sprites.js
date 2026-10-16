@@ -31,7 +31,7 @@
   // Each skin: head shape, hat, torso, held item, colours.
   const SKINS = {
     commander: { head: 'helmet', body: 'armor', item: 'none', cape: true,
-      c: { helmet: '#f1f1f4', helmetShade: '#c4c6d4', plume: '#3a3c48', plumeDark: '#26272f', body: '#2f313c', bodyShade: '#23242d', plate: '#8f929b', trim: '#c3c6ce',
+      c: { helmet: '#f1f1f4', helmetShade: '#c4c6d4', body: '#2f313c', bodyShade: '#23242d', plate: '#8f929b', trim: '#c3c6ce',
         leg: '#34363f', boot: '#22232a', hand: '#3a3c47', cape: '#45464f', capeDark: '#2e2f37' } },
     office: { head: 'face', hat: 'hair', body: 'shirt', item: 'mug',
       c: { skin: PAL.skin, hair: '#3a2a20', body: '#f4f4f6', bodyShade: '#c9ccd6', leg: '#3b4256', boot: '#262a38', hand: PAL.skin } },
@@ -145,16 +145,6 @@
     ...Array(4).fill('SSWWWWWWWWWWVVVVWWWWWWWW'),
     '..SSSSSSSSSSVVVVSSSSSS..',
     '..SSSSSSSSSSVVVVSSSSSS..',
-  ];
-  const PLUME = [
-    '......pppppppp',
-    '......pppppppp',
-    '..pppppppppppp',
-    '..pppppppppppp',
-    'PPPPPPPPPP....',
-    'PPPPPPPPPP....',
-    'PPPPPPPPPP....',
-    'PPPPPPPPPP....',
   ];
   // Hair maps sit at box (1, -1): face columns are 1..24, the face's top row is row 2.
   const HAIR = {
@@ -381,7 +371,6 @@
     };
     switch (sk.head) {
       case 'helmet': {
-        L(PLUME, { p: c.plume, P: c.plumeDark }, 6 - sway, -8 + H);
         L(HELM, { W: c.helmet, S: c.helmetShade, H: PAL.shine, V: PAL.line }, 2, H);
         break;
       }
