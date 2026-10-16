@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
+  <title>Deskmates</title>
+  <link rel="stylesheet" href="../overlay.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="stage"></div>
+  <div id="toast" class="toast hidden"></div>
+  <div id="dock" class="dock hit">
+    <button class="hit" data-action="room" title="切換到房間模式">🏠 房間</button>
+    <button class="hit" data-action="guild" title="公會手冊">📖</button>
+    <button class="hit" data-action="settings" title="設定">⚙️</button>
+  </div>
+  <script src="../../shared/catalog.js"></script>
+  <script src="../../shared/sprites.js"></script>
+  <script src="../common.js"></script>
+  <script src="strip.js"></script>
+</body>
+</html>

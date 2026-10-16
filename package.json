@@ -5,10 +5,11 @@
   "private": true,
   "description": "Tiny pixel deskmates that work beside you and act out what your Claude Code sessions are doing.",
   "license": "MIT",
-  "main": "src/main.js",
+  "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",
     "demo": "electron . --demo",
+    "preview": "electron scripts/preview/capture.js",
     "install-hooks": "node scripts/install-hooks.js",
     "uninstall-hooks": "node scripts/install-hooks.js --uninstall"
   },

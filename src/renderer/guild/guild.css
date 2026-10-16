@@ -1,0 +1,145 @@
+.targets, .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.targets button, .chips button {
+  font: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.targets button.active, .chips button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
+.chips button canvas { image-rendering: pixelated; }
+
+.equip-panel {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.equip-preview {
+  flex: none;
+  width: 200px;
+  text-align: center;
+  padding: 10px;
+  background: linear-gradient(#3b4a5a, #2a3442);
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 700;
+}
+
+.equip-lists { flex: 1; }
+.equip-lists h2 { margin-top: 0; }
+.equip-lists h2 + .chips { margin-bottom: 14px; }
+
+.gacha-buttons {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.gacha-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  min-height: 40px;
+}
+
+.item-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px;
+  border: 3px solid var(--rarity, var(--line));
+  border-radius: 8px;
+  background: var(--bg);
+  text-align: center;
+}
+
+.item-card canvas { image-rendering: pixelated; }
+.item-card .name { font-weight: 700; }
+.item-card .rarity { font-size: 11px; color: var(--rarity); font-weight: 700; }
+
+.item-card .tag {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 999px;
+  background: #e0405a;
+  color: #fff;
+}
+
+.item-card .tag.dup { background: #8a8496; }
+
+.item-card.locked canvas { filter: brightness(0) opacity(0.35); }
+.item-card.locked .name { color: var(--muted); }
+
+.gacha-results .item-card {
+  animation: flip 0.45s steps(4) both;
+}
+
+@keyframes flip {
+  from { transform: rotateY(90deg) scale(0.8); opacity: 0; }
+}
+
+.book h3 {
+  margin: 14px 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.book .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.achievements {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+}
+
+.achievement {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.achievement .icon { font-size: 24px; }
+.achievement.locked { opacity: 0.55; }
+.achievement.locked .icon { filter: grayscale(1); }
+.achievement b { display: block; }
+.achievement small { color: var(--muted); }
+
+canvas.share {
+  width: 100%;
+  max-width: 900px;
+  border-radius: 8px;
+  border: 2px solid var(--line);
+}

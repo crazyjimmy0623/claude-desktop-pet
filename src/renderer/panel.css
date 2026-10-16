@@ -1,0 +1,248 @@
+:root {
+  --ink: #1d1b26;
+  --paper: #fffdf6;
+  --bg: #f6f2ea;
+  --line: #ded6c6;
+  --muted: #7a7286;
+  --accent: #e8b13a;
+  --accent-ink: #5a3d00;
+  --good: #3f9a52;
+  --bad: #c2453f;
+  --card: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #ece8f4;
+    --paper: #2b2735;
+    --bg: #211e29;
+    --line: #3d3749;
+    --muted: #a49cb4;
+    --accent: #e8b13a;
+    --accent-ink: #2a1d00;
+    --card: #2b2735;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 13px/1.5 "Microsoft JhengHei UI", "Microsoft JhengHei", "Segoe UI", sans-serif;
+}
+
+header.top {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  background: var(--paper);
+  border-bottom: 2px solid var(--line);
+}
+
+header.top h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+header.top .spacer { flex: 1; }
+
+.pill {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  font-weight: 700;
+}
+
+nav.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 18px 0;
+  border-bottom: 2px solid var(--line);
+  background: var(--paper);
+  position: sticky;
+  top: 53px;
+  z-index: 4;
+}
+
+nav.tabs button {
+  font: inherit;
+  padding: 6px 14px;
+  border: 2px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+nav.tabs button.active {
+  background: var(--bg);
+  border-color: var(--line);
+  color: var(--ink);
+  font-weight: 700;
+  margin-bottom: -2px;
+}
+
+main {
+  padding: 16px 18px 40px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+section.card {
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+section.card h2 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+section.card p.desc {
+  margin: -4px 0 10px;
+  color: var(--muted);
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px dashed var(--line);
+}
+
+.field:first-of-type { border-top: none; }
+
+.field label.name {
+  flex: none;
+  width: 150px;
+  font-weight: 700;
+}
+
+.field .help {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+input[type="text"], input[type="number"], select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 6px;
+}
+
+input[type="number"] { width: 70px; }
+
+button.btn {
+  font: inherit;
+  padding: 4px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+button.btn:hover { filter: brightness(0.96); }
+
+button.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
+button.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.status {
+  font-weight: 700;
+}
+
+.status.ok { color: var(--good); }
+.status.off { color: var(--bad); }
+
+code, pre {
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+}
+
+pre {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+table.map {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.map td, table.map th {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+canvas.pixel { image-rendering: pixelated; }
+
+.hidden { display: none !important; }
+
+@media (max-width: 700px) {
+  .field { flex-wrap: wrap; }
+  .field label.name { width: 100%; }
+}
+
+.segmented {
+  display: inline-flex;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.segmented button {
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 130px;
+  padding: 8px 16px;
+  border: none;
+  background: var(--bg);
+  color: var(--ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.segmented button + button { border-left: 2px solid var(--line); }
+
+.segmented button small {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.segmented button.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.segmented button.active small { color: var(--accent-ink); }

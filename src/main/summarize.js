@@ -2,8 +2,11 @@
 // Tool inputs can be huge (Write content), so only short display strings survive.
 const path = require('path');
 
-const READ_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'WebFetch', 'WebSearch', 'ToolSearch', 'NotebookRead']);
+const READ_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'NotebookRead', 'ToolSearch', 'Skill']);
+const WEB_TOOLS = new Set(['WebFetch', 'WebSearch']);
+const TERMINAL_TOOLS = new Set(['Bash', 'PowerShell', 'BashOutput', 'KillShell', 'Monitor']);
 const AGENT_TOOLS = new Set(['Agent', 'Task']);
+const WRITE_TOOLS = new Set(['TodoWrite', 'TaskCreate', 'TaskUpdate']);
 
 function clip(value, max) {
   const s = String(value ?? '').replace(/\s+/g, ' ').trim();
@@ -20,11 +23,16 @@ function shortToolName(name) {
   return m ? m[1] : name || '';
 }
 
-function toolKind(name) {
-  if (AGENT_TOOLS.has(name)) return 'agent';
+// Which room station (and strip pose) a tool call looks like.
+function stationForTool(name) {
+  if (AGENT_TOOLS.has(name)) return 'meeting';
   if (READ_TOOLS.has(name)) return 'read';
-  if (name?.startsWith('mcp__') && /(read|get|search|list|look|find|query)/i.test(name)) return 'read';
-  return 'forge';
+  if (WEB_TOOLS.has(name)) return 'web';
+  if (TERMINAL_TOOLS.has(name)) return 'terminal';
+  if (WRITE_TOOLS.has(name)) return 'write';
+  if (name === 'AskUserQuestion') return 'wait';
+  if (name?.startsWith('mcp__')) return /(read|get|search|list|look|find|query|fetch)/i.test(name) ? 'read' : 'terminal';
+  return 'code';
 }
 
 function toolDetail(input) {
@@ -61,7 +69,7 @@ function summarize(p) {
     case 'PermissionRequest':
       ev.tool = shortToolName(p.tool_name);
       ev.rawTool = p.tool_name || '';
-      ev.kind = toolKind(p.tool_name);
+      ev.station = stationForTool(p.tool_name);
       ev.detail = toolDetail(p.tool_input);
       break;
     case 'Notification':
@@ -74,8 +82,11 @@ function summarize(p) {
     case 'SessionEnd':
       ev.reason = p.reason || '';
       break;
+    case 'PreCompact':
+      ev.trigger = p.trigger || '';
+      break;
   }
   return ev;
 }
 
-module.exports = { summarize };
+module.exports = { summarize, stationForTool, clip };

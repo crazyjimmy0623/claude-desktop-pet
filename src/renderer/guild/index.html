@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
+  <title>Deskmates 公會手冊</title>
+  <link rel="stylesheet" href="../panel.css">
+  <link rel="stylesheet" href="guild.css">
+</head>
+<body>
+  <header class="top">
+    <h1>📖 公會手冊</h1>
+    <span class="spacer"></span>
+    <span id="level" class="pill"></span>
+    <span id="coins" class="pill"></span>
+  </header>
+  <nav class="tabs">
+    <button data-tab="equip" class="active">夥伴</button>
+    <button data-tab="gacha">招募</button>
+    <button data-tab="book">圖鑑</button>
+    <button data-tab="achievements">成就</button>
+    <button data-tab="stats">戰績卡</button>
+  </nav>
+  <main>
+    <div id="tab-equip" class="tab">
+      <section class="card">
+        <h2>選擇夥伴</h2>
+        <p class="desc">「你」是代表自己的角色；AI 夥伴可以設定預設外觀，也能替每個專案指定不同角色。</p>
+        <div id="targets" class="targets"></div>
+      </section>
+      <section class="card equip-panel">
+        <div class="equip-preview"><canvas id="equip-canvas" class="pixel"></canvas><div id="equip-name"></div></div>
+        <div class="equip-lists">
+          <h2>角色</h2>
+          <div id="skin-list" class="chips"></div>
+          <h2>配件</h2>
+          <div id="acc-list" class="chips"></div>
+        </div>
+      </section>
+    </div>
+
+    <div id="tab-gacha" class="tab hidden">
+      <section class="card gacha">
+        <h2>招募新成員</h2>
+        <p class="desc">金幣只能靠工作賺：AI 完成回合、專注番茄鐘、陪伴時間、打倒哥布林、打開寶箱。抽到重複的會退回 3 🪙。十連抽保證至少一個稀有以上。</p>
+        <div class="gacha-buttons">
+          <button class="btn primary" id="pull-1">招募 ×1（10 🪙）</button>
+          <button class="btn primary" id="pull-10">招募 ×10（100 🪙）</button>
+          <span id="gacha-error" class="status off"></span>
+        </div>
+        <div id="gacha-results" class="gacha-results"></div>
+        <p class="desc" id="rates"></p>
+      </section>
+    </div>
+
+    <div id="tab-book" class="tab hidden">
+      <section class="card">
+        <h2>圖鑑 <span id="book-count" class="pill"></span></h2>
+        <div id="book" class="book"></div>
+      </section>
+    </div>
+
+    <div id="tab-achievements" class="tab hidden">
+      <section class="card">
+        <h2>成就 <span id="ach-count" class="pill"></span></h2>
+        <div id="achievements" class="achievements"></div>
+      </section>
+    </div>
+
+    <div id="tab-stats" class="tab hidden">
+      <section class="card">
+        <h2>本週戰績</h2>
+        <p class="desc">做成一張圖分享出去吧。</p>
+        <canvas id="share" class="share"></canvas>
+        <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
+          <button class="btn primary" id="share-save">💾 儲存圖片</button>
+          <button class="btn" id="share-copy">📋 複製到剪貼簿</button>
+          <span id="share-status" class="help"></span>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script src="../../shared/catalog.js"></script>
+  <script src="../../shared/sprites.js"></script>
+  <script src="../../shared/furniture.js"></script>
+  <script src="../common.js"></script>
+  <script src="guild.js"></script>
+</body>
+</html>

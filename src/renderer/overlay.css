@@ -20,7 +20,7 @@ html, body {
   inset: 0;
 }
 
-.knight {
+.actor {
   position: absolute;
   left: 0;
   bottom: 0;
@@ -31,13 +31,13 @@ html, body {
   will-change: transform;
 }
 
-.knight canvas.body {
+.actor canvas.body {
   display: block;
   image-rendering: pixelated;
   cursor: grab;
 }
 
-.knight.dragging canvas.body {
+.actor.dragging canvas.body {
   cursor: grabbing;
 }
 
@@ -199,4 +199,135 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.bubble.focus {
+  background: #ffd9d2;
+  font-weight: 700;
+}
+
+.nameplate.user {
+  background: rgba(120, 82, 20, 0.85);
+}
+
+.card .hint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #8a8496;
+}
+
+.toast {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  background: #fff3c4;
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--shadow);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+  animation: drop 0.25s steps(3);
+}
+
+@keyframes drop {
+  from { transform: translate(-50%, -12px); opacity: 0; }
+}
+
+.float-coin, .float-text {
+  position: absolute;
+  left: 50%;
+  bottom: 85%;
+  transform: translateX(-50%);
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffe066;
+  text-shadow: 1px 1px 0 var(--ink), -1px -1px 0 var(--ink), 1px -1px 0 var(--ink), -1px 1px 0 var(--ink);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: rise 1.6s ease-out forwards;
+}
+
+.float-text {
+  color: #fff;
+}
+
+.float-heart {
+  position: absolute;
+  left: 50%;
+  bottom: 80%;
+  margin-left: -12px;
+  pointer-events: none;
+  animation: rise 1.2s ease-out forwards;
+}
+
+@keyframes rise {
+  from { opacity: 1; translate: 0 0; }
+  to { opacity: 0; translate: 0 -40px; }
+}
+
+.goblin {
+  position: absolute;
+  bottom: 14px;
+  left: 100%;
+  margin-left: -10px;
+  pointer-events: none;
+  animation: shake 0.3s steps(2) infinite;
+}
+
+.goblin.poof {
+  animation: poof 0.4s forwards;
+}
+
+@keyframes shake {
+  50% { translate: 3px 0; }
+}
+
+@keyframes poof {
+  to { opacity: 0; scale: 1.6; filter: brightness(3); }
+}
+
+.chest {
+  position: absolute;
+  bottom: 14px;
+  cursor: pointer;
+  animation: bounce 1s steps(2) infinite;
+}
+
+@keyframes bounce {
+  50% { translate: 0 -4px; }
+}
+
+.dragon {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  pointer-events: none;
+  animation: fly 6s linear forwards;
+}
+
+@keyframes fly {
+  from { translate: calc(100vw + 40px) 30px; }
+  50% { translate: 50vw 0; }
+  to { translate: -160px 40px; }
+}
+
+.butterfly {
+  position: absolute;
+  bottom: 120px;
+  left: 0;
+  pointer-events: none;
+  animation: flutter 20s linear forwards;
+}
+
+@keyframes flutter {
+  0% { translate: var(--from) 0; }
+  25% { translate: calc((var(--from) * 3 + var(--to)) / 4) -30px; }
+  50% { translate: calc((var(--from) + var(--to)) / 2) 10px; }
+  75% { translate: calc((var(--from) + var(--to) * 3) / 4) -20px; }
+  100% { translate: var(--to) 0; }
 }

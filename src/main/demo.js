@@ -1,7 +1,8 @@
 // Fake hook payloads so the pet can be tried without a live Claude session.
 const ROOT = 'C:\\Projects\\';
 
-function runDemo(send) {
+// `send` takes a raw hook payload; `extra` lets the demo trigger events that need a long real session.
+function runDemo(send, extra = {}) {
   const tag = Math.random().toString(36).slice(2, 7);
   const A = `demo-a-${tag}`;
   const B = `demo-b-${tag}`;
@@ -26,20 +27,22 @@ function runDemo(send) {
     [8000, { ...c, hook_event_name: 'UserPromptSubmit', prompt: '跑一下測試' }],
     [9000, { ...tool(c, 'Bash', { command: 'npm test -- --watch=false' }), hook_event_name: 'PreToolUse' }],
     [9600, { ...tool(c, 'Bash', { command: 'npm test -- --watch=false' }), hook_event_name: 'PermissionRequest' }],
-    [11000, { ...tool(a, 'Edit', {}), hook_event_name: 'PostToolUse' }],
+    [10500, { ...tool(a, 'Bash', { command: 'dotnet test' }), hook_event_name: 'PostToolUseFailure' }],
     [11500, { ...a, hook_event_name: 'Stop' }],
+    [11600, () => extra.chest?.(`claude:${A}`)],
     [14000, { ...b, hook_event_name: 'SubagentStop', agent_id: 'x1' }],
     [15000, { ...tool(c, 'Bash', {}), hook_event_name: 'PostToolUse' }],
     [15400, { ...tool(c, 'WebSearch', { query: 'Unity coyote time' }), hook_event_name: 'PreToolUse' }],
     [16500, { ...b, hook_event_name: 'SubagentStop', agent_id: 'x2' }],
     [17000, { ...tool(b, 'Agent', {}), hook_event_name: 'PostToolUse' }],
     [17500, { ...b, hook_event_name: 'Stop' }],
+    [18000, { ...b, hook_event_name: 'PreCompact', trigger: 'auto' }],
     [19000, { ...c, hook_event_name: 'Stop' }],
     [26000, { ...b, hook_event_name: 'SessionEnd', reason: 'prompt_input_exit' }],
     [40000, { ...a, hook_event_name: 'SessionEnd', reason: 'prompt_input_exit' }],
     [41000, { ...c, hook_event_name: 'SessionEnd', reason: 'prompt_input_exit' }],
   ];
-  for (const [at, payload] of script) setTimeout(() => send(payload), at);
+  for (const [at, step] of script) setTimeout(() => (typeof step === 'function' ? step() : send(step)), at);
 }
 
 module.exports = { runDemo };

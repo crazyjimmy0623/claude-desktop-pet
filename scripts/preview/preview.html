@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+body{margin:0;background:#3b4a5a;font:11px sans-serif;color:#fff}
+canvas{image-rendering:pixelated}
+</style></head><body><canvas id="c"></canvas>
+<script src="../../src/shared/sprites.js"></script>
+<script src="../../src/shared/furniture.js" onerror="window.NoFurniture=true"></script>
+<script>
+const mode = new URLSearchParams(location.search).get('mode') || 'chars';
+const c = document.getElementById('c'); const ctx = c.getContext('2d');
+const U = 3, SW = Sprites.W * U, SH = Sprites.H * U;
+if (mode === 'chars') {
+  const skins = Object.keys(Sprites.SKINS);
+  const poses = ['rest','walk','hammer','type','read','paint','wait','done','sleep','dangle','dance'];
+  const accs = [null,'crown','partyhat','flower','glasses','sunglasses','headphones','halo','bow'];
+  c.width = (poses.length + 2) * (SW + 6) + 70; c.height = skins.length * (SH + 8) * 2 + 10;
+  ctx.fillStyle = '#3b4a5a'; ctx.fillRect(0,0,c.width,c.height);
+  skins.forEach((sk, r) => {
+    const col = Sprites.colorsFor(sk + 'x');
+    for (let f = 0; f < 2; f++) {
+      const y = (r * 2 + f) * (SH + 8) + 4;
+      ctx.fillStyle = '#fff'; ctx.fillText(sk + ' f' + f, 2, y + 40);
+      poses.forEach((p, i) => Sprites.drawCharacterAt(ctx, U, 70 + i * (SW + 6), y, sk, p, f, col, 1, { accessory: accs[(r + i) % accs.length] }));
+      Sprites.drawCharacterAt(ctx, U, 70 + poses.length * (SW + 6), y, sk, 'rest', f, col, -1, {});
+      Sprites.drawCharacterAt(ctx, U, 70 + (poses.length + 1) * (SW + 6), y, sk, 'type', f, col, 1, { prop: false });
+    }
+  });
+} else if (mode === 'fx') {
+  c.width = 700; c.height = 140; ctx.fillStyle = '#3b4a5a'; ctx.fillRect(0,0,c.width,c.height);
+  let x = 10; for (const k of Object.keys(Sprites.FX)) for (let f = 0; f < 2; f++) { Sprites.drawFxAt(ctx, 4, x, 20, k, f); x += Sprites.FX[k].w * 4 + 16; }
+} else if (mode === 'room' && window.Furniture) {
+  Furniture.preview(c);
+}
+document.title = 'ready';
+</script></body></html>

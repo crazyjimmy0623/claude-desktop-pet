@@ -1,0 +1,181 @@
+html, body {
+  background: transparent;
+}
+
+#frame {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+#toolbar {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  background: rgba(29, 27, 38, 0.82);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 11px;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+
+#toolbar:hover, #toolbar.pinned { opacity: 1; }
+
+#toolbar .title {
+  font-weight: 800;
+}
+
+#toolbar .coins {
+  margin-left: 6px;
+  padding: 1px 6px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 3px;
+}
+
+#toolbar .spacer, .tabs .spacer {
+  flex: 1;
+}
+
+#toolbar button, .tabs button, #palette button {
+  -webkit-app-region: no-drag;
+  font: inherit;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+#toolbar button:hover, .tabs button:hover, #palette button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#toolbar button.on, .tabs button.active, #palette button.selected {
+  background: #e8b13a;
+  color: var(--ink);
+  border-color: #e8b13a;
+}
+
+#viewport {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  background: #2a2633;
+}
+
+#viewport canvas {
+  display: block;
+  image-rendering: pixelated;
+}
+
+#overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#overlay .tag {
+  position: absolute;
+  transform: translate(-50%, 0);
+}
+
+#overlay .nameplate {
+  font-size: 10px;
+  line-height: 13px;
+}
+
+#overlay .bubble {
+  bottom: auto;
+  top: 0;
+  transform: translate(-50%, -100%);
+  font-size: 11px;
+  max-width: 180px;
+}
+
+#overlay .card {
+  pointer-events: auto;
+  bottom: auto;
+  top: 0;
+  transform: translate(-50%, -100%);
+  z-index: 10;
+}
+
+#overlay .float-coin, #overlay .float-text, #overlay .float-heart {
+  bottom: auto;
+  top: 0;
+}
+
+#viewport .toast {
+  position: absolute;
+}
+
+#editor {
+  flex: none;
+  height: 160px;
+  display: flex;
+  flex-direction: column;
+  background: #322d3d;
+  color: #fff;
+  font-size: 12px;
+  border: 2px solid var(--ink);
+  border-bottom: none;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 5px 6px;
+}
+
+.tabs .hint {
+  color: #b8b0c8;
+  font-size: 11px;
+}
+
+#palette {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+  padding: 2px 6px 6px;
+  overflow-y: auto;
+}
+
+#palette button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  min-width: 58px;
+}
+
+#palette button canvas {
+  image-rendering: pixelated;
+}
+
+#palette .row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.chest-hit {
+  position: absolute;
+  pointer-events: auto;
+  cursor: pointer;
+}
