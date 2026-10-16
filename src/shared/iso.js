@@ -116,7 +116,7 @@
 
     // A box with lit top, mid left face and dark right face; `c` is one colour or {t, l, r}.
     box(x, y, z, w, d, h, c, rim = true) {
-      const col = typeof c === 'string' ? { t: lt(c, 0.12), l: c, r: dk(c, 0.25) } : c;
+      const col = typeof c === 'string' ? { t: lt(c, 0.16), l: c, r: dk(c, 0.32) } : c;
       this.right(y + d, z, d, h, col.r, x + w);
       this.left(x, z, w, h, col.l, y + d);
       this.top(x, y, w, d, col.t, z + h);
@@ -1049,20 +1049,6 @@
     },
   };
 
-  // Materials by what a zone is, so a theme can reskin any blueprint.
-  const roleOf = (zn) => (zn.kind === 'room' ? (zn.thin ? 'loft' : 'room') : zn.kind === 'street' ? 'street' : 'outdoor');
-  const THEMES = {
-    shop: { name: '紅磚暖調', street: ['brick', 'stone'], outdoor: ['navy', 'stone'], room: ['brick', 'terra'], loft: ['cream', 'wood'] },
-    cyber: { name: '霓虹賽博', street: ['navy', 'stone'], outdoor: ['synth', 'neon'], room: ['cyber', 'cyber'], loft: ['synth', 'carpet'] },
-    cozy: { name: '溫馨木屋', street: ['brick', 'grass'], outdoor: ['plum', 'tile'], room: ['cream', 'wood'], loft: ['plum', 'carpet'] },
-  };
-  function applyTheme(room, id) {
-    const t = THEMES[id];
-    if (!t) return;
-    room.theme = id;
-    for (const zn of room.zones) [zn.wall, zn.floor] = t[roleOf(zn)];
-  }
-
   // Split a set of tiles ("x,y") into rects, greedily: widest run first, then as deep as it goes.
   function toRects(tiles) {
     const left = new Set(tiles);
@@ -1182,7 +1168,7 @@
   function migrate(room) {
     if (room?.iso === 5) return room;
     if (room?.iso !== 4) return null;
-    const out = { iso: 5, blueprint: 'shop', theme: null, ...fromSpec(BLUEPRINTS.shop), objects: room.objects || [] };
+    const out = { iso: 5, blueprint: 'shop', ...fromSpec(BLUEPRINTS.shop), objects: room.objects || [] };
     out.zones.forEach((zn, i) => { if (room.floors?.[i]) Object.assign(zn, { wall: room.floors[i].wall, floor: room.floors[i].floor }); });
     return out;
   }
@@ -1345,7 +1331,7 @@
   // A fresh room from a blueprint, furnished on every layer; locked layers keep their furniture.
   function generateRoom(id = 'shop') {
     const bp = BLUEPRINTS[id] || BLUEPRINTS.shop;
-    const room = { iso: 5, blueprint: BLUEPRINTS[id] ? id : 'shop', theme: null, ...fromSpec(bp), objects: [] };
+    const room = { iso: 5, blueprint: BLUEPRINTS[id] ? id : 'shop', ...fromSpec(bp), objects: [] };
     for (const [f, type, x, y, flip = false] of bp.objects) {
       if (canPlace(room, type, x, y, flip, f)) room.objects.push({ type, x, y, flip, f });
     }
@@ -1553,20 +1539,47 @@
 
   // Stairs down from the side of a higher block: as long as they need to be, onto the first
   // floor in front low enough.
-  function stairsFrom(room, hit) {
-    if (!hit || hit.stair || hit.face === 'top') return '點高台的側面來放樓梯';
-    const dx = hit.face === 'right' ? 1 : 0;
-    const dy = hit.face === 'left' ? 1 : 0;
-    for (let n = 1; n <= 8; n++) {
-      const bx = hit.x + dx * (n + 1);
-      const by = hit.y + dy * (n + 1);
-      const below = room.tiles.filter((t) => t[0] === bx && t[1] === by && room.zones[t[2]].z < hit.z && room.zones[t[2]].kind !== 'water')
-        .sort((p, q) => room.zones[q[2]].z - room.zones[p[2]].z)[0];
-      if (!below) continue;
-      if ((hit.z - room.zones[below[2]].z) / (n + 1) > STEP_Z) continue;
-      return addFlight(room, { x: bx, y: by, f: below[2] }, { x: hit.x, y: hit.y, f: hit.f });
+  // Stairs are a piece of their own, put down on a floor tile next to higher ground: they climb
+  // to it, and a bigger drop takes more steps, running away from the high side. Pointing at the
+  // side of a higher block puts them on the floor in front of that side.
+  function stairPlan(room, hit) {
+    if (!hit || hit.stair) return '這裡已經有樓梯了';
+    if (hit.ground) return '樓梯要放在地板上，旁邊要有比較高的地方';
+    const floorAt = (x, y, below) => room.tiles
+      .filter((t) => t[0] === x && t[1] === y && room.zones[t[2]].kind !== 'water' && room.zones[t[2]].z < below)
+      .sort((p, q) => room.zones[q[2]].z - room.zones[p[2]].z)[0];
+    let tile;
+    let dirs;
+    if (hit.face === 'top') {
+      tile = { x: hit.x, y: hit.y, f: hit.f, z: hit.z };
+      dirs = [[-1, 0], [0, -1], [1, 0], [0, 1]];
+    } else {
+      const [dx, dy] = hit.face === 'left' ? [0, 1] : [1, 0];
+      const t = floorAt(hit.x + dx, hit.y + dy, hit.z);
+      if (!t) return '高台前面要有比較低的地板';
+      tile = { x: t[0], y: t[1], f: t[2], z: room.zones[t[2]].z };
+      dirs = [[-dx, -dy]];
     }
-    return '樓梯前面要有比較低的地板可以落腳';
+    let why = '旁邊要有比較高的地方，樓梯才有地方爬';
+    for (const [dx, dy] of dirs) {
+      // The lowest floor above this one on that side.
+      const hiT = room.tiles
+        .filter((t) => t[0] === tile.x + dx && t[1] === tile.y + dy && room.zones[t[2]].kind !== 'water' && room.zones[t[2]].z > tile.z)
+        .sort((p, q) => room.zones[p[2]].z - room.zones[q[2]].z)[0];
+      if (!hiT) continue;
+      const hz = room.zones[hiT[2]].z;
+      for (let n = 1; n <= 8; n++) {
+        const lo = floorAt(tile.x - dx * n, tile.y - dy * n, hz);
+        if (!lo) { why = '樓梯底下要有地板可以落腳'; break; }
+        if ((hz - room.zones[lo[2]].z) / (n + 1) > STEP_Z) { why = '太高了，樓梯前面要留更多地板'; continue; }
+        return { lo: { x: lo[0], y: lo[1], f: lo[2] }, hi: { x: hiT[0], y: hiT[1], f: hiT[2] } };
+      }
+    }
+    return why;
+  }
+  function placeStairs(room, hit) {
+    const plan = stairPlan(room, hit);
+    return typeof plan === 'string' ? plan : addFlight(room, plan.lo, plan.hi);
   }
 
   // A little block of each kind, for the palette.
@@ -1639,8 +1652,8 @@
     return cached(key, () => renderSprite(def.w, Math.max(def.d, 1), def.h, (P) => {
       // A soft contact shadow on the floor under anything that stands on it.
       if (!def.wall && !def.flat && !def.onWater) {
-        P.top(0, 1, def.w * TU, def.d * TU - 1, 'rgba(12,8,30,0.18)', 0);
-        P.top(2, 3, def.w * TU - 4, def.d * TU - 5, 'rgba(12,8,30,0.22)', 0);
+        P.top(0, 1, def.w * TU, def.d * TU - 1, 'rgba(12,8,30,0.22)', 0);
+        P.top(2, 3, def.w * TU - 4, def.d * TU - 5, 'rgba(12,8,30,0.3)', 0);
       }
       def.draw(P, s);
     }, flip));
@@ -1652,7 +1665,7 @@
     const D = d * TU;
     const mortar = dk(c, 0.3);
     P.left(0, -h, L, h, c, D);
-    P.right(D, -h, D, h, dk(c, 0.22), L);
+    P.right(D, -h, D, h, dk(c, 0.32), L);
     for (let v = 3, row = 0; v < h; v += 5, row++) {
       for (let u = (row % 2 ? 3 : 7) - 9, i = 0; u < L; u += 9, i++) {
         const n = (row * 7 + i * 13 + L) % 9;
@@ -1665,20 +1678,38 @@
     }
   }
 
-  // Ambient shadow: floor darkens along walls and higher ground behind it, and under a loft.
+  // Shadow on a floor. The light comes from the upper left, so walls and taller ground throw a
+  // shadow to the right (+x) as long as half their height; corners against a wall or higher ground
+  // behind darken; and a deck or loft overhead shades all of it.
+  const CAST = 0.5;
   function shadeFloor(P, room, f, r) {
     const lay = layoutOf(room);
     const a = lay.areas[f];
-    const wallOn = (plane, atv, u) => a.walls.some((w) => !w[5] && w[0] === plane && w[1] === atv && u >= w[2] && u < w[3]);
+    const wallOn = (plane, atv, u) => a.walls.find((w) => !w[5] && w[0] === plane && w[1] === atv && u >= w[2] && u < w[3]);
     const above = (x, y) => lay.tilesAt(x, y).some((t) => t.z > a.z && room.zones[t.f].thin);
+    const topAt = (x, y) => Math.max(-Infinity, ...lay.tilesAt(x, y).filter((t) => !room.zones[t.f].thin && room.zones[t.f].kind !== 'water').map((t) => t.z));
     const dim = (k) => (c) => dk(c, k);
     for (let y = r[1]; y < r[1] + r[3]; y++) {
       for (let x = r[0]; x < r[0] + r[2]; x++) {
         const lx = (x - r[0]) * TU;
         const ly = (y - r[1]) * TU;
-        if (above(x, y)) P.top(lx, ly, TU, TU, dim(0.18), 0);
-        if (wallOn('x', x, y) || lay.higher(x - 1, y, a.z)) { P.top(lx, ly, 3, TU, dim(0.28), 0); P.top(lx + 3, ly, 3, TU, dim(0.12), 0); }
-        if (wallOn('y', y, x) || lay.higher(x, y - 1, a.z)) { P.top(lx, ly, TU, 3, dim(0.28), 0); P.top(lx, ly + 3, TU, 3, dim(0.12), 0); }
+        if (above(x, y)) { P.top(lx, ly, TU, TU, dim(0.32), 0); continue; }
+        // How far into this tile the longest shadow from the left reaches.
+        let reach = 0;
+        for (let k = 1; k <= 3; k++) {
+          const gap = (k - 1) * TU;
+          const wall = wallOn('x', x - k + 1, y);
+          if (wall) reach = Math.max(reach, wall[4] * CAST - gap);
+          const dz = topAt(x - k, y) - a.z;
+          if (dz > 0) reach = Math.max(reach, dz * CAST - gap);
+        }
+        const cover = Math.min(TU, Math.round(reach));
+        if (cover > 0) {
+          P.top(lx, ly, Math.max(0, cover - 2), TU, dim(0.3), 0);
+          P.top(lx + Math.max(0, cover - 2), ly, Math.min(2, cover), TU, dim(0.15), 0);
+        }
+        if (wallOn('x', x, y) || lay.higher(x - 1, y, a.z)) P.top(lx, ly, 3, TU, dim(0.2), 0);
+        if (wallOn('y', y, x) || lay.higher(x, y - 1, a.z)) { P.top(lx, ly, TU, 3, dim(0.34), 0); P.top(lx, ly + 3, TU, 3, dim(0.16), 0); }
       }
     }
   }
@@ -1688,10 +1719,10 @@
     const L = w * TU;
     const D = d * TU;
     P.left(0, -h, L, h, '#6e4429', D);
-    P.right(D, -h, D, h, '#573420', L);
+    P.right(D, -h, D, h, '#4a2b1a', L);
     for (let v = 10; v < h; v += 11) {
       P.left(0, -v, L, 2, '#5e3922', D);
-      P.right(D, -v, D, 2, '#482b1a', L);
+      P.right(D, -v, D, 2, '#3b2214', L);
     }
     for (let i = 0; i < (L + D) / 9; i++) {
       const u = (i * 37) % L;
@@ -1820,8 +1851,14 @@
             P.top(lx + 4, ly + 5, 4, 1, 'rgba(220,235,255,0.55)', 0);
           }
         } else if (weather === 'petals' || weather === 'leaves') {
-          const cols = weather === 'petals' ? ['#ffb7c9', '#ffd1dc', '#f59ab5'] : ['#e0873a', '#c9602a', '#e8b04a'];
-          for (let i = 0; i < 4; i++) if (hash(x * 3 + i, y) < 0.7) P.top(lx + 2 + Math.floor(hash(x, y * 3 + i) * 11), ly + 2 + Math.floor(hash(y, x + i) * 11), 2, 1, cols[i % 3], 0);
+          // A few fallen pieces lying flat.
+          for (let i = 0; i < 3; i++) {
+            if (hash(x * 3 + i, y) > 0.65) continue;
+            const rows = PIECES[weather][(x + y + i) % 2 ? 0 : 3];
+            const cols = PIECE_COLS[weather][(x * 7 + y + i) % 3];
+            const [sx, sy] = P.p(lx + 2 + Math.floor(hash(x, y * 3 + i) * 10), ly + 2 + Math.floor(hash(y, x + i) * 10), 0);
+            rows.forEach((row, j) => [...row].forEach((ch, k) => { if (cols[ch]) P.set(sx + k, sy + j * 0.6, cols[ch]); }));
+          }
         }
       }
     }
@@ -2114,11 +2151,43 @@
     }
     return SKY.get(lay.id);
   }
+  // Little drawn pieces for blossom and leaves, a few turns of each as they tumble.
+  // p/P: petal and its shade; l/L: leaf and its shade; s: stem.
+  const PIECES = {
+    petals: [
+      ['.pp.', 'pppP', '.pPP', '..P.'],
+      ['.p..', 'ppP.', 'pPP.', '.P..'],
+      ['pP', 'PP'],
+      ['..p.', '.ppP', 'pPP.', '.P..'],
+    ],
+    leaves: [
+      ['..l..', 'l.l.l', 'lllll', '.lLl.', '..s..'],
+      ['.l.', 'llL', 'lLL', '.s.'],
+      ['lL', 'Ls'],
+      ['..l..', '.lll.', 'llLll', '.lLL.', '...s.'],
+    ],
+  };
+  const PIECE_COLS = {
+    petals: [{ p: '#ffd1dc', P: '#f29bb4' }, { p: '#ffbfd0', P: '#e982a2' }, { p: '#fff0f4', P: '#f5b3c6' }],
+    leaves: [{ l: '#e0873a', L: '#b5602a', s: '#6e4428' }, { l: '#c9472a', L: '#97301d', s: '#6e4428' }, { l: '#e8b04a', L: '#c08a2e', s: '#6e4428' }],
+  };
+  function drawPiece(ctx, kind, turn, flip, cols, x, y, z) {
+    const rows = PIECES[kind][turn % PIECES[kind].length];
+    for (let j = 0; j < rows.length; j++) {
+      for (let i = 0; i < rows[j].length; i++) {
+        const c = cols[rows[j][i]];
+        if (!c) continue;
+        ctx.fillStyle = c;
+        ctx.fillRect((x + (flip ? rows[j].length - 1 - i : i)) * z, (y + j) * z, z, z);
+      }
+    }
+  }
+
   const FALL = {
     rain: { n: 2.6, T: 0.5, H: 120, cols: ['rgba(190,210,255,0.55)'] },
     snow: { n: 1.1, T: 7, H: 130, cols: ['rgba(255,255,255,0.95)', 'rgba(230,238,255,0.85)'] },
-    petals: { n: 0.9, T: 8, H: 140, cols: ['#ffb7c9', '#ffd1dc', '#f59ab5'] },
-    leaves: { n: 0.7, T: 8, H: 140, cols: ['#e0873a', '#c9602a', '#e8b04a'] },
+    petals: { n: 0.7, T: 8, H: 140, cols: [] },
+    leaves: { n: 0.5, T: 9, H: 140, cols: [] },
   };
   function drawWeather(ctx, room, z, now, weather) {
     const kind = FALL[weather];
@@ -2162,10 +2231,15 @@
       }
       const p = project(room, x, y, cell.z + up);
       ctx.globalAlpha = t > 0.92 ? (1 - t) / 0.08 : 1;
-      ctx.fillStyle = col;
-      const big = weather !== 'snow' || hash(i, 9) < 0.35;
-      const spin = weather !== 'snow' && Math.floor(time * 4 + i) % 2;
-      ctx.fillRect(Math.round(p.x) * z, Math.round(p.y) * z, (spin ? 1 : big ? 2 : 1) * z, (big && !spin ? 2 : 1) * z);
+      if (weather === 'snow') {
+        ctx.fillStyle = col;
+        const big = hash(i, 9) < 0.35;
+        ctx.fillRect(Math.round(p.x) * z, Math.round(p.y) * z, (big ? 2 : 1) * z, (big ? 2 : 1) * z);
+        continue;
+      }
+      // Petals and leaves tumble through their turns at their own pace.
+      const turn = Math.floor(time * (3 + hash(i, 11) * 3) + i);
+      drawPiece(ctx, weather, turn, hash(i, 12) < 0.5, PIECE_COLS[weather][i % 3], Math.round(p.x) - 2, Math.round(p.y) - 2, z);
     }
     ctx.restore();
   }
@@ -2313,9 +2387,9 @@
   }
 
   return {
-    TU, SLAB, STEP_Z, LAND, WEATHERS, weatherFor, ZONE_KINDS, FLOORS, WALLS, OBJECTS, THEMES, BLUEPRINTS, applyTheme, migrate, derive,
+    TU, SLAB, STEP_Z, LAND, WEATHERS, weatherFor, ZONE_KINDS, FLOORS, WALLS, OBJECTS, BLUEPRINTS, migrate, derive,
     pick, addZone, addTile, removeTile, addFlight, removeFlightAt, setZoneZ,
-    BLOCKS, pickBlock, blockTarget, placeBlock, removeBlock, stairsFrom, blockSprite,
+    BLOCKS, pickBlock, blockTarget, placeBlock, removeBlock, stairPlan, placeStairs, stairSprite, blockSprite,
     size, origin, project, floorZ, levels, cells, resetCells, cellAt, neighbours, door, walkable, footprint, canPlace, stationSpots,
     generateRoom, objectSprite, drawRoom, blit, tileAt, wallAt, solidAt, preview,
   };

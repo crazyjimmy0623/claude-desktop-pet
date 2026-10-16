@@ -30,9 +30,10 @@
 
   // Each skin: head shape, hat, torso, held item, colours.
   const SKINS = {
-    commander: { head: 'helmet', body: 'armor', item: 'none', cape: true,
-      c: { helmet: '#f1f1f4', helmetShade: '#c4c6d4', body: '#2f313c', bodyShade: '#23242d', plate: '#8f929b', trim: '#c3c6ce',
-        leg: '#34363f', boot: '#22232a', hand: '#3a3c47', cape: '#45464f', capeDark: '#2e2f37' } },
+    // Jimmy: the closed white helm on a plain white body, and a red cape.
+    commander: { head: 'helmet', body: 'plain', item: 'none', cape: true,
+      c: { helmet: '#f4f4f7', helmetShade: '#c9cbd8', body: '#f4f4f7', bodyShade: '#d3d5df', trim: '#c3c6ce',
+        leg: '#eef0f4', boot: '#c9cbd8', hand: '#f4f4f7', cape: '#b8323a', capeDark: '#86202c', capeLite: '#d9535b' } },
     office: { head: 'face', hat: 'hair', body: 'shirt', item: 'mug',
       c: { skin: PAL.skin, hair: '#3a2a20', body: '#f4f4f6', bodyShade: '#c9ccd6', leg: '#3b4256', boot: '#262a38', hand: PAL.skin } },
     scientist: { head: 'face', hat: 'messy', specs: true, body: 'labcoat', item: 'flask',
@@ -248,6 +249,7 @@
   // torso, with anything that reaches the hem stretched to the new bottom row); the back three
   // pixels of each row fall into shadow.
   const OUTFIT = {
+    plain: [[3, 0, 10, 1, 'r'], [12, 1, 1, 1, 'g']],
     armor: [[4, 1, 9, 6, 'b'], [5, 2, 2, 1, '+'], [11, 2, 1, 5, 'B'], [4, 6, 9, 1, 'B'], [8, 2, 1, 4, 'B'], [0, 7, 16, 2, 'd'], [8, 7, 2, 2, 't'], [6, 9, 1, 3, 'A'], [11, 9, 1, 3, 'A']],
     shirt: [[8, 1, 2, 6, 'c'], [8, 6, 2, 1, 'C'], [5, 1, 2, 1, 'A'], [11, 1, 2, 1, 'A'], [0, 8, 16, 1, 'd'], [11, 8, 2, 1, 't'], [0, 9, 16, 3, 'l'], [8, 10, 1, 2, 'L']],
     labcoat: [[6, 1, 4, 8, 'c'], [6, 8, 4, 1, 'C'], [5, 2, 1, 10, 'A'], [10, 2, 1, 10, 'A'], [12, 4, 1, 3, 'p'], [6, 9, 4, 3, 'l']],
@@ -318,11 +320,17 @@
 
     // --- Behind the body: cape, tail, backpack.
     if (sk.cape) {
-      // Torn and ragged: the hem hangs in uneven strips that flutter out of step.
+      // A full cape from the shoulders to the ankles: it swings out behind on the walk and its hem
+      // ripples a frame behind the body.
       const flap = pose === 'walk' ? WALK_FLAP[step % 4] : pose === 'dance' ? frame * 2 : sway;
-      const x0 = 2 - flap;
-      const strips = [[0, 2, 5], [2, 2, 2], [4, 2, 6], [6, 2, 3], [8, 1 + flap, 4]].map(([dx, w, h], i) => [x0 + dx, 29 + B, w, h + ((step + i) % 2), c.cape]);
-      g([[4 - flap, 19 + B, 7 + flap, 10, c.cape], ...strips], [[4 - flap, 20 + B, 1, 9, c.capeDark], [x0 + 4, 24 + B, 1, 6, c.capeDark], [x0 + 2, 29 + B, 1, 2, c.capeDark], [x0 + 7, 27 + B, 1, 2, c.capeDark]]);
+      const x0 = 3 - flap;
+      const wave = (i) => ((step + i) % 3 === 0 ? 1 : 0);
+      const hem = [0, 2, 4, 6].map((dx, i) => [x0 + dx - 1, 33 + B, 2, 1 + wave(i), c.cape]);
+      if (!sleeping) {
+        g([[6, 19 + B, 6, 3, c.cape], [x0 + 1, 21 + B, 9 + flap, 6, c.cape], [x0, 26 + B, 9 + flap, 7, c.cape], ...hem],
+          [[x0, 27 + B, 1, 6, c.capeDark], [x0 + 3, 24 + B, 1, 9, c.capeDark], [x0 + 6, 25 + B, 1, 8, c.capeDark],
+            [x0 + 4, 23 + B, 1, 9, c.capeLite], [7, 19 + B, 4, 1, c.capeLite]]);
+      }
     }
     if (sk.tail === 'flat') g([[-1, 29, 9, 4, c.bodyShade]], [[0, 29, 7, 1, lite(c.bodyShade)], [2, 31, 1, 1, dark(c.bodyShade)], [5, 30, 1, 1, dark(c.bodyShade)]]);
     else if (sk.tail) {
@@ -355,6 +363,8 @@
       l: c.leg, L: dark(c.leg), g: PAL.gold, s: c.face || '#2c3442', e: glow(c.glow || PAL.screen), E: glow('#ffffff'),
       x: glow(sk.body === 'suit' ? '#3dffb0' : col.main), y: glow('#5ef0ff'), z: glow(PAL.spark), f: c.face || '#16171c', p: '#5aa7ff',
     };
+    tp.r = c.cape || col.main;
+    tp.R = dark(tp.r);
     tp.B = dark(tp.b);
     tp.T = dark(tp.t);
     tp.D = dark(tp.d);

@@ -22,7 +22,7 @@
   const HINTS = {
     furniture: '點家具放進房間；R 或右下按鈕換方向；點房間裡的家具可搬動，右鍵刪除',
     terrain: '半透明的方塊就是會放下去的位置：點頂面往上疊、點側面往旁邊接、點空地鋪地面',
-    stairs: '樓梯：點高台的側面，會一路往下接到前面比較低的地板',
+    stairs: '樓梯：放在高台旁邊的地板上，會自動朝高的那邊爬上去；落差大會多幾階',
     erase: '刪除：指到的方塊會變紅，點一下拆掉一顆（實心的變矮一層），也可以拆樓梯',
     floor: '選樓層，再點一下換那層的地板',
     wall: '選樓層，再點一下換那層的牆面',
@@ -123,17 +123,6 @@
         plans.append(b);
       }
       palette.append(plans);
-      // Themes reskin whatever is built, by what each layer is.
-      const row = document.createElement('div');
-      row.className = 'row';
-      for (const [id, t] of Object.entries(Iso.THEMES)) {
-        row.append(button(`風格：${t.name}`, null, room().theme === id, () => {
-          Iso.applyTheme(room(), id);
-          save();
-          refresh();
-        }));
-      }
-      palette.append(row);
       // Time of day and weather, the same switches as in the settings.
       const sky = document.createElement('div');
       sky.className = 'row';
@@ -253,6 +242,15 @@
     const g = Iso.pick(room(), p.x, p.y, 0);
     return { ground: true, x: g.x, y: g.y, z: 0 };
   }
+  // The stairs that would go in for this face: built on a copy, then the new steps picked out.
+  function stairGhost(hit) {
+    const r = room();
+    const copy = JSON.parse(JSON.stringify(r));
+    const err = Iso.placeStairs(copy, hit);
+    if (err) return { err };
+    const had = new Set(Iso.cells(r).list.filter((c) => c.kind === 'stair').map((c) => `${c.x},${c.y}`));
+    return { room: copy, steps: Iso.cells(copy).list.filter((c) => c.kind === 'stair' && !had.has(`${c.x},${c.y}`)) };
+  }
   const targetOf = (hit) => (hit?.ground ? { x: hit.x, y: hit.y, z: 0 } : Iso.blockTarget(hit));
 
   function terrainDown(e) {
@@ -263,7 +261,7 @@
       if (!hit.ground) terrain(Iso.removeBlock(r, hit));
       return;
     }
-    if (build.tool === 'stairs') terrain(hit.ground ? '點高台的側面來放樓梯' : Iso.stairsFrom(r, hit), '樓梯蓋好了');
+    if (build.tool === 'stairs') terrain(Iso.placeStairs(r, hit), '樓梯蓋好了');
     else terrain(Iso.placeBlock(r, build.block, targetOf(hit)));
   }
 
@@ -271,6 +269,7 @@
     if (!state.editing) return;
     if (tab === 'terrain') {
       build.hover = buildHit(e);
+      build.stairs = build.tool === 'stairs' ? stairGhost(build.hover) : null;
       return;
     }
     hover = tool ? target(e) : { pick: objectAt(e) };
@@ -391,7 +390,19 @@
         return;
       }
       if (build.tool === 'stairs') {
-        if (!h.ground && !h.stair && h.face !== 'top') ghost(ctx, z, h.x, h.y, h.z, h.z - Iso.STEP_Z, 'rgba(255,214,90,0.4)');
+        // The steps themselves, see-through, or the tile in red with why they can't go there.
+        const g = build.stairs;
+        if (g?.steps?.length) {
+          ctx.save();
+          ctx.globalAlpha = 0.65;
+          for (const c of g.steps) Iso.blit(ctx, g.room, Iso.stairSprite(c, g.room), c.x * TU, c.y * TU, c.z, z);
+          ctx.restore();
+          for (const c of g.steps) outline(ctx, z, c.x, c.y, c.z);
+          hint.textContent = HINTS.stairs;
+        } else if (g?.err) {
+          if (!h.ground && !h.stair) ghost(ctx, z, h.x, h.y, h.z, h.z - 2, 'rgba(235,60,80,0.45)');
+          hint.textContent = g.err;
+        }
         return;
       }
       // The block in hand, see-through, exactly where it would land, with its tile outlined.
