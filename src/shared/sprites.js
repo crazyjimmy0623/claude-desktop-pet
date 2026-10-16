@@ -80,7 +80,6 @@
   // idle sinks one pixel on the out-breath; walking rises on the passing step, arms swing against
   // the legs, and loose bits (crest, cape) trail a frame behind.
   const BREATH = [0, 0, 1, 1, 1, 0, 0, 0];
-  const WALK_ARM = [2, 0, -2, 0];
   const WALK_SWAY = [0, 1, 0, -1];
   const WALK_FLAP = [2, 3, 2, 1];
 
@@ -306,7 +305,6 @@
     if (sleeping) bob = 3;
     const sway = pose === 'walk' ? WALK_SWAY[step % 4] : pose === 'rest' ? BREATH[(step + 6) % 8] : 0;
     const B = bob;
-    const armsUp = pose === 'done' || pose === 'dangle' || (pose === 'dance' && !frame);
 
     // --- Behind the body: cape, tail, backpack.
     if (sk.cape) {
@@ -323,10 +321,6 @@
     }
     if (sk.backpack) g([[2, 20 + B, 6, 9, c.body]], [[2, 21 + B, 1, 7, c.bodyShade], [4, 23 + B, 2, 3, '#8a93a6'], [4, 24 + B, 1, 1, glow('#3dffb0')]]);
 
-    // --- Back arm.
-    const backSwing = pose === 'walk' ? -WALK_ARM[step % 4] : 0;
-    if (armsUp) g([[1, 9, 3, 11, c.bodyShade], [-1, 4, 5, 5, dark(c.hand)]]);
-    else g([[5 + backSwing, 20 + B, 3, 6, c.bodyShade], [3 + backSwing, 25 + B, 5, 5, dark(c.hand)]]);
 
     // --- Legs: back leg in shadow, walk is a 4-step cycle with the lifted foot on passing steps.
     const legPal = (back) => (back ? { l: dark(c.leg), L: dark(dark(c.leg)), s: dark(c.boot), S: dark(dark(c.boot)) } : { l: c.leg, L: dark(c.leg), s: c.boot, S: dark(c.boot) });
@@ -427,33 +421,21 @@
     if (sk.hat === 'chef') L(CHEF_HAT, { w: '#ffffff', W: '#d9dde6' }, 3, -10 + H);
     if (sk.specs) g([], glassesAt(H, '#6a5040'));
 
-    // --- Front arm and whatever it holds.
-    // Hands are drawn a size up from the coordinates given: big mitten hands, like a child's.
-    const arm = (sleeve, [hx0, hy0, hw, hh]) => g([[...sleeve, c.body], [hx0, hy0, hw + 1, hh + 1, c.hand]], [[sleeve[0], sleeve[1], 1, sleeve[3], lite(c.body)]]);
+    // --- Props and effects. No arms: a head on a body with two legs, props float in front of it.
     const sparks = (pts) => g([], pts.flatMap(([x, y, color]) => twinkle(x, y, color)));
     const note = (x, y, color) => g([], [[x, y, 1, 6, color], [x + 1, y, 2, 1, color], [x + 2, y + 1, 1, 1, color], [x - 3, y + 5, 3, 2, color]]);
     switch (pose) {
       case 'done':
-        arm([24, 9, 3, 11], [24, 5, 4, 4]);
         sparks(frame ? [[16, -10, PAL.shine], [26, -6, PAL.spark], [-2, -2, PAL.spark], [28, -12, PAL.spark]]
           : [[18, -6, PAL.spark], [27, -11, PAL.shine], [0, -9, PAL.spark], [-3, 0, PAL.shine]]);
         break;
-      case 'dangle':
-        arm([24, 9, 3, 11], [24, 5, 4, 4]);
-        break;
       case 'wait':
-        arm([24, 11, 3, 9], [24 + frame, 7, 4, 4]);
         g([], frame ? [[30, 7, 2, 1, HL2], [30, 11, 2, 1, HL2]] : [[22, 7, 2, 1, HL2], [22, 11, 2, 1, HL2]]);
         break;
-      case 'type': case 'command': case 'paint':
-        arm([20, 21 + B, 6, 3], [25, 20 + B + (pose === 'type' ? frame : pose === 'command' ? -frame * 2 : 0), 4, 4]);
-        break;
       case 'game':
-        arm([20, 22 + B, 3, 3], [19, 25 + B, 4, 3]);
-        g([[13, 24 + B, 13, 5, '#3a3f4c'], [13, 28 + B, 3, 3, '#3a3f4c'], [23, 28 + B, 3, 3, '#3a3f4c']], [[15, 26 + B, 3, 1, '#c9ced8'], [16, 25 + B, 1, 3, '#c9ced8'], [21, 25 + B, 2, 2, '#5aa7ff'], [23, 27 + B, 2, 2, '#ffd65a'], [13, 24 + B, 13, 1, HL], [18, 26 + B - frame, 3, 2, c.hand]]);
+        g([[13, 24 + B, 13, 5, '#3a3f4c'], [13, 28 + B, 3, 3, '#3a3f4c'], [23, 28 + B, 3, 3, '#3a3f4c']], [[15, 26 + B, 3, 1, '#c9ced8'], [16, 25 + B, 1, 3, '#c9ced8'], [21, 25 + B, 2, 2, '#5aa7ff'], [23, 27 + B, 2, 2, '#ffd65a'], [13, 24 + B, 13, 1, HL], [18, 26 + B - frame, 3, 2, '#e0405a']]);
         break;
       case 'read': {
-        arm([20, 22 + B, 3, 4], [19, 26 + B, 4, 3]);
         const lines = [];
         for (let i = 0; i < 4; i++) {
           lines.push([15, 23 + i * 2 + B, i === 3 ? 2 : 4, 1, PAL.ink]);
@@ -463,39 +445,11 @@
         break;
       }
       case 'dance':
-        if (frame) arm([24, 9, 3, 11], [24, 5, 4, 4]); else arm([20, 20 + B, 3, 6], [20, 25 + B, 4, 4]);
         note(frame ? 27 : -2, frame ? -8 : -10, col.main);
         break;
-      case 'sleep':
-        arm([20, 21 + B, 3, 4], [20, 25 + B, 4, 3]);
+      default:
         break;
-      default: { // rest / walk, holding the signature item
-        const sw = pose === 'walk' ? WALK_ARM[step % 4] : 0;
-        const hx = 20 + (sk.item === 'none' ? sw : 0);
-        const y = B;
-        switch (sk.item) {
-          case 'mug':
-            g([[23, 23 + y, 5, 5, '#ffffff'], [28, 24 + y, 1, 3, '#ffffff']], [[23, 23 + y, 5, 1, '#8a5a30'], [23, 26 + y, 5, 1, col.main], [27, 24 + y, 1, 4, '#d9dde6']]);
-            if (frame) g([], [[24, 19 + y, 1, 2, '#e6e9f0'], [26, 18 + y, 1, 2, '#e6e9f0']]);
-            break;
-          case 'flask':
-            g([[24, 18 + y, 2, 3, '#dceff8'], [23, 21 + y, 4, 2, '#dceff8'], [22, 23 + y, 6, 4, '#dceff8']], [[23, 23 + y, 4, 4, '#3dffb0'], [23, 23 + y, 1, 1, HL2], [25, 16 + y - frame, 1, 1, PAL.shine]]);
-            break;
-          case 'wrench':
-            g([[24, 15 + y, 2, 11, PAL.steel], [23, 13 + y, 4, 3, PAL.steel]], [[24, 13 + y, 2, 1, '#5a6270'], [24, 16 + y, 1, 9, HL2]]);
-            break;
-          case 'kunai':
-            g([[24, 18 + y, 1, 7, '#c9d1dc'], [24, 25 + y, 1, 3, PAL.grip]], [[24, 19 + y, 1, 4, HL2]]);
-            break;
-          case 'ladle':
-            g([[24, 13 + y, 1, 13, PAL.steel], [23, 11 + y, 3, 3, PAL.steel]], [[23, 11 + y, 1, 1, HL2]]);
-            break;
-        }
-        arm([hx, 20 + B, 3, 6], [hx, 25 + B, 4, 4]);
-      }
     }
-    if (sk.body === 'armor') g([[17, 19 + B, 6, 3, c.plate]], [[17, 19 + B, 6, 1, lite(c.plate)], [17, 21 + B, 6, 1, c.trim]]);
-    if (sk.spikes) g([[17, 19 + B, 6, 3, c.plate], [19, 16 + B, 2, 3, c.plate]], [[17, 21 + B, 6, 1, c.face]]);
 
     // --- Accessory on top of everything.
     const A = H;
