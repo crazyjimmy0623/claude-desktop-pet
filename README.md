@@ -53,8 +53,8 @@ npm run preview -- chars out.png   # 輸出角色/家具預覽圖（chars | line
 
 ```
 src/main/        主程式：actors（角色狀態）、progress（金幣/成就/招募）、fx（隨機事件）、
-                 focus（番茄鐘）、activity（前景程式偵測）、server（HTTP）、windows、hub（工作列按鈕）、store
-src/shared/      主程式和畫面共用：catalog（物品/成就）、sprites（角色）、furniture（房間）
+                 focus（番茄鐘）、activity（前景程式偵測）、server（HTTP）、windows（工作列視窗）、store
+src/shared/      主程式和畫面共用：catalog（物品/成就）、sprites（角色）、iso（等角房間與家具）
 src/renderer/    strip（工作列）、room（房間 + 編輯器）、settings、guild（夥伴手冊）
 ```
 
