@@ -148,7 +148,7 @@ function renderEquip() {
   const invite = document.createElement('button');
   invite.className = 'invite';
   invite.textContent = '＋ 邀請居民';
-  invite.title = '邀請一位角色住進房間，他會自己生活：看書、喝咖啡、玩遊戲、晚上睡覺';
+  invite.title = '找個角色住進房間，他會自己看書、喝咖啡、打電動，晚上去睡覺';
   invite.addEventListener('click', async () => {
     const res = await desk.invoke('resident:add', '');
     if (res?.error) { $('equip-name').textContent = res.error; return; }
@@ -163,7 +163,7 @@ function renderEquip() {
   for (const m of settings.characters.customs || []) skins.push({ key: `mix:${m.id}`, name: `👗 ${m.name}` });
   for (const d of settings.characters.drawings || []) skins.push({ key: `draw:${d.id}`, name: `${d.friend ? '💌' : '🖌️'} ${d.name}` });
   for (const c of assets.characters) skins.push({ key: c.id, name: `${c.name}（自訂）`, custom: true });
-  if (target === 'ai' || target.startsWith('project:')) skins.unshift({ key: 'auto', name: '🎲 每個 session 自動換', custom: true });
+  if (target === 'ai' || target.startsWith('project:')) skins.unshift({ key: 'auto', name: '🎲 每開一個新對話就換', custom: true });
   const skinList = $('skin-list');
   skinList.replaceChildren();
   for (const s of skins) {
@@ -595,8 +595,8 @@ function renderShare() {
   ctx.fillText(`${fmt(w.from)} – ${fmt(w.to)}・團隊 Lv.${progress.level}・連續上工 ${progress.stats.streak} 天`, 52, 134);
 
   const stats = [
-    ['完成回合', w.turns],
-    ['使用工具', w.tools],
+    ['做完的事', w.turns],
+    ['動手次數', w.tools],
     ['陪伴時數', `${(w.activeMinutes / 60).toFixed(1)} h`],
     ['番茄鐘', w.focus],
     ['最常用工具', w.topTool ? `${w.topTool[0]}` : '—'],

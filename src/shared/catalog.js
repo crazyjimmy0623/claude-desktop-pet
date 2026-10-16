@@ -163,7 +163,7 @@
     { id: 'block:spiral', type: 'block', rarity: 'rare', name: '旋轉樓梯' },
     // Land: the size of the plot
     { id: 'land:8', type: 'land', rarity: 'starter', name: '8×8 空地' },
-    { id: 'land:10', type: 'land', rarity: 'rare', name: '10×10 空地', desc: '更大的地，設計好的藍圖也蓋得下了' },
+    { id: 'land:10', type: 'land', rarity: 'rare', name: '10×10 空地', desc: '大一點的地，現成的藍圖也蓋得下了' },
     { id: 'land:12', type: 'land', rarity: 'epic', name: '12×12 空地', desc: '最大的一塊地' },
   ];
 
@@ -181,11 +181,11 @@
   }
 
   const ACHIEVEMENTS = [
-    { id: 'first_turn', name: '第一個任務', desc: 'AI 夥伴完成第一個回合', reward: 5, test: (s) => s.turns >= 1 },
-    { id: 'turns_100', name: '百回合達成', desc: '累計完成 100 個回合', reward: 20, test: (s) => s.turns >= 100 },
-    { id: 'tools_1000', name: '工具狂人', desc: '累計使用工具 1000 次', reward: 20, test: (s) => s.toolCalls >= 1000 },
-    { id: 'edits_500', name: '改檔職人', desc: '累計修改檔案 500 次', reward: 20, test: (s) => s.edits >= 500 },
-    { id: 'reads_500', name: '博覽群書', desc: '累計閱讀檔案 500 次', reward: 15, test: (s) => s.reads >= 500 },
+    { id: 'first_turn', name: '第一個任務', desc: 'AI 夥伴做完第一件事', reward: 5, test: (s) => s.turns >= 1 },
+    { id: 'turns_100', name: '做完一百件', desc: 'AI 一共做完 100 件事', reward: 20, test: (s) => s.turns >= 100 },
+    { id: 'tools_1000', name: '工具狂人', desc: 'AI 一共動手 1000 次', reward: 20, test: (s) => s.toolCalls >= 1000 },
+    { id: 'edits_500', name: '改檔職人', desc: '一共改了 500 次檔案', reward: 20, test: (s) => s.edits >= 500 },
+    { id: 'reads_500', name: '博覽群書', desc: '一共看了 500 次檔案', reward: 15, test: (s) => s.reads >= 500 },
     { id: 'helpers_5', name: '人多好辦事', desc: '同時有 5 位小幫手', reward: 15, test: (s) => s.maxHelpers >= 5 },
     { id: 'night_owl', name: '夜貓子', desc: '凌晨 0–5 點還在上工', reward: 10, test: (s) => s.nightTurns >= 1 },
     { id: 'early_bird', name: '早起的鳥兒', desc: '早上 5–7 點就開工', reward: 10, test: (s) => s.earlyTurns >= 1 },
@@ -198,9 +198,9 @@
     { id: 'gacha_first', name: '第一抽', desc: '第一次招募', reward: 3, test: (s) => s.pulls >= 1 },
     { id: 'chest_10', name: '拆箱達人', desc: '打開 10 個包裹', reward: 15, test: (s) => s.chests >= 10 },
     { id: 'ufo', name: '第三類接觸', desc: '目睹 UFO 飛過', reward: 10, test: (s) => s.ufos >= 1 },
-    { id: 'hours_100', name: '百小時夥伴', desc: '一起度過 100 小時', reward: 30, test: (s) => s.activeMinutes >= 6000 },
+    { id: 'hours_100', name: '百小時夥伴', desc: '一起待了 100 小時', reward: 30, test: (s) => s.activeMinutes >= 6000 },
     { id: 'flow_1', name: '進入心流', desc: '同一件事專注 25 分鐘', reward: 5, test: (s) => s.flowSessions >= 1 },
-    { id: 'flow_50', name: '專注職人', desc: '累計 50 段專注時段', reward: 25, test: (s) => s.flowSessions >= 50 },
+    { id: 'flow_50', name: '專注職人', desc: '專心滿 25 分鐘，累積 50 次', reward: 25, test: (s) => s.flowSessions >= 50 },
     { id: 'checkin_7', name: '天天報到', desc: '連續簽到 7 天', reward: 15, test: (s) => s.checkInBest >= 7 },
   ];
 

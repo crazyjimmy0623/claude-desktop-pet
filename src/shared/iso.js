@@ -1612,7 +1612,7 @@
   function addTile(room, x, y, f) {
     const zn = room.zones[f];
     if (!zn) return '沒有這一層';
-    if (x < 0 || y < 0 || x >= landOf(room) || y >= landOf(room)) return '超出這塊地的範圍（可以到「房間」換大塊的地）';
+    if (x < 0 || y < 0 || x >= landOf(room) || y >= landOf(room)) return '超出這塊地了（可以到「土地與藍圖」換大一點的地）';
     if (tileIndex(room, x, y, f) >= 0) return null;
     const column = room.tiles.filter((t) => t[0] === x && t[1] === y);
     if (column.some((t) => room.zones[t[2]].z > zn.z && !room.zones[t[2]].thin)) return '上面有實心的地基，蓋不進去';

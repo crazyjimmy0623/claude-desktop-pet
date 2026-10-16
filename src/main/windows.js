@@ -8,6 +8,26 @@ const page = (...p) => path.join(__dirname, '..', 'renderer', ...p);
 const STRIP_HEIGHT = 380;
 const DEBUG = !!process.env.DESKMATES_DEBUG;
 
+// Always: never let a dropped file or link replace a page (that looks like the app vanishing),
+// note crashes in deskmates.log, and bring a crashed page straight back.
+function wireSafety(w, name) {
+  const ours = (url) => url.startsWith('file:') && /\.html(\?|#|$)/.test(url);
+  w.webContents.on('will-navigate', (e, url) => { if (!ours(url)) e.preventDefault(); });
+  w.webContents.on('will-frame-navigate', (e) => { if (!ours(e.url)) e.preventDefault(); });
+  w.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  w.webContents.on('render-process-gone', (_e, d) => {
+    note(`${name} page gone: ${d.reason} (${d.exitCode})`);
+    if (d.reason !== 'clean-exit' && !w.isDestroyed()) setTimeout(() => { if (!w.isDestroyed()) w.reload(); }, 500);
+  });
+  w.on('unresponsive', () => note(`${name} page not responding`));
+}
+function note(text) {
+  try {
+    const file = path.join(app.getPath('userData'), 'deskmates.log');
+    require('fs').appendFileSync(file, `${new Date().toISOString()} ${text}\n`);
+  } catch { /* nowhere to write */ }
+}
+
 function wireDebug(w, name) {
   if (!DEBUG) return;
   w.webContents.on('console-message', (e) => console.log(`[${name}] ${e.level}: ${e.message} (${e.sourceId?.split('/').pop()}:${e.lineNumber})`));
@@ -136,6 +156,7 @@ class Windows {
     if (this.strip && !this.strip.isDestroyed()) return;
     const w = this.overlayWindow();
     this.strip = w;
+    wireSafety(w, 'strip');
     wireDebug(w, 'strip');
     this.placeStrip();
     // Clicks pass through the strip except over a character (the renderer flips this on hover).
@@ -193,6 +214,7 @@ class Windows {
     if (this.room && !this.room.isDestroyed()) return;
     const w = this.overlayWindow();
     this.room = w;
+    wireSafety(w, 'room');
     wireDebug(w, 'room');
     this.placeRoom();
     // Clicks pass through the empty corners around the diorama (the renderer flips this on hover).
@@ -265,4 +287,4 @@ class Windows {
   }
 }
 
-module.exports = { Windows };
+module.exports = { note, Windows };

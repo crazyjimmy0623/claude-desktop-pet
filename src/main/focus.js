@@ -21,7 +21,7 @@ class Focus extends EventEmitter {
   stop() {
     if (!this.state) return;
     this.set(null);
-    this.actors.sayTo('user', '🍅 番茄鐘已停止', 2500);
+    this.actors.sayTo('user', '🍅 番茄鐘先停了', 2500);
   }
 
   set(state) {
@@ -40,7 +40,7 @@ class Focus extends EventEmitter {
         this.actors.sayTo('user', '🍅 專注完成！休息一下吧（+3 🪙）', 6000, 'success');
       } else {
         this.set(null);
-        this.actors.sayTo('user', '⏰ 休息結束，繼續加油！', 6000);
+        this.actors.sayTo('user', '⏰ 休息完了，回來囉', 6000);
       }
     }
 

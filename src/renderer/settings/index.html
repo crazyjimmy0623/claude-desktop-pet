@@ -19,10 +19,10 @@
       <div class="field"><label class="name">顯示模式</label>
         <div class="segmented" id="mode">
           <button data-mode="strip">🧍 工作列<small>站在工作列上</small></button>
-          <button data-mode="room">🏠 房間<small>一間小辦公室</small></button>
+          <button data-mode="room">🏠 房間<small>桌角的一間小屋</small></button>
         </div>
       </div>
-      <div class="field"><label class="name">永遠置頂</label><input type="checkbox" id="alwaysOnTop"><span class="help">每幾秒把夥伴拉回最上層</span></div>
+      <div class="field"><label class="name">一直在最上面</label><input type="checkbox" id="alwaysOnTop"><span class="help">不會被其他視窗蓋住</span></div>
       <div class="field"><label class="name">全螢幕時隱藏</label><input type="checkbox" id="hideInFullscreen"><span class="help">玩遊戲、看影片時自動躲起來</span></div>
       <div class="field"><label class="name">工作列角色大小</label>
         <select id="scale"><option value="2">小</option><option value="3">中</option><option value="4">大</option></select>
@@ -40,31 +40,31 @@
     </section>
 
     <section class="card">
-      <h2>🔌 資料來源</h2>
-      <p class="desc">夥伴要演什麼，取決於這裡開了哪些來源。不用 AI 也可以只開「電腦活動」。</p>
+      <h2>🔌 夥伴看什麼</h2>
+      <p class="desc">這裡開了什麼，夥伴就演什麼。沒在用 AI 的話，開「電腦活動」就夠了。</p>
       <div class="field"><label class="name">Claude Code</label>
         <input type="checkbox" id="src-claude">
         <span id="hooks-status" class="status"></span>
-        <button class="btn" id="hooks-install">安裝 hooks</button>
-        <button class="btn" id="hooks-uninstall">移除 hooks</button>
+        <button class="btn" id="hooks-install">連上 Claude Code</button>
+        <button class="btn" id="hooks-uninstall">斷開</button>
       </div>
       <div class="field"><label class="name">電腦活動</label>
         <input type="checkbox" id="src-activity">
-        <span class="help">依前景程式決定「你」的角色在做什麼。只讀程式名稱，不記錄鍵盤內容。</span>
+        <span class="help">看你正在用哪個程式，決定「你」在做什麼。只看程式名稱，不記錄打字內容。</span>
       </div>
       <div class="field"><label class="name">你的名字</label><input type="text" id="userName" maxlength="16"></div>
-      <div class="field"><label class="name">閒置幾分鐘算離開</label><input type="number" id="idleMinutes" min="1" max="120"></div>
+      <div class="field"><label class="name">幾分鐘沒動就算離開</label><input type="number" id="idleMinutes" min="1" max="120"></div>
     </section>
 
     <section class="card">
-      <h2>🗂️ 程式對應表</h2>
-      <p class="desc">前景程式要算成哪種活動。內建表涵蓋常見程式；在這裡新增的規則會覆蓋內建表。程式名稱就是工作管理員裡的處理程序名稱（不含 .exe）。</p>
+      <h2>🗂️ 哪個程式做什麼</h2>
+      <p class="desc">你用什麼程式，角色就做什麼事。常用的程式都設好了，你在這裡加的會優先。程式名稱可以在工作管理員找到，不用打 .exe。</p>
       <table class="map"><thead><tr><th>程式名稱</th><th>活動</th><th></th></tr></thead><tbody id="map-rows"></tbody></table>
       <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
-        <button class="btn" id="map-add">＋ 新增規則</button>
+        <button class="btn" id="map-add">＋ 加一個程式</button>
         <span class="help" id="current-app"></span>
       </div>
-      <details style="margin-top:10px;"><summary>查看內建對應表</summary><div id="builtin"></div></details>
+      <details style="margin-top:10px;"><summary>看看已經設好的</summary><div id="builtin"></div></details>
     </section>
 
     <section class="card">
@@ -77,9 +77,9 @@
     </section>
 
     <section class="card">
-      <h2>🎨 自訂素材</h2>
-      <p class="desc">自己畫的角色（Aseprite sprite sheet）和房間地板（16x16 PNG）放進素材資料夾就能用。</p>
-      <div class="field"><label class="name">素材資料夾</label>
+      <h2>🎨 自己的圖</h2>
+      <p class="desc">自己畫的角色和地板圖，丟進這個資料夾就能用。角色要用 Aseprite 匯出，地板是 16x16 的 PNG。</p>
+      <div class="field"><label class="name">資料夾</label>
         <button class="btn" id="assets-open">開啟資料夾</button>
         <button class="btn" id="assets-reload">重新載入</button>
         <span class="help" id="assets-summary"></span>
@@ -91,7 +91,7 @@
       <div class="field"><label class="name">開機自動啟動</label><input type="checkbox" id="autostart"></div>
       <div class="field"><label class="name">小工具</label>
         <button class="btn" id="run-demo">▶ 播放示範</button>
-        <button class="btn" id="regroup">重新排隊</button>
+        <button class="btn" id="regroup">大家站好</button>
         <button class="btn" id="clear-ai">AI 夥伴全部下班</button>
       </div>
     </section>
@@ -99,13 +99,14 @@
     <section class="card">
       <details>
         <summary>🛠️ 進階：給會寫程式的人</summary>
-        <p class="desc">任何程式都能讓一位夥伴動起來：把 JSON POST 到本機的 Deskmates。</p>
+        <p class="desc">任何程式只要把 JSON POST 到本機的 Deskmates，就能讓一位夥伴動起來。</p>
         <pre id="api-example"></pre>
-        <p class="desc">Codex CLI：在 <code>~/.codex/config.toml</code> 加上下面這行，每次回合結束夥伴就會歡呼。</p>
+        <p class="desc">Codex CLI：在 <code>~/.codex/config.toml</code> 加上下面這行，每次 Codex 做完事，夥伴就會歡呼。</p>
         <pre id="codex-example"></pre>
       </details>
     </section>
   </main>
+  <script src="../sideways.js"></script>
   <script src="../../shared/catalog.js"></script>
   <script src="settings.js"></script>
 </body>

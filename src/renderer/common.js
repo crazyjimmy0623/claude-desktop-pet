@@ -6,7 +6,7 @@
   const { STATIONS } = Catalog;
 
   const STATE_LABEL = {
-    idle: '待命', think: '思考中', work: '工作中', wait: '等你批准', done: '完成！', sleep: '睡覺中', leaving: '下班',
+    idle: '閒著', think: '思考中', work: '工作中', wait: '等你批准', done: '完成！', sleep: '睡覺中', leaving: '下班',
   };
 
   const POSE_SPEED = { command: 220, game: 260, type: 180, read: 600, paint: 400, dance: 300, rest: 160, sleep: 1400, wait: 250, done: 200, walk: 110 };
@@ -66,7 +66,7 @@
       rows.push(['身分', '🏡 住在這裡的居民']);
       rows.push(['今天', mins < 1 ? '剛起床' : `醒著 ${mins} 分鐘`]);
     } else {
-      rows.push(['最後指令', actor.prompt || '—']);
+      rows.push(['最後交代', actor.prompt || '—']);
       rows.push(['上工', mins < 1 ? '剛剛' : `${mins} 分鐘`]);
       rows.push(['小幫手', actor.helpers ? `${actor.helpers} 位` : '—']);
       rows.push(['來源', actor.source === 'claude' ? `Claude Code · ${actor.id.split(':')[1].slice(0, 8)}` : actor.source]);

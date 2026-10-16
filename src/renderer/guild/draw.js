@@ -226,7 +226,7 @@ function renderPaintSide() {
       b.append(tag);
     }
     b.classList.toggle('active', paint.cur === id);
-    b.title = id === 'base' ? '一定要畫的正面' : drawn ? `正在用你畫的${label}姿勢` : `沒畫的話會自動動；點一下就能自己畫（從正面複製一份開始）`;
+    b.title = id === 'base' ? '一定要畫的正面' : drawn ? `正在用你畫的${label}姿勢` : '沒畫也會自己動。點一下可以自己畫，會先複製正面給你改';
     b.addEventListener('click', () => {
       if (!paint.poses[id]) { remember(); paint.poses[id] = paint.poses.base.slice(); paint.saved = false; }
       paint.cur = id;
@@ -421,7 +421,7 @@ function renderFriends() {
   if (!looks.length) {
     const p = document.createElement('p');
     p.className = 'desc';
-    p.textContent = '先到「✨ 創角」做一個角色，就能送給朋友。';
+    p.textContent = '先去「✨ 創角」做一個角色，才有東西可以送。';
     list.append(p);
   }
   for (const l of looks) {
@@ -450,7 +450,7 @@ function renderFriends() {
   if (!fr.length) {
     const p = document.createElement('p');
     p.className = 'desc';
-    p.textContent = '還沒有朋友的角色。請朋友傳角色卡給你，拖進來就會出現在這裡。';
+    p.textContent = '還沒有朋友的角色。叫朋友傳張角色卡來，拖進來就有了。';
     book.append(p);
   }
   const living = new Set((settings.characters.residents || []).map((r) => r.skin));
@@ -494,7 +494,7 @@ $('card-copy').addEventListener('click', async () => {
   if (!lastCard) return;
   // Pasted pictures lose their insides, so the copy is the plain picture; the game reads the pixels.
   await desk.invoke('share:copy', lastCard.canvas.toDataURL('image/png'));
-  flash('📋 複製好了，貼到 LINE 或 Discord 傳給朋友吧');
+  flash('📋 複製好了，去 LINE 或 Discord 貼給朋友');
 });
 $('card-file').addEventListener('click', async () => {
   if (!lastCard) return;
@@ -520,7 +520,7 @@ async function incoming(bytes, { photo: wantPhoto = false } = {}) {
   const img = await Pixels.imageOf(bytes);
   if (!img) { flash('這個檔案打不開，換一張圖試試'); return; }
   takePhoto(img);
-  if (!wantPhoto) setTimeout(() => { $('photo-note').textContent = '這張不是角色卡，幫你把它變成像素角色看看'; }, 0);
+  if (!wantPhoto) setTimeout(() => { $('photo-note').textContent = '這不是角色卡，那就幫你變成像素角色看看'; }, 0);
 }
 
 function wireDrops() {

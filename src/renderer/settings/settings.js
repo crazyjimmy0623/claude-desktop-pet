@@ -59,7 +59,7 @@ $('userName').addEventListener('change', (e) => set({ userName: e.target.value.t
 
 const stationOptions = () => [
   ...Object.entries(Catalog.STATIONS).map(([id, s]) => [id, `${s.icon} ${s.name}`]),
-  ['ignore', '🙈 忽略（維持原本狀態）'],
+  ['ignore', '🙈 不管它（角色照舊）'],
 ];
 
 function renderMap() {
@@ -68,7 +68,7 @@ function renderMap() {
   const entries = Object.entries(settings.appMap);
   if (!entries.length) {
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td colspan="3" class="help">還沒有自訂規則。</td>';
+    tr.innerHTML = '<td colspan="3" class="help">還沒加過。</td>';
     rows.append(tr);
   }
   for (const [name, station] of entries) {
@@ -128,10 +128,10 @@ function renderBuiltIn() {
 function renderHooks(status) {
   const el = $('hooks-status');
   if (status.error) {
-    el.textContent = `讀取失敗：${status.error}`;
+    el.textContent = `看不到 Claude Code 的設定：${status.error}`;
     el.className = 'status off';
   } else {
-    el.textContent = status.installed ? '✔ 已安裝' : status.partial ? '△ 部分安裝' : '✖ 未安裝';
+    el.textContent = status.installed ? '✔ 已連上' : status.partial ? '△ 沒接好，再按一次連上' : '✖ 還沒連';
     el.className = `status ${status.installed ? 'ok' : 'off'}`;
   }
   $('hooks-install').disabled = status.installed;
@@ -175,7 +175,7 @@ desk.on('actors', (list) => {
   const user = list.find((a) => a.kind === 'user');
   focusState = user?.focus || null;
   renderPomodoro();
-  $('current-app').textContent = user ? `你的角色現在：${user.label || '待命'}` : '';
+  $('current-app').textContent = user ? `你的角色現在：${user.label || '閒著'}` : '';
 });
 
 desk.on('assets', renderAssets);

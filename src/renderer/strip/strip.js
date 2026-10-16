@@ -439,6 +439,8 @@ function setMouseIgnored(ignore) {
   mouseIgnored = ignore;
   desk.send('mouse:ignore', ignore);
 }
+// The drawer's pages say when the mouse is over them (their moves never reach this page).
+window.addEventListener('message', (e) => { if (e.data?.dmHover) setMouseIgnored(false); });
 
 window.addEventListener('mousemove', (e) => {
   if (drag) {

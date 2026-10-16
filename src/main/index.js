@@ -12,7 +12,11 @@ const { Progress, dayKey } = require('./progress');
 const { Fx } = require('./fx');
 const { Focus } = require('./focus');
 const { ActivityMonitor } = require('./activity');
-const { Windows } = require('./windows');
+const { Windows, note } = require('./windows');
+
+// A mistake somewhere in the main process is written down, not allowed to take the whole app out.
+process.on('uncaughtException', (err) => note(`main error: ${err?.stack || err}`));
+process.on('unhandledRejection', (err) => note(`main promise: ${err?.stack || err}`));
 
 // A dress-up recipe, keeping only known kinds of fields.
 function cleanRecipe(recipe) {

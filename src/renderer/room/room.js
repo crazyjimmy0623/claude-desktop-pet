@@ -674,6 +674,8 @@ function setIgnore(ignore) {
   ignoring = ignore;
   desk.send('mouse:ignore', ignore);
 }
+// The drawer's pages say when the mouse is over them (their moves never reach this page).
+window.addEventListener('message', (e) => { if (e.data?.dmHover) setIgnore(false); });
 window.addEventListener('mousemove', (e) => {
   if (state.drag || winDrag) return setIgnore(false);
   const el = document.elementFromPoint(e.clientX, e.clientY);
@@ -766,7 +768,7 @@ window.addEventListener('mouseup', () => {
 
 function setZoom(z) {
   const top = maxZoom();
-  if (z > top) showToast('已經是螢幕放得下的最大尺寸了');
+  if (z > top) showToast('再大螢幕就放不下了');
   desk.invoke('settings:set', { roomZoom: clamp(z, 1, top) });
 }
 

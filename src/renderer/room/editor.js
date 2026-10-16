@@ -28,15 +28,15 @@
   const build = { block: 'brick', tool: 'block', hover: null };
 
   const HINTS = {
-    furniture: '點家具放進房間；R 或右下按鈕換方向；點房間裡的家具可搬動，右鍵刪除',
-    terrain: '半透明的方塊就是會放下去的位置：點頂面往上疊、點側面往旁邊接、點空地鋪地面',
-    stairs: '樓梯：放在高台旁邊的地板上，會自動朝高的那邊爬上去；落差大會多幾階',
-    spiral: '旋轉樓梯：放在高處旁邊的地板上，一格就能繞上去，最多五層',
-    erase: '刪除模式：指到的東西會變成紅色透明，點一下就刪掉。家具、樓梯、方塊、地板都可以（疊高的方塊一次拆一層）',
+    furniture: '點家具放進房間，按 R 或右下的按鈕轉方向。點房間裡的家具可以搬，右鍵刪掉',
+    terrain: '半透明的就是會放下去的位置。點頂面往上疊，點側面往旁邊接，點空地鋪地',
+    stairs: '樓梯放在高台旁邊的地板上，會自己往高的那邊接上去，落差越大階數越多',
+    spiral: '旋轉樓梯放在高處旁邊的地板上，一格就能繞上去，最多五層',
+    erase: '指到的東西會變紅，點一下就拆掉。疊高的方塊一次拆一層',
     floor: '選樓層，再點一下換那層的地板',
     wall: '選樓層，再點一下換那層的牆面',
-    room: '換一塊地、付費施工藍圖，或換時間和天氣',
-    plants: '點植物種在草地上（外圍種一圈就是背景）；點房間裡的植物可以搬動',
+    room: '換地、蓋藍圖，或調時間和天氣',
+    plants: '點植物種在草地上，沿外圍種一圈就是背景。點已經種好的可以搬',
   };
 
   const itemName = (id) => Catalog.ITEMS.find((i) => i.id === id)?.name || id;
@@ -71,7 +71,7 @@
       for (const k of Object.keys(r)) delete r[k];
       Object.assign(r, JSON.parse(snapshot));
       RoomApp.setRoom(r, { relayout });
-      hint.textContent = `金幣不足：要 ${amount} 🪙，現在有 ${coins()} 🪙。讓夥伴多工作一下再來蓋吧`;
+      hint.textContent = `金幣不夠：要 ${amount} 🪙，手上只有 ${coins()} 🪙`;
       return false;
     }
     if (amount) {
@@ -175,7 +175,7 @@
       hint.textContent = HINTS.erase;
       const note = document.createElement('div');
       note.className = 'erase-note';
-      note.textContent = '🗑 把滑鼠移到房間裡想刪的東西上，它會變成紅色透明；點一下刪掉。按上面的「🔨 建造」回到建造。';
+      note.textContent = '🗑 滑鼠移到想拆的東西上，變紅就點下去。要繼續蓋，按上面的「🔨 建造」。';
       palette.append(note);
       return;
     }
@@ -310,11 +310,11 @@
       const b = button(label, blueprintThumb(id), r.blueprint === id, () => {
         if (!fits) { hint.textContent = `「${bp.name}」要 ${need}×${need} 以上的地才蓋得下`; return; }
         if (missing.length) {
-          hint.textContent = `還缺：${missing.slice(0, 6).map(itemName).join('、')}${missing.length > 6 ? ` 等 ${missing.length} 樣` : ''}，抽到才能施工`;
+          hint.textContent = `還缺：${missing.slice(0, 6).map(itemName).join('、')}${missing.length > 6 ? ` 等 ${missing.length} 樣` : ''}，抽到才能蓋`;
           return;
         }
         const back = Math.floor(worth(r) / 2);
-        if (!window.confirm(`施工「${bp.name}」要 ${total} 🪙，拆掉現在的房間退回 ${back} 🪙，實付 ${total - back} 🪙。確定嗎？`)) return;
+        if (!window.confirm(`蓋「${bp.name}」要 ${total} 🪙。拆掉現在的房子會退你 ${back} 🪙，所以要付 ${total - back} 🪙。要蓋嗎？`)) return;
         charged((rr) => {
           for (const k of Object.keys(rr)) delete rr[k];
           Object.assign(rr, built);
@@ -326,7 +326,7 @@
     }
     if (r.backdrop || (r.backdrop === undefined && Iso.BLUEPRINTS[r.blueprint]?.backdrop)) {
       const old = row('舊背景');
-      old.append(button('移除房間後面畫上去的風景（改用植物自己種）', null, false, () => {
+      old.append(button('拿掉舊的背景圖（之後改用植物自己種）', null, false, () => {
         r.backdrop = null;
         RoomApp.setRoom(r, { save: true });
         refresh();
