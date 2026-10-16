@@ -83,8 +83,8 @@
       const row = document.createElement('div');
       row.className = 'row';
       if (!Iso.isOpen(room(), storey)) storey = 0;
-      room().floors.forEach((_, i) => {
-        if (Iso.isOpen(room(), i)) row.append(button(Iso.FLOOR_NAMES[i] || `${i + 1}F`, null, storey === i, () => { storey = i; refresh(); }));
+      room().zones.forEach((zn, i) => {
+        if (Iso.isOpen(room(), i)) row.append(button(zn.name || `${i + 1}F`, null, storey === i, () => { storey = i; refresh(); }));
       });
       palette.append(row);
       const set = key === 'floor' ? Iso.FLOORS : Iso.WALLS;
@@ -94,8 +94,8 @@
         const sw = key === 'floor'
           ? tileSwatch((x) => { x.fillStyle = d.base; x.beginPath(); x.moveTo(17, 4); x.lineTo(33, 12); x.lineTo(17, 20); x.lineTo(1, 12); x.fill(); })
           : tileSwatch((x) => { x.fillStyle = d.base; x.fillRect(4, 2, 26, 22); x.fillStyle = d.trim; x.fillRect(4, 20, 26, 4); });
-        palette.append(button(itemName(`${key}:${id}`), sw, room().floors[storey][key] === id, () => {
-          room().floors[storey][key] = id;
+        palette.append(button(itemName(`${key}:${id}`), sw, room().zones[storey][key] === id, () => {
+          room().zones[storey][key] = id;
           save();
           refresh();
         }));
@@ -105,7 +105,8 @@
       row.className = 'row';
       for (const [id, t] of Object.entries(Iso.THEMES)) {
         row.append(button(t.name, null, room().theme === id, () => {
-          Object.assign(room(), { theme: id, floors: t.floors.map(([wall, floor]) => ({ wall, floor })) });
+          room().theme = id;
+          room().zones.forEach((zn, i) => { if (t.floors[i]) [zn.wall, zn.floor] = t.floors[i]; });
           save();
           refresh();
         }));

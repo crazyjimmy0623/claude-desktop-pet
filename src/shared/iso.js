@@ -54,11 +54,17 @@
       return [x - y + this.ox, (x + y) / 2 - z + this.oy];
     }
 
+    // c is a colour, or a function of the colour already there (null leaves the pixel empty).
     set(x, y, c) {
       x = Math.floor(x);
       y = Math.floor(y);
       if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
-      this.px[y * this.w + x] = c;
+      const i = y * this.w + x;
+      if (typeof c === 'function') {
+        if (!this.px[i]) return;
+        c = c(this.px[i]);
+      }
+      this.px[i] = c;
     }
 
     // Fill a convex polygon (screen points) by pixel centres.
@@ -652,52 +658,178 @@
   };
 
   // ---- Room model -----------------------------------------------------------------
-  // A street-corner diorama in layers: the street, a landing where the front stairs turn, the shop
-  // raised a storey on a brick base, and - bought with coins, one layer at a time - a roof terrace
-  // on the corner block, a loft over the back of the shop and a rooftop garden above that.
-  // Each area is a set of rects at one height; stairs are explicit flights between areas.
-  //   [x, y, w, d] in tiles. Walls: [plane, at, from, to, height] - plane 'y' runs along x at
-  //   y = at (face toward +y), plane 'x' runs along y at x = at (face toward +x). `facade` walls
-  //   are the side of a raised base: wall items can hang there, but no wall is drawn.
-  //   level: the room upgrade that unlocks the area. keep: its base is drawn while still locked.
-  //   thin: a floor resting on walls, not a solid base. rails: railing on its open edges.
-  const LAYOUTS = {
-    shop: {
-      areas: [
-        { name: '街道', z: 0, rects: [[2, 6, 5, 2], [0, 8, 7, 1]], walls: [['y', 6, 2, 7, 60, 'facade'], ['y', 8, 0, 2, 30, 'facade']] },
-        { name: '樓梯平台', z: 30, rects: [[0, 6, 2, 2]], walls: [['y', 6, 0, 2, 94, 'facade']] },
-        { name: '店內', z: 60, rects: [[0, 0, 2, 3], [2, 0, 5, 6], [7, 1, 2, 3]], walls: [['x', 0, 0, 3, 64], ['y', 0, 0, 7, 64], ['x', 2, 3, 6, 64, 'facade']] },
-        { name: '露台', z: 124, level: 1, keep: true, rects: [[0, 3, 2, 3]], walls: [], rails: true, lights: true },
-        { name: '閣樓', z: 124, level: 2, thin: true, rects: [[2, 0, 5, 3], [2, 3, 1, 1]], walls: [['x', 2, 0, 3, 64], ['y', 0, 2, 7, 64]], rails: true },
-        { name: '屋頂花園', z: 188, level: 3, thin: true, rects: [[3, 0, 3, 2]], walls: [], rails: true, lights: true },
-      ],
-      flights: [
-        // The front stairs switch back: up from the street to the landing, then on into the shop.
-        { from: 0, to: 1, style: 'solid', cells: [[3, 7], [2, 7]], bottom: [4, 7], top: [1, 7] },
-        { from: 1, to: 2, style: 'solid', cells: [[2, 6], [3, 6]], bottom: [1, 6], top: [3, 5] },
-        // Inside, up the back-left corner onto the terrace.
-        { from: 2, to: 3, style: 'open', cells: [[1, 0], [1, 1], [1, 2]], bottom: [2, 0], top: [1, 3] },
-        // From the loft up its right side to the garden.
-        { from: 4, to: 5, style: 'open', cells: [[6, 2], [6, 1], [6, 0]], bottom: [5, 2], top: [5, 0] },
-      ],
-      door: [6, 7],
-    },
+  // The room is built, not drawn: the player decides the shape and the engine dresses it.
+  //   zones: what each layer is - height z, materials, and how it is finished:
+  //     kind 'room' grows walls on its back edges, 'outdoor' and 'street' stay open;
+  //     thin: a floor on joists over the space below (else a solid brick base to the ground);
+  //     rails: railing on open edges; lights: fairy lights on them;
+  //     level: the room upgrade that unlocks it; keep: its base shows while still locked.
+  //   tiles: [x, y, zone] - one per floor tile.
+  //   flights: stairs between zones, bottom step first.
+  // From these the engine derives everything else (see derive): rects to draw, walls on back
+  // edges, brick facades where a floor steps down (wall items can hang on them), railings and
+  // shadows. Walls: [plane, at, from, to, height, facade?] - plane 'y' runs along x at y = at
+  // (face toward +y), plane 'x' runs along y at x = at (face toward +x).
+  const STEP_Z = 32; // heights come in steps of half a storey
+
+  // The default street corner, as rects per zone.
+  const DEFAULT = {
+    zones: [
+      { name: '街道', z: 0, kind: 'street', rects: [[2, 6, 5, 2], [0, 8, 7, 1]] },
+      { name: '樓梯平台', z: 32, kind: 'outdoor', rects: [[0, 6, 2, 2]] },
+      { name: '店內', z: 64, kind: 'room', rects: [[0, 0, 2, 3], [2, 0, 5, 6], [7, 1, 2, 3]] },
+      { name: '露台', z: 128, kind: 'outdoor', level: 1, keep: true, rails: true, lights: true, rects: [[0, 3, 2, 3]] },
+      { name: '閣樓', z: 128, kind: 'room', level: 2, thin: true, rails: true, rects: [[2, 0, 5, 3], [2, 3, 1, 1]] },
+      { name: '屋頂花園', z: 192, kind: 'outdoor', level: 3, thin: true, rails: true, lights: true, rects: [[3, 0, 3, 2]] },
+    ],
+    flights: [
+      // The front stairs switch back: up from the street to the landing, then on into the shop.
+      { from: 0, to: 1, style: 'solid', cells: [[3, 7], [2, 7]], bottom: [4, 7], top: [1, 7] },
+      { from: 1, to: 2, style: 'solid', cells: [[2, 6], [3, 6]], bottom: [1, 6], top: [3, 5] },
+      // Inside, up the back-left corner onto the terrace.
+      { from: 2, to: 3, style: 'open', cells: [[1, 0], [1, 1], [1, 2]], bottom: [2, 0], top: [1, 3] },
+      // From the loft up its right side to the garden.
+      { from: 4, to: 5, style: 'open', cells: [[6, 2], [6, 1], [6, 0]], bottom: [5, 2], top: [5, 0] },
+    ],
+    door: [6, 7],
   };
-  const layoutOf = (room) => LAYOUTS[room.layout] || LAYOUTS.shop;
 
   const THEMES = {
     shop: { name: '街角小店', floors: [['brick', 'stone'], ['brick', 'stone'], ['brick', 'terra'], ['navy', 'stone'], ['cream', 'wood'], ['navy', 'grass']] },
     cyber: { name: '賽博街角', floors: [['navy', 'stone'], ['navy', 'cyber'], ['cyber', 'cyber'], ['synth', 'neon'], ['synth', 'carpet'], ['cyber', 'grass']] },
     cozy: { name: '溫馨小屋', floors: [['brick', 'grass'], ['brick', 'stone'], ['cream', 'wood'], ['plum', 'tile'], ['plum', 'carpet'], ['brick', 'grass']] },
   };
-  const FLOOR_NAMES = LAYOUTS.shop.areas.map((a) => a.name);
 
-  const levels = (room) => layoutOf(room).areas.length;
-  const floorZ = (room, f) => layoutOf(room).areas[f]?.z || 0;
-  // The room's upgrade level comes from progress; an area is open once its level is reached.
-  const isOpen = (room, f) => (layoutOf(room).areas[f]?.level || 0) <= (room.level || 0);
+  // Split a set of tiles ("x,y") into rects, greedily: widest run first, then as deep as it goes.
+  function toRects(tiles) {
+    const left = new Set(tiles);
+    const rects = [];
+    const sorted = [...left].map((k) => k.split(',').map(Number)).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+    for (const [x, y] of sorted) {
+      if (!left.has(`${x},${y}`)) continue;
+      let w = 1;
+      while (left.has(`${x + w},${y}`)) w++;
+      let d = 1;
+      while (Array.from({ length: w }, (_, i) => `${x + i},${y + d}`).every((k) => left.has(k))) d++;
+      for (let j = 0; j < d; j++) for (let i = 0; i < w; i++) left.delete(`${x + i},${y + j}`);
+      rects.push([x, y, w, d]);
+    }
+    return rects;
+  }
+
+  // Merge unit edges [plane, at, u, ...rest] into runs along u.
+  function runs(edges) {
+    const groups = new Map();
+    for (const [plane, at, u, ...rest] of edges) {
+      const key = JSON.stringify([plane, at, ...rest]);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(u);
+    }
+    const out = [];
+    for (const [key, us] of groups) {
+      const [plane, at, ...rest] = JSON.parse(key);
+      us.sort((a, b) => a - b);
+      let start = us[0];
+      for (let i = 1; i <= us.length; i++) {
+        if (us[i] === us[i - 1] + 1) continue;
+        out.push([plane, at, start, us[i - 1] + 1, ...rest]);
+        start = us[i];
+      }
+    }
+    return out;
+  }
+
+  // Everything drawable and walkable, worked out from zones, tiles and flights.
+  function derive(room) {
+    const hash = JSON.stringify([room.zones, room.tiles, room.flights, room.door]);
+    if (room._derived?.hash === hash) return room._derived;
+    const zones = room.zones || [];
+    const byZone = zones.map(() => []);
+    const at = new Map(); // "x,y" -> [{ zone, z }]
+    for (const [x, y, f] of room.tiles || []) {
+      if (!zones[f]) continue;
+      byZone[f].push(`${x},${y}`);
+      const k = `${x},${y}`;
+      if (!at.has(k)) at.set(k, []);
+      at.get(k).push({ f, z: zones[f].z });
+    }
+    // Which zones each stair tile serves.
+    const stairAt = new Map();
+    for (const fl of room.flights || []) for (const [x, y] of fl.cells) stairAt.set(`${x},${y}`, [...(stairAt.get(`${x},${y}`) || []), fl.from, fl.to]);
+    const tilesAt = (x, y) => at.get(`${x},${y}`) || [];
+    const areas = zones.map((zn, f) => {
+      const mine = new Set(byZone[f]);
+      const edges = [];
+      for (const k of mine) {
+        const [x, y] = k.split(',').map(Number);
+        // Back edges of a room get walls, unless the floor carries on (same height), the space
+        // behind is a raised block (its facade is the wall) or a stair leads off there.
+        if (zn.kind === 'room') {
+          for (const [dx, dy, plane, atv, u] of [[-1, 0, 'x', x, y], [0, -1, 'y', y, x]]) {
+            const nb = tilesAt(x + dx, y + dy);
+            if (mine.has(`${x + dx},${y + dy}`) || (stairAt.get(`${x + dx},${y + dy}`) || []).includes(f)) continue;
+            if (nb.some((t) => t.z >= zn.z && !zones[t.f].thin)) continue;
+            edges.push([plane, atv, u, zn.wallH || WALL_H]);
+          }
+        }
+      }
+      return { ...zn, rects: toRects(mine), walls: runs(edges) };
+    });
+    // Facades: the front faces of solid bases, down to whatever floor lies in front. They belong
+    // to the zone in front, so wall items there are placed from that zone.
+    const facadeEdges = zones.map(() => []);
+    zones.forEach((zn, f) => {
+      if (zn.thin || zn.z <= 0) return;
+      for (const k of byZone[f]) {
+        const [x, y] = k.split(',').map(Number);
+        for (const [dx, dy, plane, atv, u] of [[1, 0, 'x', x + 1, y], [0, 1, 'y', y + 1, x]]) {
+          const nb = tilesAt(x + dx, y + dy).filter((t) => t.z < zn.z && !zones[t.f].thin).sort((a, b) => b.z - a.z)[0];
+          if (!nb || byZone[f].includes(`${x + dx},${y + dy}`)) continue;
+          facadeEdges[nb.f].push([plane, atv, u, zn.z - nb.z, 'facade']);
+        }
+      }
+    });
+    areas.forEach((a, f) => { a.walls = a.walls.concat(runs(facadeEdges[f])); });
+    // Heights of the solid things around each tile, for railings and shadows.
+    const higher = (x, y, z) => tilesAt(x, y).some((t) => t.z > z && !zones[t.f].thin);
+    let id = 5381;
+    for (let i = 0; i < hash.length; i++) id = ((id * 33) ^ hash.charCodeAt(i)) >>> 0;
+    const out = { hash, id: id.toString(36), areas, flights: room.flights || [], door: room.door || [0, 0], tilesAt, higher };
+    Object.defineProperty(room, '_derived', { value: out, enumerable: false, configurable: true, writable: true });
+    return out;
+  }
+  const layoutOf = (room) => derive(room);
+
+  // Build a room's zones/tiles/flights from a rect description like DEFAULT.
+  function fromSpec(spec, theme) {
+    const t = THEMES[theme] || THEMES.shop;
+    return {
+      zones: spec.zones.map(({ rects, ...zn }, i) => ({ ...zn, wall: t.floors[i]?.[0] || 'brick', floor: t.floors[i]?.[1] || 'stone' })),
+      tiles: spec.zones.flatMap(({ rects }, f) => rects.flatMap(([x, y, w, d]) => {
+        const out = [];
+        for (let j = 0; j < d; j++) for (let i = 0; i < w; i++) out.push([x + i, y + j, f]);
+        return out;
+      })),
+      flights: JSON.parse(JSON.stringify(spec.flights)),
+      door: [...spec.door],
+    };
+  }
+
+  // Rooms saved before the grid (iso 4) keep their furniture and materials.
+  function migrate(room) {
+    if (room?.iso === 5) return room;
+    if (room?.iso !== 4) return null;
+    const out = { iso: 5, theme: room.theme, ...fromSpec(DEFAULT, room.theme), objects: room.objects || [] };
+    out.zones.forEach((zn, i) => { if (room.floors?.[i]) Object.assign(zn, { wall: room.floors[i].wall, floor: room.floors[i].floor }); });
+    return out;
+  }
+
+  const levels = (room) => (room.zones || []).length;
+  const floorZ = (room, f) => room.zones?.[f]?.z || 0;
+  // The room's upgrade level comes from progress; a zone is open once its level is reached.
+  const isOpen = (room, f) => (room.zones?.[f]?.level || 0) <= (room.level || 0);
   const flightOpen = (room, fl) => isOpen(room, fl.from) && isOpen(room, fl.to);
-  const floorOf = (room, f) => room.floors[f] || { wall: 'brick', floor: 'stone' };
+  const floorOf = (room, f) => room.zones?.[f] || { wall: 'brick', floor: 'stone' };
 
   // Every place a character can stand: open area tiles and each step of every open flight.
   function cells(room) {
@@ -843,7 +975,8 @@
   // The default room, furnished on every layer; locked layers keep their furniture for later.
   function generateRoom(theme = 'shop') {
     const t = THEMES[theme] || THEMES.shop;
-    const room = { iso: 4, layout: 'shop', theme, floors: t.floors.map(([wall, floor]) => ({ wall, floor })), objects: [], level: 99 };
+    void t;
+    const room = { iso: 5, theme, ...fromSpec(DEFAULT, theme), objects: [], level: 99 };
     const add = (f, type, x, y, flip = false) => { if (canPlace(room, type, x, y, flip, f)) room.objects.push({ type, x, y, flip, f }); };
     // Street: a little shop under the big one, two vending machines, a lamp and the bins.
     add(0, 'shopdoor', 6, 6);
@@ -953,10 +1086,32 @@
     P.left(0, -h, L, h, c, D);
     P.right(D, -h, D, h, dk(c, 0.22), L);
     for (let v = 3, row = 0; v < h; v += 5, row++) {
+      for (let u = (row % 2 ? 3 : 7) - 9, i = 0; u < L; u += 9, i++) {
+        const n = (row * 7 + i * 13 + L) % 9;
+        if (n === 0 || n === 4) P.left(Math.max(0, u + 1), -v + 1, 8, 4, n ? dk(c, 0.07) : lt(c, 0.06), D);
+      }
       P.left(0, -v, L, 1, mortar, D);
       P.right(D, -v, D, 1, dk(mortar, 0.2), L);
       for (let u = row % 2 ? 3 : 7; u < L; u += 9) P.left(u, -v + 1, 1, 4, mortar, D);
       for (let u = row % 2 ? 2 : 6; u < D; u += 9) P.right(D - u, -v + 1, 1, 4, dk(mortar, 0.2), L);
+    }
+  }
+
+  // Ambient shadow: floor darkens along walls and higher ground behind it, and under a loft.
+  function shadeFloor(P, room, f, r) {
+    const lay = layoutOf(room);
+    const a = lay.areas[f];
+    const wallOn = (plane, atv, u) => a.walls.some((w) => !w[5] && w[0] === plane && w[1] === atv && u >= w[2] && u < w[3]);
+    const above = (x, y) => lay.tilesAt(x, y).some((t) => t.z > a.z && isOpen(room, t.f) && (room.zones[t.f].thin));
+    const dim = (k) => (c) => dk(c, k);
+    for (let y = r[1]; y < r[1] + r[3]; y++) {
+      for (let x = r[0]; x < r[0] + r[2]; x++) {
+        const lx = (x - r[0]) * TU;
+        const ly = (y - r[1]) * TU;
+        if (above(x, y)) P.top(lx, ly, TU, TU, dim(0.18), 0);
+        if (wallOn('x', x, y) || lay.higher(x - 1, y, a.z)) { P.top(lx, ly, 3, TU, dim(0.28), 0); P.top(lx + 3, ly, 3, TU, dim(0.12), 0); }
+        if (wallOn('y', y, x) || lay.higher(x, y - 1, a.z)) { P.top(lx, ly, TU, 3, dim(0.28), 0); P.top(lx, ly + 3, TU, 3, dim(0.12), 0); }
+      }
     }
   }
 
@@ -968,7 +1123,8 @@
     const fl = FLOORS[floor] || FLOORS.wood;
     const [, , w, d] = r;
     const h = a.thin ? SLAB : a.z + SLAB;
-    return cached(`slab|${room.layout}|${f}|${r}|${floor}|${base}`, () => renderSprite(w, d, 8, (P) => {
+    const lay = layoutOf(room);
+    return cached(`slab|${lay.id}|${f}|${r}|${floor}|${base}|${room.level || 0}`, () => renderSprite(w, d, 8, (P) => {
       if (a.thin) { // a floor on joists: a timber edge with a beam showing underneath
         P.box(0, 0, -SLAB, w * TU, d * TU, SLAB, { t: fl.base, l: '#5a3a2a', r: '#432a1e' }, false);
         P.left(0, -SLAB, w * TU, 2, '#3a2418', d * TU);
@@ -976,6 +1132,7 @@
       } else if (a.z > 0) brickFaces(P, w, d, h, base);
       else P.box(0, 0, -SLAB, w * TU, d * TU, SLAB, { t: fl.base, l: dk(fl.base, 0.3), r: dk(fl.base, 0.45) }, false);
       for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) fl.draw(P, x, y, 0);
+      shadeFloor(P, room, f, r);
       // A lit lip along the front edges, so each layer reads as separate.
       P.left(0, -2, w * TU, 2, lt(fl.base, 0.2), d * TU);
       P.right(d * TU, -2, d * TU, 2, lt(fl.base, 0.1), w * TU);
@@ -1226,7 +1383,7 @@
   // Click-through mask: the diorama's silhouette at 1 fine pixel per pixel.
   let mask = { key: '', data: null, w: 0 };
   function solidAt(room, fx, fy) {
-    const key = JSON.stringify([room.layout, room.level || 0, room.floors]);
+    const key = `${layoutOf(room).id}|${room.level || 0}`;
     if (mask.key !== key) {
       const S = size(room);
       const c = makeCanvas(S.w, S.h);
@@ -1268,7 +1425,7 @@
   }
 
   return {
-    TU, SLAB, FLOORS, WALLS, OBJECTS, THEMES, FLOOR_NAMES, LAYOUTS, isOpen,
+    TU, SLAB, STEP_Z, FLOORS, WALLS, OBJECTS, THEMES, isOpen, migrate, derive,
     size, origin, project, floorZ, levels, cells, resetCells, cellAt, neighbours, door, walkable, footprint, canPlace, stationSpots,
     generateRoom, objectSprite, drawRoom, blit, tileAt, wallAt, solidAt, preview,
   };

@@ -739,7 +739,8 @@ desk.on('settings', applySettings);
 desk.on('progress', applyProgress);
 desk.on('fx', onFx);
 desk.on('room', (room) => {
-  if (room?.iso === 4 && JSON.stringify(room) !== JSON.stringify(state.room)) setRoom(room);
+  const r = Iso.migrate(room);
+  if (r && JSON.stringify(r) !== JSON.stringify(state.room)) setRoom(r);
 });
 desk.on('assets', (assets) => {
   Common.loadSheets(assets);
@@ -754,8 +755,10 @@ desk.invoke('init').then((init) => {
   state.assets = init.assets;
   Common.loadSheets(init.assets);
   applyProgress(init.progress);
-  if (init.room?.iso === 4) state.room = clone(init.room);
-  else desk.invoke('room:set', state.room);
+  // Older saved rooms are carried over to the grid, keeping their furniture.
+  const saved = Iso.migrate(init.room && clone(init.room));
+  if (saved) state.room = saved;
+  if (saved?.iso !== init.room?.iso || !saved) desk.invoke('room:set', state.room);
   applyLevel(state.room);
   layout();
   syncActors(init.actors);
