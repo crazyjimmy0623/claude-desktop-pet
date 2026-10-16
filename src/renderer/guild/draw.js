@@ -510,6 +510,14 @@ $('card-pick').addEventListener('change', async (e) => {
 // A picture arrived (dropped, pasted or picked). A character card makes a new friend; any other
 // picture goes to the photo corner to become a character.
 async function incoming(bytes, { photo: wantPhoto = false } = {}) {
+  const roomCard = await Pixels.readRoomCard(bytes);
+  if (roomCard) {
+    // Only the room window can show another room.
+    if (!inRoom()) { flash('房間卡要在房間模式拖到房子上才能參觀'); return; }
+    window.parent.postMessage({ visitRoom: roomCard }, '*');
+    flash(`👀 去參觀「${roomCard.name}」的房間`);
+    return;
+  }
   const card = await Pixels.readCard(bytes);
   if (card) {
     const res = await desk.invoke('drawing:save', { name: card.name, art: card.art, recipe: card.recipe, friend: true });
@@ -538,6 +546,41 @@ function wireDrops() {
     if (file) incoming(new Uint8Array(await file.arrayBuffer()), { photo: tab === 'studio' });
   });
 }
+
+// ---- Sharing your room -----------------------------------------------------------------------
+
+const inRoom = () => { try { return window.parent !== window && !!window.parent.RoomApp; } catch { return false; } };
+
+let roomShare = null;
+$('room-card-make').addEventListener('click', () => {
+  if (!inRoom()) { flash('切到房間模式就能把房間做成卡片'); return; }
+  $('room-card-make').textContent = '📸 拍照中…';
+  window.parent.postMessage({ makeRoomCard: true }, '*');
+});
+window.addEventListener('message', (e) => {
+  const card = e.data?.roomCard;
+  if (!card) return;
+  $('room-card-make').textContent = '📸 做成房間卡';
+  if (card.error) { flash(card.error); return; }
+  roomShare = card;
+  const img = document.createElement('img');
+  img.src = card.dataUrl;
+  img.title = '再按一次可以重拍';
+  img.addEventListener('click', () => $('room-card-make').click());
+  $('room-card').replaceChildren(img, $('room-card-make'));
+  $('room-card-make').classList.add('hidden');
+  $('room-card-actions').classList.remove('hidden');
+});
+$('room-card-copy').addEventListener('click', async () => {
+  if (!roomShare) return;
+  await desk.invoke('share:copy', roomShare.dataUrl);
+  flash('📋 房間卡複製好了，貼給朋友吧');
+});
+$('room-card-file').addEventListener('click', async () => {
+  if (!roomShare) return;
+  const file = await desk.invoke('card:save', { dataUrl: roomShare.dataUrl, name: `${roomShare.name}的房間` });
+  flash(`💾 存好了：${file.split(/[\\/]/).pop()}`);
+});
 
 function initDraw() {
   boardSize();

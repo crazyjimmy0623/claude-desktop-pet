@@ -217,7 +217,7 @@ function boot() {
     const dir = path.join(app.getPath('pictures'), 'Deskmates');
     fs.mkdirSync(dir, { recursive: true });
     const safe = String(name || '角色').replace(/[\\/:*?"<>|]/g, '').slice(0, 12) || '角色';
-    const file = path.join(dir, `${safe}-角色卡-${Date.now() % 100000}.png`);
+    const file = path.join(dir, `${safe}-${safe.endsWith('的房間') ? '房間卡' : '角色卡'}-${Date.now() % 100000}.png`);
     fs.writeFileSync(file, Buffer.from(String(dataUrl).split(',')[1], 'base64'));
     shell.showItemInFolder(file);
     return file;

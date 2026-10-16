@@ -27,6 +27,7 @@ const editorEl = document.getElementById('editor');
 const drawer = Drawer.create({
   editor: editorEl,
   onChange: (pane) => {
+    if (pane === 'edit' && state.visiting) goHome();
     window.RoomEditor?.setEditing(pane === 'edit');
     layout();
   },
@@ -636,6 +637,8 @@ function actorAt(e) {
 // A friend's character card dropped (or pasted) onto the room: they join the friends' book and
 // move straight in. Any other picture goes to the photo corner to become a character.
 async function pictureArrived(bytes) {
+  const roomCard = await Pixels.readRoomCard(bytes);
+  if (roomCard) { visit(roomCard); return; }
   const card = await Pixels.readCard(bytes);
   if (!card) {
     drawer.open('guild', 'studio');
@@ -674,8 +677,136 @@ function setIgnore(ignore) {
   ignoring = ignore;
   desk.send('mouse:ignore', ignore);
 }
-// The drawer's pages say when the mouse is over them (their moves never reach this page).
-window.addEventListener('message', (e) => { if (e.data?.dmHover) setIgnore(false); });
+// The drawer's pages say when the mouse is over them (their moves never reach this page), and
+// the friends page asks for a room card or hands over one to visit.
+window.addEventListener('message', async (e) => {
+  if (e.data?.dmHover) setIgnore(false);
+  if (e.data?.visitRoom) visit(e.data.visitRoom);
+  if (e.data?.makeRoomCard) {
+    const card = await roomCard();
+    e.source?.postMessage({ roomCard: card }, '*');
+  }
+});
+
+// ---- Room cards: share your room, visit a friend's -------------------------------------
+
+// A picture of the room as it is (home, never a room being visited) plus the room itself.
+async function roomCard() {
+  if (state.visiting) return { error: '先回家，才能分享自己的房間' };
+  const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  let x0 = canvas.width; let y0 = canvas.height; let x1 = -1; let y1 = -1;
+  for (let y = 0; y < canvas.height; y += 2) {
+    for (let x = 0; x < canvas.width; x += 2) {
+      if (d[(y * canvas.width + x) * 4 + 3] < 16) continue;
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+  }
+  const pic = document.createElement('canvas');
+  pic.width = Math.max(1, x1 - x0 + 2);
+  pic.height = Math.max(1, y1 - y0 + 2);
+  pic.getContext('2d').drawImage(canvas, -x0, -y0);
+  const name = state.settings?.userName || '我';
+  const card = await Pixels.makeRoomCard({ name, picture: pic, room: JSON.parse(JSON.stringify(state.room, (k, v) => (k.startsWith('_') ? undefined : v))) });
+  return { name, dataUrl: card.toDataURL('image/png') };
+}
+
+// Whatever a card says, only known pieces in sensible amounts get in.
+function cleanRoom(r) {
+  if (!r || r.iso !== 5 || !Array.isArray(r.zones) || !Array.isArray(r.tiles)) return null;
+  const n = Iso.LAND_SIZES.includes(r.land) ? r.land : 8;
+  const zones = r.zones.slice(0, 64).map((z) => ({
+    ...z,
+    floor: Iso.FLOORS[z?.floor] ? z.floor : 'stone',
+    ...(z?.wall ? { wall: Iso.WALLS[z.wall] ? z.wall : 'brick' } : {}),
+  }));
+  const tiles = r.tiles.filter((t) => Array.isArray(t) && t.length >= 3 && t.slice(0, 3).every(Number.isFinite) && zones[t[2]]).slice(0, 3000);
+  const objects = (r.objects || []).filter((o) => o && Iso.OBJECTS[o.type]).slice(0, 400);
+  const flights = (r.flights || []).filter((f) => f && typeof f === 'object').slice(0, 64);
+  return { ...r, land: n, zones, tiles, objects, flights, blueprint: null, backdrop: r.backdrop ?? null };
+}
+
+let banner = null;
+function visit(card) {
+  const room = cleanRoom(card.room);
+  if (!room) { showToast('這張房間卡讀不出來，請朋友再傳一次'); return; }
+  if (drawer.current === 'edit') drawer.close();
+  if (!state.visiting) state.visiting = { home: state.room };
+  Object.assign(state.visiting, { name: card.name, room });
+  try { setRoom(clone(room)); } catch (err) { console.error(err); goHome(); showToast('這個房間蓋不出來，請朋友再傳一次'); return; }
+  showBanner();
+}
+
+function goHome() {
+  if (!state.visiting) return;
+  const { home } = state.visiting;
+  state.visiting = null;
+  banner?.remove();
+  banner = null;
+  setRoom(home);
+}
+
+// Build the same room at home: every piece must be unlocked, and you pay for all of it (what is
+// there now is taken down and gives half back), like a blueprint.
+function buildLike() {
+  const v = state.visiting;
+  if (!v) return;
+  const owned = new Set(state.progress?.owned || []);
+  const land = Iso.landOf(v.room);
+  const missing = Iso.needsOf(v.room).filter((k) => Catalog.ITEMS.some((i) => i.id === k) && !owned.has(k));
+  if (land !== 8 && !owned.has(`land:${land}`)) missing.unshift(`land:${land}`);
+  const nameOf = (id) => Catalog.ITEMS.find((i) => i.id === id)?.name || id;
+  if (missing.length) {
+    showToast(`還缺：${missing.slice(0, 5).map(nameOf).join('、')}${missing.length > 5 ? ` 等 ${missing.length} 樣` : ''}，抽到才能照著蓋`);
+    return;
+  }
+  const total = Iso.roomCost(v.room, Catalog.priceOf);
+  const back = Math.floor(Iso.roomCost(v.home, Catalog.priceOf) / 2);
+  const pay = total - back;
+  const coins = state.progress?.coins ?? 0;
+  if (pay > coins) { showToast(`照著蓋要 ${pay} 🪙（拆掉現在的房子已經退你 ${back} 🪙），手上只有 ${coins} 🪙`); return; }
+  if (!window.confirm(`照「${v.name}」的房間蓋要 ${total} 🪙。拆掉你現在的房子會退 ${back} 🪙，所以要付 ${pay} 🪙。要蓋嗎？`)) return;
+  if (pay) {
+    state.progress.coins -= pay;
+    desk.invoke('coins:spend', pay);
+  }
+  const built = clone(v.room);
+  state.visiting = null;
+  banner?.remove();
+  banner = null;
+  setRoom(built, { save: true });
+  showToast(`🏠 照「${v.name}」的房間蓋好了！`);
+}
+
+function showBanner() {
+  if (!document.getElementById('visit-style')) {
+    const st = document.createElement('style');
+    st.id = 'visit-style';
+    st.textContent = `
+      #visit { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 8px;
+        padding: 6px 8px 6px 14px; border-radius: 999px; background: rgba(31,26,23,0.92); color: #fff4e2; font: 700 13px/1.3 "Microsoft JhengHei UI", sans-serif;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.35); white-space: nowrap; }
+      #visit button { font: inherit; padding: 4px 12px; border-radius: 999px; border: 1px solid rgba(255,236,214,0.2); background: #3a322c; color: #fff4e2; cursor: pointer; }
+      #visit button:hover { filter: brightness(1.2); }
+      #visit button.home { background: #f0b54d; color: #2a2420; border-color: #f0b54d; }`;
+    document.head.append(st);
+  }
+  banner?.remove();
+  banner = document.createElement('div');
+  banner.id = 'visit';
+  const v = state.visiting;
+  const label = document.createElement('span');
+  label.textContent = `👀 參觀「${v.name}」的房間`;
+  const copy = document.createElement('button');
+  copy.textContent = `📐 照著蓋 ${Iso.roomCost(v.room, Catalog.priceOf)} 🪙`;
+  copy.title = '零件都解鎖的話，付錢請人照這樣蓋一間（現在的房子拆掉退一半）';
+  copy.addEventListener('click', buildLike);
+  const home = document.createElement('button');
+  home.className = 'home';
+  home.textContent = '🏠 回家';
+  home.addEventListener('click', goHome);
+  banner.append(label, copy, home);
+  viewport.append(banner);
+}
 window.addEventListener('mousemove', (e) => {
   if (state.drag || winDrag) return setIgnore(false);
   const el = document.elementFromPoint(e.clientX, e.clientY);
@@ -802,6 +933,7 @@ desk.on('progress', applyProgress);
 desk.on('fx', onFx);
 desk.on('room', (room) => {
   const r = Iso.migrate(room);
+  if (state.visiting) { if (r) state.visiting.home = r; return; }
   if (r && JSON.stringify(r) !== JSON.stringify(state.room)) setRoom(r);
 });
 desk.on('assets', (assets) => {

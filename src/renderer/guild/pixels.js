@@ -406,5 +406,116 @@
     return { canvas: c, dataUrl: withData(c.toDataURL('image/png'), data) };
   }
 
-  window.Pixels = { blank, skinToArt, photoToArt, cardFor, readCard, imageOf, readCardImage, CARD, hex, rgb };
+  // ---- Room cards ----------------------------------------------------------------------
+  // A picture of your room with the room itself woven into a strip of little squares underneath
+  // (squeezed, with a checksum), so it survives being pasted into a chat app like the character
+  // cards do. A dark fifth marker tells it apart from a character card.
+  const ROOM = { W: 800, top: 640, x: 16, cell: 6, cols: 128 };
+  const ROOM_MARK = '#3a2a20';
+  const INK = '#5a3a28';
+
+  const pump = async (bytes, stream) => new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+
+  async function makeRoomCard({ name, picture, room }) {
+    const json = new TextEncoder().encode(JSON.stringify({ v: 1, name, room }));
+    const packed = await pump(json, new CompressionStream('deflate-raw'));
+    const crc = CRC(packed);
+    const head = [0x44, 0x4d, 0x52, 1, packed.length >> 8, packed.length & 255, crc >>> 24, (crc >>> 16) & 255, (crc >>> 8) & 255, crc & 255];
+    const bytes = [...head, ...packed];
+    const rows = Math.ceil((bytes.length * 8) / ROOM.cols);
+    const H = ROOM.top + rows * ROOM.cell + 44;
+    const c = canvas(ROOM.W, H);
+    const x = c.getContext('2d');
+    x.fillStyle = CREAM;
+    x.fillRect(0, 0, ROOM.W, H);
+    x.fillStyle = '#f0b54d';
+    x.fillRect(0, 0, ROOM.W, 6);
+    x.fillRect(0, H - 6, ROOM.W, 6);
+    MARKS.forEach((m, i) => { x.fillStyle = m; x.fillRect(20 + i * 12, 20, 12, 12); });
+    x.fillStyle = ROOM_MARK;
+    x.fillRect(KEY_AT[0], KEY_AT[1], 12, 12);
+    const font = (size, weight = 800) => `${weight} ${size}px "Microsoft JhengHei UI", "Microsoft JhengHei", sans-serif`;
+    x.fillStyle = '#3a2a20';
+    x.font = font(30);
+    x.fillText(`${name} 的房間`, 96, 40);
+    x.font = font(14, 600);
+    x.fillStyle = '#9a7a5a';
+    x.textAlign = 'right';
+    x.fillText('Deskmates 房間卡', ROOM.W - 24, 36);
+    x.textAlign = 'left';
+    // The room, as large as fits.
+    if (picture) {
+      const k = Math.min(768 / picture.width, 560 / picture.height);
+      const w = picture.width * k;
+      const h = picture.height * k;
+      x.imageSmoothingEnabled = k < 1;
+      x.drawImage(picture, (ROOM.W - w) / 2, 64 + (560 - h) / 2, w, h);
+    }
+    x.fillStyle = INK;
+    bytes.forEach((b, i) => {
+      for (let bit = 0; bit < 8; bit++) {
+        if (!((b >> (7 - bit)) & 1)) continue;
+        const n = i * 8 + bit;
+        x.fillRect(ROOM.x + (n % ROOM.cols) * ROOM.cell, ROOM.top + Math.floor(n / ROOM.cols) * ROOM.cell, ROOM.cell, ROOM.cell);
+      }
+    });
+    x.font = font(13, 600);
+    x.fillStyle = '#9a7a5a';
+    x.fillText('把這張圖拖到 Deskmates 的房間上，就能來參觀 · github.com/crazyjimmy0623/deskmates', 24, H - 16);
+    return c;
+  }
+
+  // Bytes of a picture -> { name, room } or null if it isn't a room card.
+  async function readRoomCard(bytes) {
+    const img = await imageOf(bytes);
+    if (!img) return null;
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    if (w < ROOM.W / 3 || h / w < ROOM.top / ROOM.W) return null;
+    const c = canvas(w, h);
+    const x = c.getContext('2d', { willReadFrequently: true });
+    x.drawImage(img, 0, 0);
+    const d = x.getImageData(0, 0, w, h).data;
+    const s = w / ROOM.W;
+    const sample = (cx, cy, r) => {
+      const acc = [0, 0, 0];
+      let n = 0;
+      const px = Math.floor(cx * s);
+      const py = Math.floor(cy * s);
+      const rr = Math.max(0, Math.round(r * s) - 1);
+      for (let yy = py - rr; yy <= py + rr; yy++) {
+        for (let xx = px - rr; xx <= px + rr; xx++) {
+          if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+          const i = (yy * w + xx) * 4;
+          acc[0] += d[i]; acc[1] += d[i + 1]; acc[2] += d[i + 2]; n++;
+        }
+      }
+      return acc.map((v) => v / Math.max(1, n));
+    };
+    if (!MARKS.every((m, i) => dist(sample(26 + i * 12, 26, 3), rgb(m)) < 70)) return null;
+    if (dist(sample(KEY_AT[0] + 6, KEY_AT[1] + 6, 3), rgb(ROOM_MARK)) > 70) return null;
+    const byte = (i) => {
+      let b = 0;
+      for (let bit = 0; bit < 8; bit++) {
+        const n = i * 8 + bit;
+        const p = sample(ROOM.x + (n % ROOM.cols) * ROOM.cell + ROOM.cell / 2, ROOM.top + Math.floor(n / ROOM.cols) * ROOM.cell + ROOM.cell / 2, 2);
+        b = (b << 1) | ((p[0] + p[1] + p[2]) / 3 < 160 ? 1 : 0);
+      }
+      return b;
+    };
+    const head = Array.from({ length: 10 }, (_, i) => byte(i));
+    if (head[0] !== 0x44 || head[1] !== 0x4d || head[2] !== 0x52 || head[3] !== 1) return null;
+    const len = (head[4] << 8) | head[5];
+    if (!len || (10 + len) * 8 > ((h / s - ROOM.top) / ROOM.cell) * ROOM.cols + 8) return null;
+    const packed = Uint8Array.from({ length: len }, (_, i) => byte(10 + i));
+    if (CRC(packed) !== (((head[6] << 24) | (head[7] << 16) | (head[8] << 8) | head[9]) >>> 0)) return null;
+    try {
+      const data = JSON.parse(new TextDecoder().decode(await pump(packed, new DecompressionStream('deflate-raw'))));
+      return data?.v === 1 && data.room ? { name: String(data.name || '朋友').slice(0, 12), room: data.room } : null;
+    } catch {
+      return null;
+    }
+  }
+
+  window.Pixels = { blank, skinToArt, photoToArt, cardFor, readCard, imageOf, readCardImage, CARD, hex, rgb, makeRoomCard, readRoomCard };
 })();

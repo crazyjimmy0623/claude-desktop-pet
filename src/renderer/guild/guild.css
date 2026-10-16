@@ -249,3 +249,9 @@ canvas.share {
 .mine.friend .mini-actions { display: flex; gap: 8px; font-size: 14px; }
 .mine.friend .mini-actions span { cursor: pointer; opacity: 0.75; }
 .mine.friend .mini-actions span:hover { opacity: 1; transform: scale(1.15); }
+
+/* ---- Room card ---- */
+.room-share { width: auto; display: flex; flex-direction: column; gap: 6px; }
+.room-share .room-card-row { display: flex; gap: 12px; align-items: stretch; height: 100%; }
+.room-card-preview { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; min-width: 160px; }
+.room-card-preview img { height: 100%; max-height: 100%; width: auto; border-radius: var(--r); box-shadow: var(--shadow-s); }
