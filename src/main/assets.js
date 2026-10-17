@@ -27,18 +27,27 @@ function ensureFolders() {
 
 const toDataUrl = (file) => `data:image/png;base64,${fs.readFileSync(file).toString('base64')}`;
 
+// Anything in these folders can be broken (a dead link, a locked file, no permission); a bad entry
+// is skipped and logged, and never stops the app from starting.
+const listDir = (dir) => {
+  try { return fs.readdirSync(dir); } catch (err) {
+    console.error(`[deskmates] could not read ${dir}: ${err.message}`);
+    return [];
+  }
+};
+
 function loadCustomAssets() {
-  ensureFolders();
+  try { ensureFolders(); } catch (err) { console.error(`[deskmates] could not create the custom folders: ${err.message}`); }
   const characters = [];
   const charDir = path.join(root(), 'characters');
-  for (const name of fs.readdirSync(charDir)) {
-    const dir = path.join(charDir, name);
-    if (!fs.statSync(dir).isDirectory()) continue;
-    const files = fs.readdirSync(dir);
-    const png = files.find((f) => f.toLowerCase().endsWith('.png'));
-    const json = files.find((f) => f.toLowerCase().endsWith('.json'));
-    if (!png || !json) continue;
+  for (const name of listDir(charDir)) {
     try {
+      const dir = path.join(charDir, name);
+      if (!fs.statSync(dir).isDirectory()) continue;
+      const files = fs.readdirSync(dir);
+      const png = files.find((f) => f.toLowerCase().endsWith('.png'));
+      const json = files.find((f) => f.toLowerCase().endsWith('.json'));
+      if (!png || !json) continue;
       characters.push({ id: `custom:${name}`, name, dataUrl: toDataUrl(path.join(dir, png)), json: JSON.parse(fs.readFileSync(path.join(dir, json), 'utf8')) });
     } catch (err) {
       console.error(`[deskmates] skipped custom character ${name}: ${err.message}`);
@@ -46,8 +55,13 @@ function loadCustomAssets() {
   }
   const tiles = [];
   const tileDir = path.join(root(), 'tiles');
-  for (const file of fs.readdirSync(tileDir)) {
-    if (file.toLowerCase().endsWith('.png')) tiles.push({ file, dataUrl: toDataUrl(path.join(tileDir, file)) });
+  for (const file of listDir(tileDir)) {
+    if (!file.toLowerCase().endsWith('.png')) continue;
+    try {
+      tiles.push({ file, dataUrl: toDataUrl(path.join(tileDir, file)) });
+    } catch (err) {
+      console.error(`[deskmates] skipped custom tile ${file}: ${err.message}`);
+    }
   }
   return { characters, tiles };
 }

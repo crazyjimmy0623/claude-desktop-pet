@@ -3,14 +3,14 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 const INVOKE = new Set([
   'init', 'settings:set', 'room:set', 'room:resize', 'gacha:pull', 'equip', 'project:forget', 'chest:open',
-  'focus:start', 'focus:stop', 'hooks:install', 'hooks:uninstall', 'hooks:status', 'assets:reload',
-  'assets:open-folder', 'window:open', 'demo', 'share:save', 'share:copy',
+  'focus:start', 'focus:stop', 'hooks:install', 'hooks:uninstall', 'assets:reload',
+  'assets:open-folder', 'demo', 'share:save', 'share:copy',
   'autostart:get', 'autostart:set', 'actors:clear', 'actors:regroup', 'app:quit', 'focus:toggle',
   'coins:spend', 'resident:add', 'resident:rename', 'resident:remove', 'custom:save', 'custom:remove',
   'drawing:save', 'drawing:remove', 'card:save',
 ]);
 const SEND = new Set(['mouse:ignore', 'room:hide', 'room:drag', 'actor:pat', 'actor:menu']);
-const LISTEN = new Set(['actors', 'progress', 'settings', 'room', 'fx', 'assets', 'command', 'guild:tab', 'dock:open']);
+const LISTEN = new Set(['actors', 'progress', 'settings', 'room', 'fx', 'assets', 'command', 'dock:open']);
 
 contextBridge.exposeInMainWorld('desk', {
   invoke: (channel, ...args) => (INVOKE.has(channel) ? ipcRenderer.invoke(channel, ...args) : Promise.reject(new Error(`blocked: ${channel}`))),

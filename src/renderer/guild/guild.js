@@ -2,7 +2,7 @@
 // In the drawer the page lays its cards out side by side, scrolling sideways.
 if (new URLSearchParams(location.search).has('docked')) document.documentElement.classList.add('docked');
 const $ = (id) => document.getElementById(id);
-const DPR = window.devicePixelRatio || 1;
+let DPR = window.devicePixelRatio || 1;
 // Even device-pixel units so the 2x fine art grid lands on whole pixels.
 const even = (cssScale) => 2 * Math.max(1, Math.round((cssScale * DPR) / 2));
 const { ITEMS, RARITY, ACHIEVEMENTS } = Catalog;
@@ -126,7 +126,7 @@ function slotFor(t) {
   if (t === 'user') return c.user;
   if (t === 'ai') return c.ai;
   if (t.startsWith('resident:')) return (c.residents || []).find((r) => r.id === t.slice(9)) || c.user;
-  return c.projects[t.slice(8)] || c.ai;
+  return (Object.hasOwn(c.projects, t.slice(8)) && c.projects[t.slice(8)]) || c.ai;
 }
 const residents = () => settings.characters.residents || [];
 
@@ -184,7 +184,7 @@ function renderEquip() {
     b.addEventListener('click', () => desk.invoke('equip', { target, accessory: a.key }));
     accList.append(b);
   }
-  if (target.startsWith('project:') && settings.characters.projects[target.slice(8)]) {
+  if (target.startsWith('project:') && Object.hasOwn(settings.characters.projects, target.slice(8))) {
     const b = document.createElement('button');
     b.textContent = '↺ 改回 AI 預設';
     b.addEventListener('click', () => desk.invoke('project:forget', target.slice(8)));
@@ -205,25 +205,41 @@ function renderEquip() {
   }
 }
 
+// Sizes a character preview for `unit` device pixels per fine pixel at the current pixel density;
+// true when it had to (the first time, or after a move to a screen with other scaling).
+function fitPreview(c, unit) {
+  if (c.width === Sprites.W * unit && c.dataset.dpr === String(DPR)) return false;
+  c.width = Sprites.W * unit;
+  c.height = Sprites.H * unit;
+  c.style.width = `${c.width / DPR}px`;
+  c.style.height = `${c.height / DPR}px`;
+  c.dataset.dpr = String(DPR);
+  return true;
+}
+
 function animateEquip() {
   const c = $('equip-canvas');
   const scale = 5;
-  c.width = Sprites.W * even(scale);
-  c.height = Sprites.H * even(scale);
-  c.style.width = `${c.width / DPR}px`;
-  c.style.height = `${c.height / DPR}px`;
+  fitPreview(c, even(scale));
   const ctx = c.getContext('2d');
   const poses = ['rest', 'type', 'command', 'read', 'done', 'dance'];
+  let drawn = '';
   const tickEquip = () => {
     if (settings && tab === 'equip') {
+      if (fitPreview(c, even(scale))) drawn = '';
       const now = Date.now();
       const slot = slotFor(target);
       const pose = poses[Math.floor(now / 2500) % poses.length];
       const skin = slot.skin === 'auto' ? ['office', 'scientist', 'cat', 'robot'][Math.floor(now / 2500) % 4] : slot.skin;
-      const fake = { id: target, hue: 210, skin, accessory: slot.accessory };
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, c.width, c.height);
-      Common.drawActorAt(ctx, even(scale), 0, 0, fake, pose, Math.floor(now / 300) % 2, 1, { prop: true }, now);
+      const frame = Math.floor(now / 300) % 2;
+      // Painted again only when the picture changes, not sixty times a second.
+      const key = `${target}:${skin}:${slot.accessory}:${pose}:${frame}:${Common.sheets.has(skin) ? Math.floor(now / 80) : ''}:${looksRev}`;
+      if (key !== drawn) {
+        drawn = key;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, c.width, c.height);
+        Common.drawActorAt(ctx, even(scale), 0, 0, { id: target, hue: 210, skin, accessory: slot.accessory }, pose, frame, 1, { prop: true }, now);
+      }
     }
     requestAnimationFrame(tickEquip);
   };
@@ -324,8 +340,10 @@ function renderMine() {
   fresh.className = 'mine new';
   fresh.innerHTML = '<span class="ico">＋</span><span>新角色</span>';
   fresh.addEventListener('click', () => {
-    if (studio.mode === 'draw') loadPaint(null);
-    else if (studio.mode === 'photo') photo.img = null;
+    if (studio.mode === 'draw') {
+      if (!discardOk()) return;
+      loadPaint(null);
+    } else if (studio.mode === 'photo') photo.img = null;
     else {
       Object.assign(studio, { id: null, recipe: freshRecipe(), saved: false });
       $('studio-name').value = '';
@@ -358,7 +376,7 @@ function renderMine() {
     b.append(label);
     b.classList.toggle('active', studio.mode === 'draw' && paint.id === d.id);
     b.addEventListener('click', () => {
-      if (studio.mode === 'draw' && !paint.saved && paint.poses.base.some(Boolean) && paint.id !== d.id && !window.confirm('現在這張還沒存，要換掉嗎？')) return;
+      if (studio.mode === 'draw' && paint.id !== d.id && !discardOk()) return;
       loadPaint(d);
       studio.mode = 'draw';
       renderStudio();
@@ -397,21 +415,25 @@ $('studio-delete').addEventListener('click', () => {
 // The big preview: walking, working, dancing in turn.
 function animateStudio() {
   const c = $('studio-canvas');
-  const unit = even(4.5);
-  c.width = Sprites.W * unit;
-  c.height = Sprites.H * unit;
-  c.style.width = `${c.width / DPR}px`;
-  c.style.height = `${c.height / DPR}px`;
+  fitPreview(c, even(4.5));
   const ctx = c.getContext('2d');
   const poses = ['rest', 'walk', 'type', 'read', 'dance', 'done'];
+  let drawn = '';
   const tick = () => {
     if (settings && tab === 'studio' && studio.recipe) {
+      const unit = even(4.5);
+      if (fitPreview(c, unit)) drawn = '';
       const now = Date.now();
-      Sprites.SKINS['mix:__studio'] = Sprites.skinFor(studio.recipe);
       const pose = poses[Math.floor(now / 2200) % poses.length];
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, c.width, c.height);
-      Common.drawActorAt(ctx, unit, 0, 0, { id: 'studio', hue: 210, skin: 'mix:__studio' }, pose, Math.floor(now / 300) % 2, 1, { prop: true }, now);
+      const frame = Math.floor(now / 300) % 2;
+      const key = `${JSON.stringify(studio.recipe)}:${pose}:${frame}`;
+      if (key !== drawn) {
+        drawn = key;
+        Sprites.SKINS['mix:__studio'] = Sprites.skinFor(studio.recipe);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, c.width, c.height);
+        Common.drawActorAt(ctx, unit, 0, 0, { id: 'studio', hue: 210, skin: 'mix:__studio' }, pose, frame, 1, { prop: true }, now);
+      }
     }
     requestAnimationFrame(tick);
   };
@@ -444,11 +466,12 @@ $('pull-10').addEventListener('click', () => pull(10));
 // while pulling.
 function drawMachine(shake = 0) {
   const c = $('gacha-machine');
-  const S = 4;
+  // Whole device pixels per art pixel, about three logical pixels, so it stays crisp at any scaling.
+  const S = Math.max(1, Math.round(3 * DPR));
   c.width = 32 * S;
   c.height = 40 * S;
-  c.style.width = `${32 * 3}px`;
-  c.style.height = `${40 * 3}px`;
+  c.style.width = `${(32 * S) / DPR}px`;
+  c.style.height = `${(40 * S) / DPR}px`;
   const x = c.getContext('2d');
   const px = (X, Y, w, h, col) => { x.fillStyle = col; x.fillRect((X + shake) * S, Y * S, w * S, h * S); };
   // Dome.
@@ -537,8 +560,10 @@ function weekSummary() {
       totals.tools += day.tools;
       totals.activeMinutes += day.activeMinutes;
       totals.focus += day.focus;
-      for (const [k, v] of Object.entries(day.projects)) totals.projects[k] = (totals.projects[k] || 0) + v;
-      for (const [k, v] of Object.entries(day.toolsBy)) totals.toolsBy[k] = (totals.toolsBy[k] || 0) + v;
+      // Own keys only: a project or tool called 'constructor' must not add to Object's.
+      const add = (o, k, v) => { o[k] = (Object.hasOwn(o, k) ? o[k] : 0) + v; };
+      for (const [k, v] of Object.entries(day.projects)) add(totals.projects, k, v);
+      for (const [k, v] of Object.entries(day.toolsBy)) add(totals.toolsBy, k, v);
     }
     d.setDate(d.getDate() - 1);
   }
@@ -598,7 +623,8 @@ function renderShare() {
     ['做完的事', w.turns],
     ['動手次數', w.tools],
     ['陪伴時數', `${(w.activeMinutes / 60).toFixed(1)} h`],
-    ['番茄鐘', w.focus],
+    // Counted in 25-minute pomodoros, so shorter ones add up to whole ones.
+    ['番茄鐘', Math.floor(w.focus)],
     ['最常用工具', w.topTool ? `${w.topTool[0]}` : '—'],
     ['最忙專案', w.topProject ? w.topProject[0] : '—'],
     ['成就', `${Object.keys(progress.achievements).length}/${ACHIEVEMENTS.length}`],
@@ -644,10 +670,11 @@ function showTab(name) {
 document.querySelectorAll('nav.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 document.querySelectorAll('.studio-modes .mode').forEach((b) => b.addEventListener('click', () => { studio.mode = b.dataset.mode; renderStudio(); }));
 
-function render() {
+function render(full = true) {
   if (!settings || !progress) return;
   $('coins').textContent = `${progress.coins} 🪙`;
   $('level').textContent = `Lv.${progress.level}（${progress.xp - progress.levelFloor}/${progress.levelCeil - progress.levelFloor} XP）`;
+  if (!full) return;
   if (tab === 'equip') renderEquip();
   if (tab === 'studio') renderStudio();
   if (tab === 'friends') renderFriends();
@@ -656,14 +683,28 @@ function render() {
   if (tab === 'stats') renderShare();
 }
 
-desk.on('settings', (s) => { settings = s; Sprites.useCustoms(s.characters?.customs); Sprites.useDrawings(s.characters?.drawings); render(); });
-desk.on('progress', (p) => { progress = p; render(); });
+// Moved to a screen with other scaling: every picture is drawn again for the new pixel density.
+Common.onDprChange((dpr) => { DPR = dpr; render(); drawMachine(); });
+
+// Bumped whenever home-made looks or custom art may have changed, so previews draw again.
+let looksRev = 0;
+desk.on('settings', (s) => { settings = s; looksRev++; Sprites.useCustoms(s.characters?.customs); Sprites.useDrawings(s.characters?.drawings); render(); });
+// Progress comes with every tool call a Claude session makes. Rebuilding the open tab that often
+// swallows clicks (a button replaced between press and release), so a tab is only drawn again when
+// what it shows changed; the coins and level always are.
+const SHOWS = { achievements: ['achievements'], stats: ['days', 'stats', 'level', 'achievements', 'owned'] };
+desk.on('progress', (p) => {
+  const before = progress;
+  progress = p;
+  const changed = (k) => !before || JSON.stringify(before[k]) !== JSON.stringify(p[k]);
+  render((SHOWS[tab] || ['owned']).some(changed));
+});
 desk.on('actors', (list) => {
-  const before = projectNames && settings ? projectNames().join() : '';
+  const before = settings ? projectNames().join() : '';
   actors = list;
   if (tab === 'equip' && settings && projectNames().join() !== before) renderEquip();
 });
-desk.on('assets', (a) => { assets = a; Common.loadSheets(a); render(); });
+desk.on('assets', (a) => { assets = a; looksRev++; Common.loadSheets(a); render(); });
 function openTab(t) {
   if (!t) return;
   if (t.startsWith('equip:')) {
@@ -673,7 +714,6 @@ function openTab(t) {
     showTab(t);
   }
 }
-desk.on('guild:tab', openTab);
 // The drawer asks for a tab by message once this page is loaded.
 window.addEventListener('message', (e) => {
   openTab(e.data?.guildTab);

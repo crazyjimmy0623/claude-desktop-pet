@@ -34,10 +34,10 @@ class Focus extends EventEmitter {
     const now = Date.now();
     if (this.state && now >= this.state.endsAt) {
       if (this.state.phase === 'focus') {
-        this.progress.onFocusDone();
+        const coins = this.progress.onFocusDone(this.state.total / 60000);
         const minutes = this.store.settings.pomodoro.break;
         this.set({ phase: 'break', endsAt: now + minutes * 60000, total: minutes * 60000 });
-        this.actors.sayTo('user', '🍅 專注完成！休息一下吧（+3 🪙）', 6000, 'success');
+        this.actors.sayTo('user', `🍅 專注完成！休息一下吧${coins ? `（+${coins} 🪙）` : ''}`, 6000, 'success');
       } else {
         this.set(null);
         this.actors.sayTo('user', '⏰ 休息完了，回來囉', 6000);

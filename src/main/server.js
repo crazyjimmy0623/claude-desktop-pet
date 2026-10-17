@@ -10,6 +10,12 @@ function startServer(port, routes) {
       res.writeHead(200, { 'Content-Type': 'text/plain' }).end('ok');
       return;
     }
+    // A browser always says where a request comes from; hooks, curl and Codex never do. Without this
+    // any web page could post here (a no-cors fetch needs no preflight) and drive the characters.
+    if (req.headers.origin || req.headers['sec-fetch-site']) {
+      res.writeHead(403).end();
+      return;
+    }
     const handler = req.method === 'POST' && routes[req.url];
     if (!handler) {
       res.writeHead(404).end();

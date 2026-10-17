@@ -1,5 +1,6 @@
-// The knight's helm as the app icon, built from a pixel map so no image file is needed.
-const { nativeImage } = require('electron');
+// The knight's helm as the app icon, built from a pixel map. Windows get it straight from the map;
+// the installer's build/icon.ico is made from the same map by scripts/make-icon.js (npm run icon,
+// which npm run dist runs first).
 
 const MAP = [
   '................',
@@ -29,19 +30,26 @@ const COLORS = {
   '.': [0, 0, 0, 0],
 };
 
-// The 16x16 map scaled up by whole pixels, so the icon stays crisp at taskbar sizes.
-function buildIcon(scale = 1) {
+// The 16x16 map scaled up by whole pixels, so the icon stays crisp at taskbar sizes, as RGBA.
+function pixels(scale = 1) {
   const size = 16 * scale;
   const buf = Buffer.alloc(size * size * 4);
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const [r, g, b, a] = COLORS[MAP[Math.floor(y / scale)][Math.floor(x / scale)]] || COLORS['.'];
-      const i = (y * size + x) * 4;
-      // createFromBitmap expects BGRA
-      buf[i] = b; buf[i + 1] = g; buf[i + 2] = r; buf[i + 3] = a;
+      const rgba = COLORS[MAP[Math.floor(y / scale)][Math.floor(x / scale)]] || COLORS['.'];
+      buf.set(rgba, (y * size + x) * 4);
     }
   }
+  return buf;
+}
+
+function buildIcon(scale = 1) {
+  const { nativeImage } = require('electron');
+  const size = 16 * scale;
+  const buf = pixels(scale);
+  // createFromBitmap expects BGRA
+  for (let i = 0; i < buf.length; i += 4) [buf[i], buf[i + 2]] = [buf[i + 2], buf[i]];
   return nativeImage.createFromBitmap(buf, { width: size, height: size });
 }
 
-module.exports = { buildIcon };
+module.exports = { buildIcon, pixels };

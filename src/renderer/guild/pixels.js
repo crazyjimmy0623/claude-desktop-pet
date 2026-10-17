@@ -18,11 +18,12 @@
     return c;
   }
 
-  // Any character the game can draw (built-in, dress-up, drawn), standing still, as a drawing.
-  function skinToArt(skin) {
+  // Any character the game can draw (built-in, dress-up, drawn) as a drawing: standing still, or
+  // one frame of another pose.
+  function skinToArt(skin, pose = 'rest', frame = 0) {
     const c = canvas(Sprites.W * Sprites.RES, Sprites.H * Sprites.RES);
     const x = c.getContext('2d');
-    Sprites.drawCharacterAt(x, Sprites.RES, 0, 0, skin, 'rest', 0, Sprites.colorsFor(210), 1, { prop: false });
+    Sprites.drawCharacterAt(x, Sprites.RES, 0, 0, skin, pose, frame, Sprites.colorsFor(210), 1, { prop: false });
     // The drawing box sits over the body box: centred on it, feet on its bottom row.
     const d = x.getImageData(13, 10, AW, AH).data;
     const px = blank();
@@ -46,18 +47,21 @@
     const d = x.getImageData(0, 0, w, h).data;
     const at = (i) => [d[i * 4], d[i * 4 + 1], d[i * 4 + 2]];
     const fg = new Uint8Array(w * h).fill(1);
-    // Already see-through (a PNG cut-out): use that.
+    // Already see-through (a PNG cut-out): use that. A few clear pixels (rounded corners, a thin
+    // clear frame) don't make a cut-out, and the background still has to go.
     let clear = 0;
     for (let i = 0; i < w * h; i++) if (d[i * 4 + 3] < 128) { fg[i] = 0; clear++; }
-    if (!clear && cut > 0) {
+    if (clear <= w * h * 0.05 && cut > 0) {
       // Grow the background in from the border while colours stay close to it.
       const T = [0, 18, 30, 48][cut];
       const border = [];
       for (let i = 0; i < w; i++) border.push(i, (h - 1) * w + i);
       for (let j = 0; j < h; j++) border.push(j * w, j * w + w - 1);
+      // Its colour from the solid border pixels only: clear ones are usually stored as black.
       const sum = [0, 0, 0];
-      for (const i of border) { const p = at(i); sum[0] += p[0]; sum[1] += p[1]; sum[2] += p[2]; }
-      const ref = sum.map((v) => v / border.length);
+      let solid = 0;
+      for (const i of border) if (fg[i]) { const p = at(i); sum[0] += p[0]; sum[1] += p[1]; sum[2] += p[2]; solid++; }
+      const ref = sum.map((v) => v / Math.max(1, solid));
       const stack = [];
       for (const i of border) if (fg[i] && dist(at(i), ref) < T * 1.6) { fg[i] = 0; stack.push(i); }
       while (stack.length) {
@@ -191,6 +195,48 @@
   const POSE_ICONS = { walk: '🚶', work: '💻', sleep: '😴', happy: '🎉' };
 
   // { name, poses: { base: px[], walk?, ... }, data } -> canvas. `data` is what rides inside the PNG.
+  const font = (size, weight = 800) => `${weight} ${size}px "Microsoft JhengHei UI", "Microsoft JhengHei", sans-serif`;
+  // What every card starts as: cream with gold bars top and bottom, the four markers, the square
+  // that says which kind of card it is, its title and the small label at the right.
+  function cardFrame(W, H, mark, title, label) {
+    const c = canvas(W, H);
+    const x = c.getContext('2d');
+    x.fillStyle = CREAM;
+    x.fillRect(0, 0, W, H);
+    x.fillStyle = '#f0b54d';
+    x.fillRect(0, 0, W, 6);
+    x.fillRect(0, H - 6, W, 6);
+    MARKS.forEach((m, i) => { x.fillStyle = m; x.fillRect(20 + i * 12, 20, 12, 12); });
+    x.fillStyle = mark;
+    x.fillRect(KEY_AT[0], KEY_AT[1], 12, 12);
+    x.fillStyle = '#3a2a20';
+    x.font = font(30);
+    x.fillText(title, 96, 40);
+    x.font = font(14, 600);
+    x.fillStyle = '#9a7a5a';
+    x.textAlign = 'right';
+    x.fillText(label, W - 24, 36);
+    x.textAlign = 'left';
+    return { c, x };
+  }
+  // The average colour around card point (cx, cy), r card pixels each way, in pixels read at s
+  // image pixels per card pixel.
+  const sampler = ({ w, h, d }, s) => (cx, cy, r = 2) => {
+    const acc = [0, 0, 0];
+    let n = 0;
+    const px = Math.floor(cx * s);
+    const py = Math.floor(cy * s);
+    const rr = Math.max(0, Math.round(r * s) - 1);
+    for (let yy = py - rr; yy <= py + rr; yy++) {
+      for (let xx = px - rr; xx <= px + rr; xx++) {
+        if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+        const i = (yy * w + xx) * 4;
+        acc[0] += d[i]; acc[1] += d[i + 1]; acc[2] += d[i + 2]; n++;
+      }
+    }
+    return acc.map((v) => v / Math.max(1, n));
+  };
+
   function drawCard({ name, poses }) {
     // Keep colours clear of the see-through green and of each other, and at most 52 of them.
     const all = [];
@@ -208,25 +254,7 @@
       if (!near && pal.length < 52) pal.push(out);
       fixed.set(c, out);
     }
-    const c = canvas(CARD.W, CARD.H);
-    const x = c.getContext('2d');
-    x.fillStyle = CREAM;
-    x.fillRect(0, 0, CARD.W, CARD.H);
-    x.fillStyle = '#f0b54d';
-    x.fillRect(0, 0, CARD.W, 6);
-    x.fillRect(0, CARD.H - 6, CARD.W, 6);
-    MARKS.forEach((m, i) => { x.fillStyle = m; x.fillRect(20 + i * 12, 20, 12, 12); });
-    x.fillStyle = KEY;
-    x.fillRect(KEY_AT[0], KEY_AT[1], 12, 12);
-    const font = (size, weight = 800) => `${weight} ${size}px "Microsoft JhengHei UI", "Microsoft JhengHei", sans-serif`;
-    x.fillStyle = '#3a2a20';
-    x.font = font(30);
-    x.fillText(name, 96, 40);
-    x.font = font(14, 600);
-    x.fillStyle = '#9a7a5a';
-    x.textAlign = 'right';
-    x.fillText('Deskmates 角色卡', CARD.W - 24, 36);
-    x.textAlign = 'left';
+    const { c, x } = cardFrame(CARD.W, CARD.H, KEY, name, 'Deskmates 角色卡');
     const grid = (px, gx, gy, cell) => {
       x.fillStyle = KEY;
       x.fillRect(gx, gy, AW * cell, AH * cell);
@@ -298,9 +326,13 @@
       const len = dv.getUint32(p);
       const type = String.fromCharCode(...bytes.subarray(p + 4, p + 8));
       if (type === 'tEXt') {
-        const text = String.fromCharCode(...bytes.subarray(p + 8, p + 8 + len));
-        if (text.startsWith(`${KEYWORD}\0`)) {
-          try { return JSON.parse(new TextDecoder().decode(b64ToBytes(text.slice(KEYWORD.length + 1)))); } catch { return null; }
+        // The keyword first: other programs keep big text here (a whole workflow), too big to
+        // spread into fromCharCode, and none of it is ours.
+        const body = bytes.subarray(p + 8, p + 8 + len);
+        const key = `${KEYWORD}\0`;
+        if (body.length > key.length && [...key].every((ch, i) => body[i] === ch.charCodeAt(0))) {
+          const text = new TextDecoder('latin1').decode(body.subarray(key.length));
+          try { return JSON.parse(new TextDecoder().decode(b64ToBytes(text))); } catch { return null; }
         }
       }
       if (type === 'IEND') break;
@@ -310,30 +342,25 @@
   }
 
   // Reads the visible card back (it may have been shrunk or turned into a JPEG on the way).
+  // The pixels of a picture someone sent, at most `maxW` wide: a huge one is read shrunk, since
+  // every mark on a card is a block many pixels across.
+  function pixelsOf(img, maxW) {
+    const k = Math.min(1, maxW / (img.naturalWidth || img.width));
+    const w = Math.max(1, Math.round((img.naturalWidth || img.width) * k));
+    const h = Math.max(1, Math.round((img.naturalHeight || img.height) * k));
+    const x = canvas(w, h).getContext('2d', { willReadFrequently: true });
+    x.drawImage(img, 0, 0, w, h);
+    return { w, h, d: x.getImageData(0, 0, w, h).data };
+  }
+
   function readCardImage(img) {
-    const w = img.naturalWidth || img.width;
-    const h = img.naturalHeight || img.height;
-    if (Math.abs(w / h - CARD.W / CARD.H) > 0.04 || w < CARD.W / 3) return null;
-    const c = canvas(w, h);
-    const x = c.getContext('2d', { willReadFrequently: true });
-    x.drawImage(img, 0, 0);
-    const d = x.getImageData(0, 0, w, h).data;
+    const nw = img.naturalWidth || img.width;
+    const nh = img.naturalHeight || img.height;
+    if (Math.abs(nw / nh - CARD.W / CARD.H) > 0.04 || nw < CARD.W / 3) return null;
+    const read = pixelsOf(img, CARD.W * 2);
+    const { w, h, d } = read;
     const s = w / CARD.W;
-    const sample = (cx, cy, r = 2) => {
-      const acc = [0, 0, 0];
-      let n = 0;
-      const px = Math.floor(cx * s);
-      const py = Math.floor(cy * s);
-      const rr = Math.max(0, Math.round(r * s) - 1);
-      for (let yy = py - rr; yy <= py + rr; yy++) {
-        for (let xx = px - rr; xx <= px + rr; xx++) {
-          if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-          const i = (yy * w + xx) * 4;
-          acc[0] += d[i]; acc[1] += d[i + 1]; acc[2] += d[i + 2]; n++;
-        }
-      }
-      return acc.map((v) => v / Math.max(1, n));
-    };
+    const sample = sampler(read, s);
     if (!MARKS.every((m, i) => dist(sample(26 + i * 12, 26, 3), rgb(m)) < 70)) return null;
     const bytes = [];
     for (let i = 0; i < BAR.cols * BAR.rows / 8; i++) {
@@ -374,10 +401,11 @@
   }
 
   // Bytes of an image file (or a pasted image) -> { name, art | recipe } or null if it isn't a card.
-  async function readCard(bytes) {
+  // `img`: the same bytes already opened with imageOf (null if they wouldn't open), to open them once.
+  async function readCard(bytes, img) {
     const data = dataOf(bytes);
     if (data?.v === 1 && (data.art?.base || data.recipe)) return { name: data.name, art: data.art, recipe: data.recipe, exact: true };
-    const img = await imageOf(bytes);
+    if (img === undefined) img = await imageOf(bytes);
     const seen = img && readCardImage(img);
     if (!seen) return null;
     const art = {};
@@ -390,7 +418,9 @@
     const type = bytes[0] === 0xff ? 'jpeg' : bytes[0] === 0x47 ? 'gif' : bytes[0] === 0x52 ? 'webp' : bytes[0] === 0x42 ? 'bmp' : 'png';
     return new Promise((resolve) => {
       const img = new Image();
-      img.onload = () => resolve(img);
+      // A few KB of PNG can claim 16000x16000; past 64 megapixels (well above a phone photo) it is
+      // not opened at all, rather than a gigabyte of pixels that takes the window down.
+      img.onload = () => resolve(img.naturalWidth * img.naturalHeight <= 64e6 ? img : null);
       img.onerror = () => resolve(null);
       img.src = `data:image/${type};base64,${bytesToB64(bytes)}`;
     });
@@ -424,25 +454,7 @@
     const bytes = [...head, ...packed];
     const rows = Math.ceil((bytes.length * 8) / ROOM.cols);
     const H = ROOM.top + rows * ROOM.cell + 44;
-    const c = canvas(ROOM.W, H);
-    const x = c.getContext('2d');
-    x.fillStyle = CREAM;
-    x.fillRect(0, 0, ROOM.W, H);
-    x.fillStyle = '#f0b54d';
-    x.fillRect(0, 0, ROOM.W, 6);
-    x.fillRect(0, H - 6, ROOM.W, 6);
-    MARKS.forEach((m, i) => { x.fillStyle = m; x.fillRect(20 + i * 12, 20, 12, 12); });
-    x.fillStyle = ROOM_MARK;
-    x.fillRect(KEY_AT[0], KEY_AT[1], 12, 12);
-    const font = (size, weight = 800) => `${weight} ${size}px "Microsoft JhengHei UI", "Microsoft JhengHei", sans-serif`;
-    x.fillStyle = '#3a2a20';
-    x.font = font(30);
-    x.fillText(`${name} 的房間`, 96, 40);
-    x.font = font(14, 600);
-    x.fillStyle = '#9a7a5a';
-    x.textAlign = 'right';
-    x.fillText('Deskmates 房間卡', ROOM.W - 24, 36);
-    x.textAlign = 'left';
+    const { c, x } = cardFrame(ROOM.W, H, ROOM_MARK, `${name} 的房間`, 'Deskmates 房間卡');
     // The room, as large as fits.
     if (picture) {
       const k = Math.min(768 / picture.width, 560 / picture.height);
@@ -465,33 +477,15 @@
     return c;
   }
 
-  // Bytes of a picture -> { name, room } or null if it isn't a room card.
-  async function readRoomCard(bytes) {
-    const img = await imageOf(bytes);
+  // Bytes of a picture -> { name, room } or null if it isn't a room card. `img` as for readCard.
+  async function readRoomCard(bytes, img) {
+    if (img === undefined) img = await imageOf(bytes);
     if (!img) return null;
-    const w = img.naturalWidth;
-    const h = img.naturalHeight;
-    if (w < ROOM.W / 3 || h / w < ROOM.top / ROOM.W) return null;
-    const c = canvas(w, h);
-    const x = c.getContext('2d', { willReadFrequently: true });
-    x.drawImage(img, 0, 0);
-    const d = x.getImageData(0, 0, w, h).data;
+    if (img.naturalWidth < ROOM.W / 3 || img.naturalHeight / img.naturalWidth < ROOM.top / ROOM.W) return null;
+    const read = pixelsOf(img, ROOM.W * 2);
+    const { w, h } = read;
     const s = w / ROOM.W;
-    const sample = (cx, cy, r) => {
-      const acc = [0, 0, 0];
-      let n = 0;
-      const px = Math.floor(cx * s);
-      const py = Math.floor(cy * s);
-      const rr = Math.max(0, Math.round(r * s) - 1);
-      for (let yy = py - rr; yy <= py + rr; yy++) {
-        for (let xx = px - rr; xx <= px + rr; xx++) {
-          if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-          const i = (yy * w + xx) * 4;
-          acc[0] += d[i]; acc[1] += d[i + 1]; acc[2] += d[i + 2]; n++;
-        }
-      }
-      return acc.map((v) => v / Math.max(1, n));
-    };
+    const sample = sampler(read, s);
     if (!MARKS.every((m, i) => dist(sample(26 + i * 12, 26, 3), rgb(m)) < 70)) return null;
     if (dist(sample(KEY_AT[0] + 6, KEY_AT[1] + 6, 3), rgb(ROOM_MARK)) > 70) return null;
     const byte = (i) => {
@@ -517,5 +511,5 @@
     }
   }
 
-  window.Pixels = { blank, skinToArt, photoToArt, cardFor, readCard, imageOf, readCardImage, CARD, hex, rgb, makeRoomCard, readRoomCard };
+  window.Pixels = { blank, skinToArt, photoToArt, cardFor, readCard, imageOf, makeRoomCard, readRoomCard };
 })();

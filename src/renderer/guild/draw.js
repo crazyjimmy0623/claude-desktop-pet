@@ -57,8 +57,10 @@ function drawBoard() {
 }
 
 function cellAt(e) {
-  const r = $('paint-canvas').getBoundingClientRect();
-  return [Math.floor((e.clientX - r.left) / CELL), Math.floor((e.clientY - r.top) / CELL)];
+  const c = $('paint-canvas');
+  const r = c.getBoundingClientRect();
+  // Measured from inside the border.
+  return [Math.floor((e.clientX - r.left - c.clientLeft) / CELL), Math.floor((e.clientY - r.top - c.clientTop) / CELL)];
 }
 
 function setPx(px, x, y, col) {
@@ -88,7 +90,8 @@ function stroke(e, first) {
   const erase = paint.tool === 'erase' || e.buttons === 2;
   if (paint.tool === 'pick' && !erase) {
     const col = px[y * AW + x] || paint.poses.base[y * AW + x];
-    if (col) { paint.color = col; paint.tool = 'pen'; renderPaint(); }
+    // Back to the pen, with this press over: dragging on must not paint.
+    if (col) { paint.color = col; paint.tool = 'pen'; paint.down = false; renderPaint(); }
     return;
   }
   if (paint.tool === 'fill' && !erase) {
@@ -109,8 +112,11 @@ function changed() {
   drawBoard();
 }
 
-function remember() {
-  paint.undo.push({ pose: paint.cur, px: paint.poses[paint.cur].slice() });
+// `all`: for changes to every pose at once (starting over), so undo brings them all back.
+function remember(all = false) {
+  paint.undo.push(all
+    ? { pose: paint.cur, all: Object.fromEntries(Object.entries(paint.poses).map(([k, px]) => [k, px.slice()])) }
+    : { pose: paint.cur, px: paint.poses[paint.cur].slice() });
   if (paint.undo.length > 60) paint.undo.shift();
 }
 
@@ -136,8 +142,8 @@ function wireBoard() {
 function undo() {
   const u = paint.undo.pop();
   if (!u) return;
-  if (!paint.poses[u.pose]) paint.poses[u.pose] = Pixels.blank();
-  paint.poses[u.pose] = u.px;
+  if (u.all) paint.poses = u.all;
+  else paint.poses[u.pose] = u.px;
   paint.cur = u.pose;
   changed();
   renderPaint();
@@ -195,7 +201,7 @@ function renderPaint() {
 // Start again from a blank page, a plain person, or the dress-up character.
 function startFrom(kind) {
   if (!window.confirm('重新開始會蓋掉現在的圖，確定嗎？')) return;
-  remember();
+  remember(true);
   let px = Pixels.blank();
   if (kind === 'person') px = Pixels.skinToArt('office');
   if (kind === 'dress') {
@@ -256,14 +262,7 @@ function renderPaintSide() {
 // What the game would do with a pose nobody drew: its first frame.
 function autoFrame(id) {
   const pose = { walk: 'walk', work: 'type', sleep: 'sleep', happy: 'done', base: 'rest' }[id];
-  const c = document.createElement('canvas');
-  c.width = Sprites.W * Sprites.RES;
-  c.height = Sprites.H * Sprites.RES;
-  Sprites.drawCharacterAt(c.getContext('2d'), Sprites.RES, 0, 0, 'draw:__paint', pose, pose === 'walk' ? 1 : 0, Sprites.colorsFor(210), 1, { prop: false });
-  const d = c.getContext('2d').getImageData(13, 10, AW, AH).data;
-  const px = Pixels.blank();
-  for (let i = 0; i < px.length; i++) if (d[i * 4 + 3] > 128) px[i] = Pixels.hex(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
-  return px;
+  return Pixels.skinToArt('draw:__paint', pose, pose === 'walk' ? 1 : 0);
 }
 
 function artCanvas(px, scale, faded) {
@@ -272,6 +271,11 @@ function artCanvas(px, scale, faded) {
     x.globalAlpha = faded ? 0.5 : 1;
     px.forEach((col, i) => { if (col) { x.fillStyle = col; x.fillRect((i % AW) * s, Math.floor(i / AW) * s, s, s); } });
   });
+}
+
+// Whether the picture on the board may be put away: saved, empty, or the user says so.
+function discardOk() {
+  return paint.saved || !Object.values(paint.poses).some((px) => px.some(Boolean)) || window.confirm('現在這張還沒存，要換掉嗎？');
 }
 
 function loadPaint(entry) {
@@ -298,22 +302,28 @@ async function savePaint() {
 
 function animatePaint() {
   const c = $('paint-preview');
-  const unit = even(4.5);
-  c.width = Sprites.W * unit;
-  c.height = Sprites.H * unit;
-  c.style.width = `${c.width / DPR}px`;
-  c.style.height = `${c.height / DPR}px`;
+  fitPreview(c, even(4.5));
   const ctx = c.getContext('2d');
   const poses = ['rest', 'walk', 'type', 'sleep', 'done', 'dance'];
+  let drawn = '';
+  let rev = 0;
   const tick = () => {
     if (settings && tab === 'studio' && studio.mode === 'draw') {
-      if (paint.dirty) { Sprites.setDrawing('paint', paint.poses); paint.dirty = false; }
+      const unit = even(4.5);
+      if (fitPreview(c, unit)) drawn = '';
+      if (paint.dirty) { Sprites.setDrawing('paint', paint.poses); paint.dirty = false; rev++; }
       const now = Date.now();
       const pose = poses[Math.floor(now / 2200) % poses.length];
-      const { frame } = Common.poseFor({ state: pose === 'rest' ? 'idle' : 'work' }, { moving: pose === 'walk', now });
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, c.width, c.height);
-      Common.drawActorAt(ctx, unit, 0, 0, { id: 'paint', hue: 210, skin: 'draw:__paint' }, pose, pose === 'walk' || pose === 'rest' ? frame : Math.floor(now / 300) % 2, 1, { prop: true }, now);
+      const { frame: step } = Common.poseFor({ state: pose === 'rest' ? 'idle' : 'work' }, { moving: pose === 'walk', now });
+      const frame = pose === 'walk' || pose === 'rest' ? step : Math.floor(now / 300) % 2;
+      // Painted again only when the drawing, the pose or the frame changes.
+      const key = `${rev}:${pose}:${frame}`;
+      if (key !== drawn) {
+        drawn = key;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, c.width, c.height);
+        Common.drawActorAt(ctx, unit, 0, 0, { id: 'paint', hue: 210, skin: 'draw:__paint' }, pose, frame, 1, { prop: true }, now);
+      }
     }
     requestAnimationFrame(tick);
   };
@@ -379,6 +389,7 @@ $('photo-file').addEventListener('change', async (e) => {
   if (file) incoming(new Uint8Array(await file.arrayBuffer()), { photo: true });
 });
 $('photo-edit').addEventListener('click', () => {
+  if (!discardOk()) return;
   loadPaint(null);
   paint.poses.base = photo.px.slice();
   paint.saved = false;
@@ -386,6 +397,7 @@ $('photo-edit').addEventListener('click', () => {
   renderStudio();
 });
 $('photo-done').addEventListener('click', async () => {
+  if (!discardOk()) return;
   loadPaint(null);
   paint.poses.base = photo.px.slice();
   studio.mode = 'draw';
@@ -511,7 +523,9 @@ $('card-pick').addEventListener('change', async (e) => {
 // A picture arrived (dropped, pasted or picked). A character card makes a new friend; any other
 // picture goes to the photo corner to become a character.
 async function incoming(bytes, { photo: wantPhoto = false } = {}) {
-  const roomCard = await Pixels.readRoomCard(bytes);
+  // Opened once, then tried as a room card, a character card and a photo.
+  const img = await Pixels.imageOf(bytes);
+  const roomCard = await Pixels.readRoomCard(bytes, img);
   if (roomCard) {
     // Only the room window can show another room.
     if (!inRoom()) { flash('房間卡要在房間模式拖到房子上才能參觀'); return; }
@@ -519,14 +533,13 @@ async function incoming(bytes, { photo: wantPhoto = false } = {}) {
     flash(`去參觀「${roomCard.name}」的房間`);
     return;
   }
-  const card = await Pixels.readCard(bytes);
+  const card = await Pixels.readCard(bytes, img);
   if (card) {
     const res = await desk.invoke('drawing:save', { name: card.name, art: card.art, recipe: card.recipe, friend: true });
     showTab('friends');
     flash(res?.error || `${card.name || '新朋友'} 來了！`);
     return;
   }
-  const img = await Pixels.imageOf(bytes);
   if (!img) { flash('這個檔案打不開，換一張圖試試'); return; }
   takePhoto(img);
   if (!wantPhoto) setTimeout(() => { $('photo-note').textContent = '這不是角色卡，那就幫你變成像素角色看看'; }, 0);
@@ -579,7 +592,7 @@ $('room-card-copy').addEventListener('click', async () => {
 });
 $('room-card-file').addEventListener('click', async () => {
   if (!roomShare) return;
-  const file = await desk.invoke('card:save', { dataUrl: roomShare.dataUrl, name: `${roomShare.name}的房間` });
+  const file = await desk.invoke('card:save', { dataUrl: roomShare.dataUrl, name: `${roomShare.name}的房間`, kind: 'room' });
   flash(`存好了：${file.split(/[\\/]/).pop()}`);
 });
 

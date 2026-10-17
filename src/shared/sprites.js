@@ -28,35 +28,28 @@
     skin: '#f6cfa6',
   };
 
-  // Each skin: head shape, hat, torso, held item, colours.
+  // Each skin: head shape, hat, torso, extras (tail, cape, specs, backpack), colours.
   const SKINS = {
     // Jimmy: the closed white helm on a plain white body, and a red cape.
-    commander: { head: 'helmet', body: 'plain', item: 'none', cape: true,
+    commander: { head: 'helmet', body: 'plain', cape: true,
       c: { helmet: '#f4f4f7', helmetShade: '#c9cbd8', body: '#f4f4f7', bodyShade: '#d3d5df', trim: '#c3c6ce',
         leg: '#eef0f4', boot: '#c9cbd8', hand: '#f4f4f7', cape: '#b8323a', capeDark: '#86202c', capeLite: '#d9535b' } },
-    office: { head: 'face', hat: 'hair', body: 'shirt', item: 'mug',
+    office: { head: 'face', hat: 'hair', body: 'shirt',
       c: { skin: PAL.skin, hair: '#3a2a20', body: '#f4f4f6', bodyShade: '#c9ccd6', leg: '#3b4256', boot: '#262a38', hand: PAL.skin } },
-    scientist: { head: 'face', hat: 'messy', specs: true, body: 'labcoat', item: 'flask',
+    scientist: { head: 'face', hat: 'messy', specs: true, body: 'labcoat',
       c: { skin: PAL.skin, hair: '#d9d4cb', body: '#f5f7fb', bodyShade: '#c6ccd8', leg: '#4a4f63', boot: '#2e3140', hand: PAL.skin } },
-    cat: { head: 'cat', body: 'fur', item: 'none', tail: true,
+    cat: { head: 'cat', body: 'fur', tail: true,
       c: { body: '#f0a35e', bodyShade: '#d0803e', belly: '#fbe3c4', leg: '#f0a35e', boot: '#d0803e', hand: '#fbe3c4' } },
-    robot: { head: 'robot', body: 'metal', item: 'wrench',
+    robot: { head: 'robot', body: 'metal',
       c: { head: '#b8c0cc', body: '#b8c0cc', bodyShade: '#8a93a3', leg: '#8a93a3', boot: '#5a6270', hand: '#8a93a3' } },
-    ninja: { head: 'ninja', body: 'gi', item: 'kunai',
+    ninja: { head: 'ninja', body: 'gi',
       c: { skin: PAL.skin, head: '#343a56', body: '#343a56', bodyShade: '#262a40', leg: '#343a56', boot: '#1c1f2e', hand: '#262a40' } },
-    chef: { head: 'face', hat: 'chef', body: 'apron', item: 'ladle',
+    chef: { head: 'face', hat: 'chef', body: 'apron',
       c: { skin: PAL.skin, hair: '#6b4423', body: '#f7f7f7', bodyShade: '#cfd3dc', leg: '#3b4256', boot: '#262a38', hand: PAL.skin } },
-    droid: { head: 'droid', body: 'mech', item: 'none', spikes: true,
+    droid: { head: 'droid', body: 'mech',
       c: { head: '#34373f', headShade: '#25272e', body: '#34373f', bodyShade: '#25272e', plate: '#4a4e59', face: '#16171c', glow: '#d8f1ff',
         leg: '#2c2e36', boot: '#1b1c22', hand: '#4a4e59' } },
-    // Bru: a fluffy white plush with a round head as tall as it is wide, a broad flat bill, happy
-    // closed eyes, and a checked blanket hugged to its tummy.
-    platypus: { head: 'plush', body: 'blanket', item: 'none', tail: 'flat', mitts: true, torsoAt: [5, 21],
-      c: { body: '#f6f4f0', bodyShade: '#d8d3cc', belly: '#ffffff', bill: '#f8f6f2', leg: '#f6f4f0', boot: '#ebe7e1', hand: '#ffffff' } },
-    // Okai: a short, round white cat with bean eyes, a bead of sweat and a little crescent moon.
-    whitecat: { head: 'okai', body: 'chubby', item: 'none', tail: true, drop: 4, torsoAt: [4, 23],
-      c: { body: '#f6f4f0', bodyShade: '#d6d1ca', belly: '#ffffff', leg: '#f6f4f0', boot: '#d6d1ca', hand: '#ffffff' } },
-    astronaut: { head: 'astronaut', body: 'suit', item: 'none', backpack: true,
+    astronaut: { head: 'astronaut', body: 'suit', backpack: true,
       c: { head: '#f4f6fa', body: '#f4f6fa', bodyShade: '#c3c9d6', leg: '#e6e9f0', boot: '#8a93a6', hand: '#c3c9d6' } },
   };
 
@@ -71,12 +64,6 @@
 
   // Characters: g(rects, details, extraDetails, extraRects), everything in fine pixels.
   const fineGrouper = (groups) => (rects, details = [], extra = [], extraRects = []) => groups.push({ rects: [...rects, ...extraRects], details: [...details, ...extra] });
-  // Furniture: rects/details in logical pixels (doubled), fine/fineRects already in fine pixels.
-  const d2 = ([x, y, w, h, c]) => [x * RES, y * RES, w * RES, h * RES, c];
-  const grouper = (groups) => (rects, details = [], fine = [], fineRects = []) => groups.push({
-    rects: [...rects.map(d2), ...fineRects],
-    details: [...details.map(d2), ...fine],
-  });
   // A small four-point twinkle centred on fine (x, y).
   const twinkle = (x, y, color) => [[x, y - 1, 1, 3, color], [x - 1, y, 3, 1, color]];
 
@@ -226,47 +213,6 @@
     '..WWwwwwwwwwwwwwwwwwwwWW..',
     '...WWWWWWWWWWWWWWWWWWWW...',
   ];
-  // Bru's head: round, as tall as it is wide (24x23 at box (2, -1)).
-  const PLUSH_HEAD = [
-    '.......kkkkkkkkkk.......',
-    '....kkkkkkkkkkkkkkkk....',
-    '...kkkkkkkkkkkkkkkkkk...',
-    '..kkkkkkkkkkkkkkkkkkkk..',
-    '.kkkkkkkkkkkkkkkkkkkkkk.',
-    '.kkkkkkkkkkkkkkkkkkkkkk.',
-    ...Array(11).fill('kkkkkkkkkkkkkkkkkkkkkkkk'),
-    '.kkkkkkkkkkkkkkkkkkkkkk.',
-    '.Kkkkkkkkkkkkkkkkkkkkkk.',
-    '..KKkkkkkkkkkkkkkkkkkK..',
-    '...KKKkkkkkkkkkkkkkKK...',
-    '....KKKKkkkkkkkkkKKK....',
-    '.......KKKKKKKKKK.......',
-  ];
-  // A broad, flat duck bill.
-  const PLUSH_BILL = [
-    '..bbbbbbbbb.',
-    '.bbbbbbbbbbb',
-    'bbbbbbbbbbbb',
-    'bBbbbbbbbbbB',
-    '.BBBBBBBBBB.',
-  ];
-  // Okai's head: wide and round, all white, shaded at the sides (26x19 at box (1, 1)).
-  const OKAI_HEAD = [
-    '.......kkkkkkkkkkkk.......',
-    '....kkkkkkkkkkkkkkkkkk....',
-    '..hhkkkkkkkkkkkkkkkkkkhh..',
-    '.hhhhkkkkkkkkkkkkkkkkkhhh.',
-    '.hhhhkkkkkkkkkkkkkkkkkkhh.',
-    'hhhhhkkkkkkkkkkkkkkkkkkhhh',
-    'hhhhkkkkkkkkkkkkkkkkkkkhhh',
-    ...Array(6).fill('hhhhkkkkkkkkkkkkkkkkkkkkhh'),
-    'hhhhhkkkkkkkkkkkkkkkkkkhhh',
-    'Hhhhhkkkkkkkkkkkkkkkkkkhhh',
-    '.Hhhhhkkkkkkkkkkkkkkkkhhh.',
-    '.HHhhh.KKkkkkkkkkkkKK.hhh.',
-    '..HHhh..KKKKKKKKKKKK..hh..',
-    '...HH..................h..',
-  ];
   const EAR_L = ['.a...', '.aa..', '.apa.', 'aappa'];
   const EAR_R = ['...a.', '..aa.', '.apa.', 'appaa'];
 
@@ -288,7 +234,6 @@
   // pixels of each row fall into shadow.
   const OUTFIT = {
     plain: [[3, 0, 10, 1, 'r'], [12, 1, 1, 1, 'g']],
-    armor: [[4, 1, 9, 6, 'b'], [5, 2, 2, 1, '+'], [11, 2, 1, 5, 'B'], [4, 6, 9, 1, 'B'], [8, 2, 1, 4, 'B'], [0, 7, 16, 2, 'd'], [8, 7, 2, 2, 't'], [6, 9, 1, 3, 'A'], [11, 9, 1, 3, 'A']],
     shirt: [[8, 1, 2, 6, 'c'], [8, 6, 2, 1, 'C'], [5, 1, 2, 1, 'A'], [11, 1, 2, 1, 'A'], [0, 8, 16, 1, 'd'], [11, 8, 2, 1, 't'], [0, 9, 16, 3, 'l'], [8, 10, 1, 2, 'L']],
     labcoat: [[6, 1, 4, 8, 'c'], [6, 8, 4, 1, 'C'], [5, 2, 1, 10, 'A'], [10, 2, 1, 10, 'A'], [12, 4, 1, 3, 'p'], [6, 9, 4, 3, 'l']],
     fur: [[2, 1, 12, 1, 'c'], [7, 2, 2, 1, 'g'], [5, 3, 7, 7, 'b'], [4, 4, 9, 5, 'b']],
@@ -298,57 +243,11 @@
     apron: [[4, 1, 1, 3, 'c'], [11, 1, 1, 3, 'c'], [3, 4, 10, 8, 'c'], [6, 6, 4, 2, 'C'], [3, 4, 10, 1, 'C']],
     suit: [[3, 3, 2, 2, 'c'], [7, 3, 5, 3, 's'], [8, 4, 1, 1, 'x'], [10, 4, 1, 1, 'y'], [0, 7, 16, 1, 't'], [6, 9, 1, 3, 'A']],
   };
-  // Outfits drawn whole on the 18x13 torso, shape included.
-  const OUTFIT_FULL = {
-    // Bru's round little body with a red-and-yellow checked blanket hugged in front (18x11).
-    blanket: [
-      '...aaaaaaaaaaaa...',
-      '..aaaaaaaaaaaaaa..',
-      '.AAaaaaaaaaaaaaaa.',
-      '.AAaaccqqccqqccaa.',
-      'AAAaaccqqccqqccaaa',
-      'AAAqqccqqccqqccqqa',
-      'AAAccqqccqqccqqcca',
-      'AAAccqqccqqccqqcca',
-      'AAAqqccqqccqqccqqa',
-      '.AAaqqccqqccqqccq.',
-      '..AAAaaaaaaaaaaa..',
-    ],
-    // Okai's short, chubby body: a collar with a bell, a round white tummy (20x10).
-    chubby: [
-      '....aaaaaaaaaaaa....',
-      '..AAAcccccccccccaa..',
-      '.AAAaaaaaaagaaaaaaa.',
-      'AAAaaaaabbbbbbbaaaaa',
-      'AAAaaaabbbbbbbbbaaaa',
-      'AAAaaaabbbbbbbbbaaaa',
-      'AAAaaaaabbbbbbbaaaaa',
-      '.AAAaaaaaaaaaaaaaaa.',
-      '..AAAaaaaaaaaaaaaa..',
-    ],
-    // Steel plate over black cloth: a mail collar under the helm, broad pauldrons, a ridged
-    // breastplate, a buckled belt and a ragged skirt.
-    armor: [
-      '....dddddddddd....',
-      '...dddddddddddd...',
-      '...ddd+bbbbbdddd..',
-      '++++db+bbbbbBd++++',
-      'bbbbtb+bbbbbbtbbbb',
-      'BBBBtb+bbbbbbtBBBB',
-      '.tttabbbbbbbbBattt',
-      'dddddddttddddddddd',
-      'aaaaaaaaaaaaaaaaaa',
-      'aaaaAaaaaaaaaAaaaa',
-      'aaaaAaaaaaaaaAaaaa',
-      'aAaaaaaAaaaaaaAaaa',
-      '.aaaa.aaaaaa.aaaa.',
-    ],
-  };
   const torsoCache = new Map();
   function torsoRows(body) {
     if (torsoCache.has(body)) return torsoCache.get(body);
-    const g = (OUTFIT_FULL[body] || TORSO_SHAPE).map((r) => [...r].map((ch) => (OUTFIT_FULL[body] ? ch : ch === 'x' ? 'a' : '.')));
-    for (const [x0, y, w0, h0, ch] of OUTFIT_FULL[body] ? [] : OUTFIT[body] || OUTFIT.shirt) {
+    const g = TORSO_SHAPE.map((r) => [...r].map((ch) => (ch === 'x' ? 'a' : '.')));
+    for (const [x0, y, w0, h0, ch] of OUTFIT[body] || OUTFIT.shirt) {
       // Full-width bands (belts, trousers) stay full width; the rest shifts to the centre.
       const [x, w] = x0 === 0 && w0 === 16 ? [0, 18] : [x0 + 1, w0];
       const h = y + h0 >= 12 ? h0 + 1 : h0;
@@ -429,11 +328,9 @@
             [x0 + 4, 23 + B, 1, 9, c.capeLite], [7, 19 + B, 4, 1, c.capeLite]]);
       }
     }
-    if (sk.tail === 'flat') g([[-1, 29, 9, 4, c.bodyShade]], [[0, 29, 7, 1, lite(c.bodyShade)], [2, 31, 1, 1, dark(c.bodyShade)], [5, 30, 1, 1, dark(c.bodyShade)]]);
-    else if (sk.tail) {
+    if (sk.tail) {
       const tip = pose === 'walk' ? WALK_SWAY[step % 4] : frame;
-      const td = sk.drop || 0;
-      g([[1 + tip, 13 + B + td, 2, 4, c.body], [1, 16 + B + td, 2, 9 - td, c.body], [2, 24 + B, 6, 2, c.body]], [[1 + tip, 13 + B + td, 2, 2, c.bodyShade], [1, 19 + B + td, 2, 1, c.bodyShade]]);
+      g([[1 + tip, 13 + B, 2, 4, c.body], [1, 16 + B, 2, 9, c.body], [2, 24 + B, 6, 2, c.body]], [[1 + tip, 13 + B, 2, 2, c.bodyShade], [1, 19 + B, 2, 1, c.bodyShade]]);
     }
     if (sk.backpack) g([[2, 20 + B, 6, 9, c.body]], [[2, 21 + B, 1, 7, c.bodyShade], [4, 23 + B, 2, 3, '#8a93a6'], [4, 24 + B, 1, 1, glow('#3dffb0')]]);
 
@@ -469,24 +366,17 @@
     tp['+'] = lite(tp.b);
     tp.q = '#f2c64a';
     tp.Q = dark(tp.q);
-    // Bru's blanket is always red and yellow, whatever the session's colour.
-    if (sk.body === 'blanket') {
-      tp.c = '#d8402e';
-      tp.C = dark(tp.c);
+    // torsoRows shades the back of the torso by upper-casing letters, so every colour needs an
+    // upper-case twin, or those pixels come out see-through (the robot's metal torso had four).
+    for (const k of Object.keys(tp)) {
+      const K = k.toUpperCase();
+      if (K !== k && !(K in tp) && typeof tp[k] === 'string') tp[K] = tp[k][0] === '*' ? tp[k] : dark(tp[k]);
     }
-    const [tx, ty] = sk.torsoAt || [5, 19];
-    L(torsoRows(sk.body), tp, tx, ty + B);
-    // Bru's white mitts, hugging the blanket when its hands are free.
-    if (sk.mitts && !['type', 'read', 'game', 'paint', 'command'].includes(pose)) {
-      const mitt = ['.mmmm.', 'mmmmmm', 'mmmmmm', 'mmmmmm', '.mmmm.'];
-      L(mitt, { m: c.hand }, 8, 22 + B);
-      L(mitt, { m: c.hand }, 15, 22 + B);
-      g([], [[10, 23 + B, 1, 2, c.bodyShade], [12, 23 + B, 1, 2, c.bodyShade], [17, 23 + B, 1, 2, c.bodyShade], [19, 23 + B, 1, 2, c.bodyShade]]);
-    }
+    L(torsoRows(sk.body), tp, 5, 19 + B);
 
     // --- Head.
     // Helmet-like heads are drawn shorter than faces: sit them down on the body instead of floating.
-    const H = B + (sk.drop || 0) + ({ robot: 4, droid: 3, astronaut: 3 }[sk.head] || 0);
+    const H = B + ({ robot: 4, droid: 3, astronaut: 3 }[sk.head] || 0);
     const eyeDots = (color = PAL.eye, at = [[8, 12], [22, 12]]) => at.map(([x, y]) => (sleeping ? [x - 1, y + 1 + H, 4, 1, color] : [x, y + H, 2, 2, color]));
     const blush = [[5, 14 + H, 3, 2, PAL.blush], [23, 14 + H, 2, 2, PAL.blush]];
     const face = (skin) => {
@@ -511,33 +401,6 @@
           ...eyeDots('#3a3020'), [12, 13 + H, 7, 3, c.belly], [14, 13 + H, 2, 1, '#e07a7a'], [13, 15 + H, 1, 1, '#b07050'], [16, 15 + H, 1, 1, '#b07050'],
           [5, 14 + H, 3, 2, PAL.blush], [25, 11 + H, 3, 1, '#a08a78'], [25, 13 + H, 3, 1, '#a08a78'],
         ]);
-        break;
-      }
-      case 'plush': {
-        L(PLUSH_HEAD, { k: c.body, K: c.bodyShade }, 2, -1 + H);
-        // Happy closed eyes (soft arches), striped pink cheeks, a fluffy shine up top.
-        const arch = ([x, y]) => (sleeping
-          ? [[x, y + 1 + H, 4, 1, PAL.eye]]
-          : [[x, y + 1 + H, 1, 2, PAL.eye], [x + 1, y + H, 2, 1, PAL.eye], [x + 3, y + 1 + H, 1, 2, PAL.eye]]);
-        g([], [...arch([5, 10]), ...arch([15, 10]),
-          [4, 13 + H, 4, 2, PAL.blush], [14, 13 + H, 3, 2, PAL.blush], [5, 13 + H, 1, 2, '#e88a8a'], [15, 13 + H, 1, 2, '#e88a8a'],
-          [6, 1 + H, 6, 1, PAL.shine], [5, 2 + H, 2, 1, PAL.shine]]);
-        L(PLUSH_BILL, { b: c.bill, B: c.bodyShade }, 17, 12 + H);
-        g([], [[19, 14 + H, 9, 1, '#d2ccc4'], [25, 13 + H, 1, 1, '#c2bbb2'], [27, 13 + H, 1, 1, '#c2bbb2'], [20, 12 + H, 6, 1, PAL.shine]]);
-        break;
-      }
-      case 'okai': {
-        const ear = { a: c.body, p: '#f4c4c4' };
-        L(['.a....', '.aa...', '.aaa..', '.apaa.', 'aappaa'], ear, 3, -4 + H);
-        L(['....a.', '...aa.', '..aaa.', '.aapa.', 'aappaa'], ear, 18, -4 + H);
-        L(OKAI_HEAD, { k: c.body, K: c.bodyShade, h: c.body, H: c.bodyShade }, 1, 1 + H);
-        // Bean eyes like everyone else's, a bead of sweat, a small open mouth, a crescent moon.
-        const lid = '#3a2a36';
-        g([], [...eyeDots(PAL.eye, [[7, 11], [22, 11]]),
-          [14, 13 + H, 3, 1, lid], [14, 14 + H, 1, 1, lid], [16, 14 + H, 1, 1, lid], [15, 14 + H, 1, 1, '#f08a6a'], [15, 15 + H, 1, 1, lid],
-          [6, 3 + H, 1, 1, '#7cc0ee'], [6, 4 + H, 2, 1, '#8fcdf5'], [5, 5 + H, 4, 2, '#8fcdf5'], [6, 7 + H, 2, 1, '#6fb2e0'], [6, 5 + H, 1, 1, PAL.shine],
-          [6, 13 + H, 2, 1, 'rgba(245,163,163,0.7)'], [22, 13 + H, 2, 1, 'rgba(245,163,163,0.7)']]);
-        g([], [[23, 15 + H, 2, 1, '#ffd84a'], [22, 16 + H, 2, 2, '#ffd84a'], [23, 18 + H, 2, 1, '#ffd84a'], [22, 16 + H, 1, 1, '#fff2a8'], [24, 18 + H, 1, 1, '#d9a62a']]);
         break;
       }
       case 'robot':
@@ -736,37 +599,12 @@
     const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
     return [f(0) * 255, f(8) * 255, f(4) * 255];
   }
-  function shade(color) {
-    const key = color;
-    if (shadeCache.has(key)) return shadeCache.get(key);
-    const [r, g, b] = parseColor(color[0] === '*' ? color.slice(1) : color).map((v) => v / 255);
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h = 0;
-    const l = (max + min) / 2;
-    const d = max - min;
-    const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
-    if (d) {
-      if (max === r) h = 60 * (((g - b) / d) % 6);
-      else if (max === g) h = 60 * ((b - r) / d + 2);
-      else h = 60 * ((r - g) / d + 4);
-    }
-    if (h < 0) h += 360;
-    // Drift the hue toward violet-blue, darken, and keep some colour in the dark.
-    const toward = 255;
-    const diff = ((toward - h + 540) % 360) - 180;
-    const nh = (h + Math.sign(diff) * Math.min(Math.abs(diff), 10) + 360) % 360;
-    const ns = Math.min(1, s * 0.7 + 0.06);
-    const nl = Math.max(0.09, l * 0.48);
-    const [R, G, B] = hslToRgb(nh, ns, nl).map((v) => Math.round(v));
-    const out = `rgb(${R}, ${G}, ${B})`;
-    shadeCache.set(key, out);
-    return out;
-  }
+  // The edge shade: the hue drifts toward violet-blue, darker, keeping some colour in the dark.
+  const shade = (color) => tone(color[0] === '*' ? color.slice(1) : color, 255, 10, (v) => Math.min(1, v * 0.7 + 0.06), (v) => Math.max(0.09, v * 0.48));
 
   // Softer steps for shading inside a part: a cooler mid shadow and a warmer light.
   function tone(color, toward, maxShift, sF, lF) {
-    const key = `${color}|${toward}|${sF}|${lF}`;
+    const key = `${color}|${toward}|${maxShift}|${sF}|${lF}`;
     if (shadeCache.has(key)) return shadeCache.get(key);
     const [r, g, b] = parseColor(color).map((v) => v / 255);
     const max = Math.max(r, g, b);
@@ -799,16 +637,16 @@
 
   // `unit` is device pixels per logical pixel; groups are in fine pixels (RES per logical pixel).
   // Each rect is edged one fine pixel wide in a darker shade of its own colour (all edges first, then
-  // fills, so seams inside a group vanish). Colours starting with '*' glow. `remap` lets room themes
-  // recolour furniture without redrawing it. `width` is in logical pixels (for mirroring).
-  function paint(ctx, unit, groups, facing, width, remap) {
+  // fills, so seams inside a group vanish). Colours starting with '*' glow.
+  // `width` is in logical pixels (for mirroring).
+  function paint(ctx, unit, groups, facing, width) {
     ctx.save();
     if (facing < 0) ctx.setTransform(-1, 0, 0, 1, width * unit + ctx.getTransform().e, ctx.getTransform().f);
     const f = unit / RES;
     const o = Math.max(1, Math.round(f));
     const px = (v) => Math.round(v * f);
     const fill = (x, y, w, h, color) => {
-      let c = remap ? remap(color) : color;
+      let c = color;
       const lit = c[0] === '*';
       if (lit) {
         c = c.slice(1);
@@ -821,20 +659,13 @@
     };
     for (const { rects, details } of groups) {
       for (const [x, y, w, h, color] of rects) {
-        ctx.fillStyle = shade(remap ? remap(color) : color);
+        ctx.fillStyle = shade(color);
         ctx.fillRect(px(x) - o, px(y) - o, px(x + w) - px(x) + 2 * o, px(y + h) - px(y) + 2 * o);
       }
       for (const [x, y, w, h, color] of rects) fill(x, y, w, h, color);
       for (const [x, y, w, h, color] of details) fill(x, y, w, h, color);
     }
     ctx.restore();
-  }
-
-  // Draw a character onto a dedicated canvas (clears it first).
-  function drawCharacter(ctx, unit, skin, pose, frame, col, facing, opts) {
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    paint(ctx, unit, buildCharacter(skin, pose, frame, col, opts), facing, W);
   }
 
   // Draw a character at an offset on a shared canvas (room mode). (x, y) is the sprite's top-left in pixels.
@@ -985,9 +816,12 @@
     let skipped = 0;
     while (y > top && runs(y).length < 2 && skipped < 2) { y--; skipped++; }
     let legTop = -1;
+    const legEnd = y; // the lowest split row; anything below it was skipped as unsplit
     while (y > top && runs(y).length >= 2) { legTop = y; y--; }
     if (legTop < 0 || bottom - legTop < 1) return { top, bottom, legTop: null };
-    legTop = Math.max(legTop, bottom - Math.floor((bottom - top) * 0.45));
+    // No higher than 45% up the picture, but never past the split rows: on a tiny picture that
+    // limit can land on an empty row, with nothing to split.
+    legTop = Math.min(Math.max(legTop, bottom - Math.floor((bottom - top) * 0.45)), legEnd);
     // Split the legs at the gap nearest the middle of the picture.
     const r = runs(legTop);
     const mid = (r[0][0] + r[r.length - 1][1]) / 2;
@@ -1099,16 +933,15 @@
   // few colours. It becomes a skin like any other ('mix:<id>'). Parts that come from a recruited
   // character unlock with that character.
   const PARTS = {
-    head: { face: '人臉', cat: '貓貓', robot: '機器人', droid: '暴走機器人', ninja: '忍者頭巾', astronaut: '太空頭盔', helmet: '白盔', plush: '絨毛玩偶', okai: '大圓貓頭' },
+    head: { face: '人臉', cat: '貓貓', robot: '機器人', droid: '暴走機器人', ninja: '忍者頭巾', astronaut: '太空頭盔', helmet: '白盔' },
     hat: { none: '光頭', hair: '短髮', messy: '亂髮', chef: '廚師帽' },
-    body: { shirt: '襯衫', labcoat: '實驗袍', fur: '毛茸茸', metal: '金屬', mech: '機甲', gi: '忍者服', apron: '圍裙', suit: '太空衣', plain: '素面', blanket: '抱毯子', chubby: '圓肚肚' },
-    extra: { none: '無', tail: '貓尾巴', flat: '扁尾巴', cape: '披風', backpack: '背包', specs: '眼鏡' },
+    body: { shirt: '襯衫', labcoat: '實驗袍', fur: '毛茸茸', metal: '金屬', mech: '機甲', gi: '忍者服', apron: '圍裙', suit: '太空衣', plain: '素面' },
+    extra: { none: '無', tail: '貓尾巴', cape: '披風', backpack: '背包', specs: '眼鏡' },
   };
   const PART_FROM = {
     'head:ninja': 'ninja', 'body:gi': 'ninja', 'hat:chef': 'chef', 'body:apron': 'chef', 'head:astronaut': 'astronaut',
     'body:suit': 'astronaut', 'extra:backpack': 'astronaut', 'head:helmet': 'commander', 'body:plain': 'commander',
-    'extra:cape': 'commander', 'head:plush': 'platypus', 'body:blanket': 'platypus', 'extra:flat': 'platypus',
-    'head:okai': 'whitecat', 'body:chubby': 'whitecat',
+    'extra:cape': 'commander',
   };
   // Colour swatches to pick from: skin or fur, clothes, trousers, shoes, hair.
   const SWATCHES = {
@@ -1118,7 +951,7 @@
     boot: ['#262a38', '#5a3a24', '#c9473d', '#f4f4f6', '#3a5a8a', '#e8b13a'],
     hair: ['#3a2a20', '#6b4423', '#d9a24a', '#e8e0d0', '#c9473d', '#5aa7ff', '#ff8fb1', '#2b2233'],
   };
-  const FURRY = new Set(['cat', 'plush', 'okai']);
+  const FURRY = new Set(['cat']);
   function composeSkin(r = {}) {
     const C = r.colors || {};
     const head = PARTS.head[r.head] ? r.head : 'face';
@@ -1133,19 +966,14 @@
       hat: head === 'face' && PARTS.hat[r.hat] && r.hat !== 'none' ? r.hat : undefined,
       specs: extra === 'specs' && head === 'face',
       body,
-      item: 'none',
-      tail: extra === 'tail' ? true : extra === 'flat' ? 'flat' : undefined,
+      tail: extra === 'tail' || undefined,
       cape: extra === 'cape',
       backpack: extra === 'backpack',
-      spikes: head === 'droid',
-      mitts: body === 'blanket',
-      drop: head === 'okai' ? 4 : 0,
-      torsoAt: body === 'chubby' ? [4, 23] : body === 'blanket' ? [5, 21] : undefined,
       c: {
         skin, hair: C.hair || '#3a2a20', body: cloth, bodyShade: dark(cloth), belly: lite(cloth), trim: dark(cloth),
         leg: C.leg || '#3b4256', boot: C.boot || '#262a38', hand: head === 'face' || head === 'ninja' ? skin : coat,
         head: head === 'ninja' ? cloth : coat, headShade: dark(coat), helmet: coat, helmetShade: dark(coat),
-        plate: lite(coat), face: '#16171c', glow: '#d8f1ff', bill: lite(coat),
+        plate: lite(coat), face: '#16171c', glow: '#d8f1ff',
         cape: C.cape || '#b8323a', capeDark: dark(C.cape || '#b8323a'), capeLite: lite(C.cape || '#b8323a'),
       },
     };
@@ -1153,7 +981,7 @@
   // A furry head on a furry body is one creature, all in the fur colour.
   function skinFor(recipe) {
     const sk = composeSkin(recipe);
-    if (FURRY.has(sk.head) && ['fur', 'blanket', 'chubby'].includes(sk.body)) {
+    if (FURRY.has(sk.head) && sk.body === 'fur') {
       Object.assign(sk.c, { body: sk.c.head, bodyShade: dark(sk.c.head), belly: lite(sk.c.head), leg: sk.c.head, boot: dark(sk.c.head) });
     }
     return sk;
@@ -1177,10 +1005,10 @@
   }
 
   return {
-    W, H, RES, PAL, SKINS, FX, MINI, grouper, shade,
-    buildCharacter, buildMini, drawMiniAt, drawCharacter, drawCharacterAt, drawFx, drawFxAt, paint,
+    W, H, RES, SKINS, FX, MINI, shade,
+    drawMiniAt, drawCharacterAt, drawFx, drawFxAt, paint,
     parseSheet, drawCustomAt, colorsFor,
     PARTS, PART_FROM, SWATCHES, skinFor, useCustoms, randomRecipe,
-    ART, ART_POSES, encodeArt, decodeArt, useDrawings, setDrawing, findLegs, drawnFrame,
+    ART, ART_POSES, encodeArt, decodeArt, useDrawings, setDrawing,
   };
 });

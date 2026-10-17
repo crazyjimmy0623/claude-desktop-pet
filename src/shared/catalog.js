@@ -40,8 +40,6 @@
     { id: 'skin:chef', type: 'skin', rarity: 'epic', name: '廚師', desc: '義大利麵程式碼專家' },
     { id: 'skin:astronaut', type: 'skin', rarity: 'epic', name: '太空人', desc: '在雲端工作' },
     { id: 'skin:commander', type: 'skin', rarity: 'legend', name: '冷酷吉米', desc: '白盔白身、紅披風，話不多' },
-    { id: 'skin:platypus', type: 'skin', rarity: 'legend', name: '布魯', desc: '白色鴨嘴獸，畫什麼都可愛' },
-    { id: 'skin:whitecat', type: 'skin', rarity: 'legend', name: '歐凱', desc: '白貓，臉很臭、技術很硬' },
     // Accessories
     { id: 'acc:partyhat', type: 'accessory', rarity: 'common', name: '派對帽' },
     { id: 'acc:flower', type: 'accessory', rarity: 'common', name: '小花' },
@@ -172,7 +170,6 @@
   const BUILD_PRICE = { starter: 3, common: 5, rare: 8, epic: 12, legend: 20 };
   const BLOCK_PRICE = { starter: 2, common: 3, rare: 4 };
   function priceOf(id) {
-    if (id === 'block:stairs') return 2;
     if (id === 'block:spiral') return 8;
     const item = ITEMS.find((i) => i.id === id);
     if (!item) return id.startsWith('block:') ? 2 : 3;

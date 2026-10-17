@@ -52,12 +52,15 @@ function toolDetail(input) {
 
 function summarize(p) {
   if (!p || typeof p !== 'object' || !p.hook_event_name || !p.session_id) return null;
+  // Everything here ends up in the save file or on screen, so nothing is taken at any length.
+  const cwd = typeof p.cwd === 'string' ? p.cwd.slice(0, 260) : '';
+  const toolName = clip(p.tool_name, 80);
   const ev = {
-    event: p.hook_event_name,
-    session: String(p.session_id),
-    cwd: p.cwd || '',
-    project: baseName(p.cwd) || 'Claude',
-    agentId: p.agent_id || '',
+    event: clip(p.hook_event_name, 30),
+    session: clip(p.session_id, 80),
+    cwd,
+    project: clip(baseName(cwd), 40) || 'Claude',
+    agentId: clip(p.agent_id, 80),
   };
   switch (p.hook_event_name) {
     case 'UserPromptSubmit':
@@ -67,23 +70,23 @@ function summarize(p) {
     case 'PostToolUse':
     case 'PostToolUseFailure':
     case 'PermissionRequest':
-      ev.tool = shortToolName(p.tool_name);
-      ev.rawTool = p.tool_name || '';
-      ev.station = stationForTool(p.tool_name);
+      ev.tool = shortToolName(toolName);
+      ev.rawTool = toolName;
+      ev.station = stationForTool(toolName);
       ev.detail = toolDetail(p.tool_input);
       break;
     case 'Notification':
       ev.message = clip(p.message, 60);
-      ev.notificationType = p.notification_type || '';
+      ev.notificationType = clip(p.notification_type, 30);
       break;
     case 'SessionStart':
-      ev.source = p.source || '';
+      ev.source = clip(p.source, 20);
       break;
     case 'SessionEnd':
-      ev.reason = p.reason || '';
+      ev.reason = clip(p.reason, 30);
       break;
     case 'PreCompact':
-      ev.trigger = p.trigger || '';
+      ev.trigger = clip(p.trigger, 20);
       break;
   }
   return ev;

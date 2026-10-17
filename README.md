@@ -8,7 +8,7 @@
 
 夥伴手冊的「✨ 創角」有三種做法：
 
-- **換裝**：頭、頭髮、身體、配件、顏色一樣一樣挑，懶得想就按 🎲。招募到新角色，他身上的零件（白盔、絨毛玩偶頭、披風…）也會跟著解鎖
+- **換裝**：頭、頭髮、身體、配件、顏色一樣一樣挑，懶得想就按 🎲。招募到新角色，他身上的零件（白盔、太空頭盔、披風…）也會跟著解鎖
 - **畫畫**：有人形參考線，也能左右對稱。只畫正面就夠了，走路、呼吸、打瞌睡、開心跳都會自己動；想畫細一點，再補走路、工作、睡覺、開心的姿勢
 - **照片**：娃娃、公仔或手繪圖拖進來，會自動去背、縮成像素，再稍微修一下就好
 
@@ -60,7 +60,7 @@
 
 ## 自訂
 
-- 11 種角色、8 種配件，AI 夥伴一開始是暴走機器人。傳說角色是我們團隊本人：冷酷吉米（白盔紅披風）、布魯（白色鴨嘴獸）、歐凱（白貓），只能用抽的
+- 9 種角色、8 種配件，AI 夥伴一開始是暴走機器人。傳說角色是我們團隊本人：冷酷吉米（白盔紅披風），只能用抽的
 - 房間編輯器：擺家具、塗地板、換牆面、調高度
 - 自己的素材放進 `%APPDATA%\Deskmates\custom\`：
   - `characters/<名稱>/`：Aseprite 匯出的 PNG + JSON，用 frame tag 命名動作（idle、walk、work、type、command、game、read、wait、done、sleep…）
@@ -72,8 +72,10 @@
 npm install
 npm start              # 啟動
 npm run demo           # 播放示範
+npm run test-mode      # 測試模式：金幣無限、全部解鎖，玩的是存檔副本（deskmates-test.json），不影響正式存檔
 npm run install-hooks  # 安裝 Claude Code hooks（設定視窗也有按鈕）
 npm run preview -- chars out.png   # 輸出角色/家具預覽圖（chars | lineup | minis | anim | fx | iso）
+npm run dist           # 打包成安裝檔 dist/Deskmates-Setup-<版本>.exe
 ```
 
 啟動參數：`--demo`、`--mode=room|strip`、`--open=settings|guild`。設 `DESKMATES_DEBUG=1` 會印出 hook 事件和視窗 console。

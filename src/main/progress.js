@@ -91,7 +91,7 @@ class Progress extends EventEmitter {
     const day = this.today();
     s.toolCalls += 1;
     day.tools += 1;
-    day.toolsBy[ev.tool] = (day.toolsBy[ev.tool] || 0) + 1;
+    if (ev.tool && ev.tool !== '__proto__') day.toolsBy[ev.tool] = (Object.hasOwn(day.toolsBy, ev.tool) ? day.toolsBy[ev.tool] : 0) + 1;
     if (EDIT_TOOLS.has(ev.rawTool)) s.edits += 1;
     if (READ_TOOLS.has(ev.rawTool)) s.reads += 1;
     this.earn(s.toolCalls % 20 === 0 ? 1 : 0, 1, actor.id);
@@ -103,7 +103,8 @@ class Progress extends EventEmitter {
     const day = this.today();
     s.turns += 1;
     day.turns += 1;
-    day.projects[actor.name] = (day.projects[actor.name] || 0) + 1;
+    // Own counts only: a folder called 'constructor' would otherwise add 1 to Object's.
+    if (actor.name !== '__proto__') day.projects[actor.name] = (Object.hasOwn(day.projects, actor.name) ? day.projects[actor.name] : 0) + 1;
     const hour = new Date().getHours();
     if (hour < 5) s.nightTurns += 1;
     if (hour >= 5 && hour < 7) s.earlyTurns += 1;
@@ -174,11 +175,18 @@ class Progress extends EventEmitter {
     return true;
   }
 
-  onFocusDone() {
-    this.p.stats.focus += 1;
-    this.today().focus += 1;
-    this.earn(3, 20, 'user');
+  // A pomodoro pays by its length: 3 coins and 20 XP for 25 minutes, in proportion for others (a
+  // few minutes earn nothing), and counts as that many 25-minute pomodoros - so a timer set to one
+  // minute can't be run over and over for coins or the pomodoro achievements. Returns the coins.
+  onFocusDone(minutes = 25) {
+    const share = Math.max(0, minutes) / 25;
+    const add = (v) => Math.round((v + share) * 100) / 100;
+    this.p.stats.focus = add(this.p.stats.focus);
+    this.today().focus = add(this.today().focus);
+    const coins = Math.floor(3 * share);
+    this.earn(coins, Math.floor(20 * share), 'user');
     this.commit();
+    return coins;
   }
 
   onBug(actorId) {

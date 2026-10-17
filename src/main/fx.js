@@ -28,13 +28,13 @@ class Fx extends EventEmitter {
     if (!this.enabled) return;
     this.emit('fx', { type: 'bug', id: this.nextId('bug'), actorId: a.id, duration: BUG_MS });
     setTimeout(() => {
-      this.progress.onBug(a.id);
+      if (!a.demo) this.progress.onBug(a.id);
       this.actors.say(a, '🐛 抓到 bug！', 2000);
     }, BUG_MS);
   }
 
   chest(a) {
-    if (!this.enabled) return;
+    if (!this.enabled || a.demo) return;
     const id = this.nextId('chest');
     this.chests.set(id, a.id);
     this.emit('fx', { type: 'chest', id, actorId: a.id });
@@ -56,7 +56,7 @@ class Fx extends EventEmitter {
   ufo(a) {
     if (!this.enabled) return;
     this.emit('fx', { type: 'ufo', id: this.nextId('ufo'), actorId: a?.id });
-    this.progress.onUfo();
+    if (!a?.demo) this.progress.onUfo();
   }
 }
 

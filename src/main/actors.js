@@ -11,6 +11,8 @@ const SLEEP_AFTER_MS = 3 * 60 * 1000;
 const STALE_MS = 2 * 60 * 60 * 1000;
 const LEAVE_MS = 6000;
 const MAX_RESIDENTS = 6;
+// AI sessions on screen at once; past this the one quiet the longest goes home.
+const MAX_AI = 30;
 // What residents get up to, with how often (weights) and what they say when they start.
 const PASTIMES = [
   { station: 'read', w: 3, says: ['📖 這本好看', '📚 再一章就好'] },
@@ -55,7 +57,7 @@ class Actors extends EventEmitter {
     const { characters } = this.store.settings;
     const owned = new Set(this.store.progress.owned);
     const resident = a.kind === 'resident' ? (characters.residents || []).find((r) => `resident:${r.id}` === a.id) : null;
-    const pick = resident || (a.kind === 'user' ? characters.user : (characters.projects[a.name] || characters.ai));
+    const pick = resident || (a.kind === 'user' ? characters.user : ((Object.hasOwn(characters.projects, a.name) && characters.projects[a.name]) || characters.ai));
     const fallback = a.kind === 'ai' ? 'droid' : 'office';
     let skin = pick?.skin || fallback;
     if (skin === 'auto') {
@@ -97,6 +99,7 @@ class Actors extends EventEmitter {
   ensure(id, init) {
     let a = this.map.get(id);
     if (!a) {
+      if (init.kind === 'ai') this.makeRoom();
       const now = Date.now();
       a = {
         id, kind: 'ai', source: 'api', name: '', cwd: '', state: 'idle', station: null, label: '', icon: '', prompt: '',
@@ -109,6 +112,12 @@ class Actors extends EventEmitter {
       this.changed();
     }
     return a;
+  }
+
+  makeRoom() {
+    const ai = [...this.map.values()].filter((a) => a.kind === 'ai' && a.state !== 'leaving');
+    if (ai.length < MAX_AI) return;
+    this.leave(ai.reduce((old, a) => (a.lastEvent < old.lastEvent ? a : old)));
   }
 
   setState(a, state, station = null) {
@@ -161,7 +170,7 @@ class Actors extends EventEmitter {
       if (a) this.leave(a);
       return;
     }
-    if (!a) a = this.ensure(id, { kind: 'ai', source: 'claude', name: ev.project, cwd: ev.cwd });
+    if (!a) a = this.ensure(id, { kind: 'ai', source: 'claude', name: ev.project, cwd: ev.cwd, demo: !!ev.demo });
     if (a.state === 'leaving') return;
     a.lastEvent = Date.now();
     if (ev.cwd && ev.project !== a.name) {
@@ -255,7 +264,7 @@ class Actors extends EventEmitter {
       if (a) this.leave(a);
       return;
     }
-    a = a || this.ensure(id, { kind: 'ai', source: String(p.source || 'api'), name: clip(p.name || p.id || 'API', 30) });
+    a = a || this.ensure(id, { kind: 'ai', source: clip(p.source || 'api', 20), name: clip(p.name || p.id || 'API', 30) });
     if (a.state === 'leaving') return;
     a.lastEvent = Date.now();
     const station = STATIONS[p.station] ? p.station : null;
@@ -263,8 +272,13 @@ class Actors extends EventEmitter {
     a.icon = clip(p.icon || (station ? STATIONS[station].icon : ''), 4);
     if (VALID_STATES.has(p.state)) {
       if (p.state === 'think') a.turnStart = Date.now();
+      // A turn is finishing, not saying "done" again: only coming into done counts, once.
+      const finished = p.state === 'done' && a.state !== 'done';
       this.setState(a, p.state, station || (p.state === 'wait' ? 'wait' : null));
-      if (p.state === 'done') this.emit('turn', a, { duration: Date.now() - a.turnStart });
+      if (finished) {
+        this.emit('turn', a, { duration: Date.now() - a.turnStart });
+        a.turnStart = Date.now();
+      }
     }
     if (p.say) this.say(a, clip(p.say, 60), 4000);
     this.changed();
@@ -273,9 +287,10 @@ class Actors extends EventEmitter {
   // Codex CLI `notify` payload: { type: 'agent-turn-complete', 'thread-id', cwd, 'last-assistant-message' }.
   codex(p) {
     if (!p || typeof p !== 'object') return;
-    const id = `codex:${p['thread-id'] || p.thread_id || 'default'}`;
-    const name = p.cwd ? path.win32.basename(path.posix.basename(String(p.cwd))) : 'Codex';
-    const a = this.ensure(id, { kind: 'ai', source: 'codex', name, cwd: p.cwd || '' });
+    const id = `codex:${clip(p['thread-id'] || p.thread_id || 'default', 80)}`;
+    const cwd = typeof p.cwd === 'string' ? p.cwd.slice(0, 260) : '';
+    const name = cwd ? clip(path.win32.basename(path.posix.basename(cwd)), 40) : 'Codex';
+    const a = this.ensure(id, { kind: 'ai', source: 'codex', name, cwd });
     a.lastEvent = Date.now();
     if (p.type === 'agent-turn-complete') {
       this.setState(a, 'done');

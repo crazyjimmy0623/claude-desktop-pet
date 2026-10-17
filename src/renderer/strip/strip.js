@@ -1,6 +1,6 @@
 /* global desk, Sprites, Catalog, Common */
 // Taskbar strip: characters stand above the taskbar, wander, can be dragged and clicked.
-const DPR = window.devicePixelRatio || 1;
+let DPR = window.devicePixelRatio || 1;
 const GRAVITY = 1800;
 const MAX_MINIS = 3;
 const OUCH = ['唉唷！', '頭好暈…', '放我下來啦', '咚！'];
@@ -16,7 +16,12 @@ let mouseIgnored = true;
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 // Whole device pixels per fine art pixel (half a logical pixel) keeps sprites crisp at any Windows display scaling.
-const devUnit = (s) => 2 * Math.max(1, Math.round((s * DPR) / 2));
+// Each size from small (2) up is a step bigger than the one below, even where rounding to whole pixels
+// would make two the same (medium and large at 100%, small and medium at 150%).
+const devUnit = (s) => {
+  const near = 2 * Math.max(1, Math.round((s * DPR) / 2));
+  return Number.isInteger(s) && s > 2 ? Math.max(near, devUnit(s - 1) + 2) : near;
+};
 const spriteW = () => (Sprites.W * devUnit(scale)) / DPR;
 const spriteH = () => (Sprites.H * devUnit(scale)) / DPR;
 const snapCss = (v) => Math.round(v * DPR) / DPR;
@@ -64,13 +69,20 @@ function createView(actor) {
 
   const v = {
     id: actor.id, actor, el, canvas, ctx, bubble, zzz, plate, helpersEl, minis: [],
-    x: 0, y: 170, vy: 0, facing: -1, target: null, nextWander: Date.now() + 4000 + Math.random() * 6000,
+    x: 0, y: 170, vx: 0, vy: 0, facing: -1, target: null, nextWander: Date.now() + 4000 + Math.random() * 6000,
     dragging: false, wasDropped: false, card: null, drawKey: '', hop: 0,
   };
   v.x = freeSpot(v);
   el.style.setProperty('--c', Common.colorOf(actor).main);
   el.style.width = `${spriteW()}px`;
 
+  wireCanvas(v, canvas);
+  views.set(v.id, v);
+  return v;
+}
+
+// A character's picture is where it is grabbed, patted (double click) and asked about (right click).
+function wireCanvas(v, canvas) {
   canvas.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
     drag = { v, sx: e.clientX, sy: e.clientY, moved: false };
@@ -80,8 +92,6 @@ function createView(actor) {
     e.preventDefault();
     desk.send('actor:menu', v.id);
   });
-  views.set(v.id, v);
-  return v;
 }
 
 function removeView(v) {
@@ -111,15 +121,7 @@ function syncActors(list) {
 function rebuildCanvases() {
   for (const v of views.values()) {
     const { canvas, ctx } = makeCanvas(scale, 'body hit');
-    canvas.addEventListener('mousedown', (e) => {
-      if (e.button !== 0) return;
-      drag = { v, sx: e.clientX, sy: e.clientY, moved: false };
-    });
-    canvas.addEventListener('dblclick', () => desk.send('actor:pat', v.id));
-    canvas.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      desk.send('actor:menu', v.id);
-    });
+    wireCanvas(v, canvas);
     v.canvas.replaceWith(canvas);
     v.canvas = canvas;
     v.ctx = ctx;
@@ -180,9 +182,12 @@ function renderMinis(v, now) {
 
 function update(v, dt, now) {
   const a = v.actor;
-  if (!v.dragging && v.y > 0) {
+  if (!v.dragging && (v.y > 0 || v.vy > 0)) {
     v.vy -= GRAVITY * dt;
     v.y = Math.max(0, v.y + v.vy * dt);
+    // Thrown up, they stop at the top of the window instead of flying out of it.
+    const top = window.innerHeight - spriteH() - 50;
+    if (v.y > top) { v.y = top; v.vy = Math.min(0, v.vy); }
     if (v.y === 0) {
       v.vy = 0;
       if (v.wasDropped) {
@@ -190,6 +195,16 @@ function update(v, dt, now) {
         showFloat(v, pick(OUCH), 'float-text');
       }
     }
+  }
+
+  // Thrown sideways: on they go, bouncing off the screen edges, and slide to a stop once down.
+  if (!v.dragging && v.vx) {
+    v.x += v.vx * dt;
+    const lo = 40;
+    const hi = window.innerWidth - 40;
+    if (v.x < lo || v.x > hi) { v.x = clamp(v.x, lo, hi); v.vx = -v.vx * 0.5; }
+    if (v.y === 0) v.vx *= Math.exp(-6 * dt);
+    if (Math.abs(v.vx) < 15) v.vx = 0;
   }
 
   let moving = false;
@@ -454,7 +469,11 @@ window.addEventListener('mousemove', (e) => {
     if (drag.moved) {
       v.x = clamp(e.clientX, 40, window.innerWidth - 40);
       v.y = clamp(window.innerHeight - e.clientY - spriteH() + 20, 0, window.innerHeight - spriteH() - 50);
+      v.vx = 0;
       v.vy = 0;
+      // The last moment of the drag, for how hard they are thrown when let go.
+      const t = performance.now();
+      drag.trail = (drag.trail || []).filter((p) => t - p.t < 80).concat({ x: v.x, y: v.y, t });
     }
   }
   const overHit = !!e.target.closest?.('.hit');
@@ -466,7 +485,14 @@ window.addEventListener('mouseup', () => {
   const { v } = drag;
   if (drag.moved) {
     v.dragging = false;
-    v.wasDropped = v.y > 20;
+    const trail = (drag.trail || []).filter((p) => performance.now() - p.t < 80);
+    const [first, last] = [trail[0], trail.at(-1)];
+    const dt = first && last ? (last.t - first.t) / 1000 : 0;
+    if (dt > 0.01) {
+      v.vx = clamp((last.x - first.x) / dt, -2500, 2500);
+      v.vy = clamp((last.y - first.y) / dt, -2500, 2500);
+    }
+    v.wasDropped = v.y > 20 || v.vy > 300;
     v.nextWander = Date.now() + 4000;
   } else if (v.card) {
     closeCard(v);
@@ -482,6 +508,8 @@ document.addEventListener('mouseleave', (e) => {
 });
 
 // ---- Wiring ----------------------------------------------------------------------
+
+Common.onDprChange((dpr) => { DPR = dpr; rebuildCanvases(); });
 
 let looksRev = 0;
 function applySettings(s) {

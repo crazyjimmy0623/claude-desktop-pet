@@ -2,6 +2,7 @@
 const { app, BrowserWindow, screen } = require('electron');
 const { buildIcon } = require('./icon');
 const path = require('path');
+const { fileURLToPath } = require('url');
 
 const PRELOAD = path.join(__dirname, '..', 'preload.js');
 const page = (...p) => path.join(__dirname, '..', 'renderer', ...p);
@@ -11,7 +12,16 @@ const DEBUG = !!process.env.DESKMATES_DEBUG;
 // Always: never let a dropped file or link replace a page (that looks like the app vanishing),
 // note crashes in deskmates.log, and bring a crashed page straight back.
 function wireSafety(w, name) {
-  const ours = (url) => url.startsWith('file:') && /\.html(\?|#|$)/.test(url);
+  const ours = (url) => {
+    // Only our own pages: a dropped .html file would otherwise load with the full desk bridge.
+    if (!url.startsWith('file:')) return false;
+    try {
+      const rel = path.relative(page(), fileURLToPath(url));
+      return !rel.startsWith('..') && !path.isAbsolute(rel) && rel.endsWith('.html');
+    } catch {
+      return false;
+    }
+  };
   w.webContents.on('will-navigate', (e, url) => { if (!ours(url)) e.preventDefault(); });
   w.webContents.on('will-frame-navigate', (e) => { if (!ours(e.url)) e.preventDefault(); });
   w.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -43,18 +53,13 @@ class Windows {
     this.strip = null;
     this.room = null;
     this.fullscreen = false;
-    this.hiddenByUser = false;
     // Windows sometimes pushes topmost windows down (e.g. after clicking the taskbar); keep reclaiming the top.
     setInterval(() => this.reassertTop(), 3000);
   }
 
-  all() {
-    return [this.strip, this.room].filter((w) => w && !w.isDestroyed());
-  }
-
   // To every frame, so the guild and settings pages inside a drawer hear it too.
   broadcast(channel, data) {
-    for (const w of this.all()) {
+    for (const w of this.overlays) {
       for (const f of w.webContents.mainFrame.framesInSubtree) {
         try { f.send(channel, data); } catch { /* frame going away */ }
       }
@@ -93,7 +98,7 @@ class Windows {
   }
 
   bringUp() {
-    this.setHidden(false);
+    this.refreshVisibility();
     const w = this.overlays[0];
     if (!w) return;
     if (w.isMinimized()) w.restore();
@@ -106,7 +111,7 @@ class Windows {
   }
 
   shouldShow() {
-    return !this.hiddenByUser && !(this.fullscreen && this.store.settings.hideInFullscreen);
+    return !(this.fullscreen && this.store.settings.hideInFullscreen);
   }
 
   refreshVisibility() {
@@ -115,11 +120,6 @@ class Windows {
       if (show && !w.isVisible()) w.showInactive();
       if (!show && w.isVisible()) w.hide();
     }
-  }
-
-  setHidden(hidden) {
-    this.hiddenByUser = hidden;
-    this.refreshVisibility();
   }
 
   setFullscreen(full) {

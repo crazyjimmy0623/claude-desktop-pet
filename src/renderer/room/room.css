@@ -211,3 +211,9 @@ html, body {
   pointer-events: auto;
   cursor: pointer;
 }
+
+/* ---- Visiting a friend's room ---- */
+#visit { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 8px;
+  padding: 5px 6px 5px 12px; border: 2px solid var(--ink); border-radius: var(--r); background: var(--paper); color: var(--ink);
+  font: 700 13px/1.3 var(--font); box-shadow: var(--shadow); white-space: nowrap; }
+#visit .btn { display: inline-flex; align-items: center; gap: 5px; }

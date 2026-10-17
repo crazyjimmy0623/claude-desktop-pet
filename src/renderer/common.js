@@ -107,5 +107,13 @@
 
   const colorOf = (actor) => Sprites.colorsFor(actor.hue ?? actor.id);
 
-  window.Common = { colorOf, drawMiniAt, STATE_LABEL, poseFor, bubbleFor, infoRows, loadSheets, drawActorAt, mmss, sheets };
+  // `fn(dpr)` whenever the window's pixel density changes: moved onto a screen with other scaling,
+  // or the scaling itself changed. Pages size their canvases in whole device pixels, so they redo it.
+  function onDprChange(fn) {
+    const watch = () => matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+      .addEventListener('change', () => { fn(window.devicePixelRatio || 1); watch(); }, { once: true });
+    watch();
+  }
+
+  window.Common = { colorOf, drawMiniAt, STATE_LABEL, poseFor, bubbleFor, infoRows, loadSheets, drawActorAt, mmss, sheets, onDprChange };
 })();

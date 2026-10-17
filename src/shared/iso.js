@@ -153,7 +153,8 @@
       for (let y = 0; y < h; y++) {
         for (let x = 0; x < w; x++) {
           const c = px[y * w + x];
-          if (!c || alphaOf(c) < 1) continue;
+          // Lit pixels ('*') stay lit: a one-pixel beacon or bulb is all edge.
+          if (!c || c[0] === '*' || alphaOf(c) < 1) continue;
           const empty = (dx, dy) => {
             const nx = x + dx;
             const ny = y + dy;
@@ -635,13 +636,13 @@
       P.dot(11, 7, 16, '#ffd65a', 1, 1);
     } },
     // Trees and greenery to plant anywhere, the same ones as the scenery behind.
-    pine: { w: 1, d: 1, h: 92, plant: true, draw: (P, s) => paintPlant(P, 'pine', 88, 0.5, s.weather === 'snow') },
-    birch: { w: 1, d: 1, h: 80, plant: true, draw: (P) => paintPlant(P, 'birch', 76, 0.5) },
-    maple: { w: 1, d: 1, h: 78, plant: true, draw: (P) => paintPlant(P, 'maple', 74, 0.4) },
-    sakura: { w: 1, d: 1, h: 78, plant: true, draw: (P) => paintPlant(P, 'sakura', 74, 0.6) },
-    bamboo: { w: 1, d: 1, h: 88, plant: true, draw: (P) => paintPlant(P, 'bamboo', 84, 0.5) },
-    jungle: { w: 1, d: 1, h: 30, plant: true, draw: (P) => paintPlant(P, 'jungle', 30, 0.5) },
-    rock: { w: 1, d: 1, h: 20, plant: true, draw: (P) => paintPlant(P, 'rock', 20, 0.5) },
+    pine: { w: 1, d: 1, h: 92, plant: true, draw: (P, s) => paintPlant(P, 'pine', 88, s.weather === 'snow') },
+    birch: { w: 1, d: 1, h: 80, plant: true, draw: (P) => paintPlant(P, 'birch', 76) },
+    maple: { w: 1, d: 1, h: 78, plant: true, draw: (P) => paintPlant(P, 'maple', 74) },
+    sakura: { w: 1, d: 1, h: 78, plant: true, draw: (P) => paintPlant(P, 'sakura', 74) },
+    bamboo: { w: 1, d: 1, h: 88, plant: true, draw: (P) => paintPlant(P, 'bamboo', 84) },
+    jungle: { w: 1, d: 1, h: 30, plant: true, draw: (P) => paintPlant(P, 'jungle', 30) },
+    rock: { w: 1, d: 1, h: 20, plant: true, draw: (P) => paintPlant(P, 'rock', 20) },
     lilypad: { w: 1, d: 1, h: 4, flat: true, onWater: true, draw: (P) => {
       P.top(3, 4, 9, 8, '#5aa85a', 0.5);
       P.top(7, 4, 2, 4, '#4f8f45', 0.6);
@@ -1045,7 +1046,8 @@
         // Terrace: a sofa under the sky. Loft: a bed under the garden. Garden: a telescope.
         [3, 'chair', 0, 4], [3, 'plant', 0, 3], [3, 'planter', 0, 5],
         [4, 'bed', 3, 0], [4, 'lamp', 2, 0], [4, 'poster', 2, 1, true], [4, 'window', 3, 0], [4, 'neon', 5, 0],
-        [5, 'telescope', 4, 1], [5, 'plant', 3, 0], [5, 'plant', 4, 0], [5, 'catbed', 3, 1],
+        // The garden is full, so the telescope turns to face the top of the stairs, the one free tile.
+        [5, 'telescope', 4, 0, true], [5, 'plant', 3, 0], [5, 'plant', 4, 1], [5, 'catbed', 3, 1],
       ],
     },
     cyber: {
@@ -1077,7 +1079,6 @@
     },
     lake: {
       name: '湖畔溫室',
-      backdrop: 'forest',
       desc: '湖面上的高腳木平台，兩間玻璃溫室種滿植物，還有釣魚碼頭和屋頂露台',
       zones: [
         { name: '湖', z: 0, kind: 'water', depth: 40, wall: 'brick', floor: 'stone', rects: [[0, 0, 9, 9]] },
@@ -1106,7 +1107,6 @@
     },
     beach: {
       name: '熱帶海邊小屋',
-      backdrop: 'beach',
       desc: '白沙灘上的竹子高腳屋，椰子樹、陽傘和躺椅，木棧橋一路伸進藍綠色的淺海',
       zones: [
         { name: '沙灘', z: 16, kind: 'outdoor', base: 'earth', wall: 'bamboo', floor: 'sand', rects: [[0, 0, 5, 6]] },
@@ -1136,7 +1136,6 @@
     },
     cabin: {
       name: '森林溫馨木屋',
-      backdrop: 'forest',
       desc: '森林裡的圓木小屋，屋前有營火和門廊，後面的小山丘有瀑布流進池塘',
       zones: [
         { name: '草地', z: 0, kind: 'outdoor', base: 'earth', wall: 'stone', floor: 'grass', rects: [[0, 0, 1, 9], [1, 5, 5, 4], [6, 6, 3, 3]] },
@@ -1241,7 +1240,7 @@
             if (mine.has(`${x + dx},${y + dy}`) || (stairAt.get(`${x + dx},${y + dy}`) || []).includes(f)) continue;
             if (nb.some((t) => t.z >= zn.z && !zones[t.f].thin)) continue;
             if (nb.some((t) => t.z === zn.z && zones[t.f].kind !== 'water')) continue;
-            edges.push([plane, atv, u, zn.wallH || WALL_H]);
+            edges.push([plane, atv, u, WALL_H]);
           }
         }
       }
@@ -1288,22 +1287,24 @@
 
   // Rooms saved before the grid (iso 4) were the street corner: keep their furniture and materials.
   function migrate(room) {
-    if (room?.iso === 5) return room;
+    if (room?.iso === 5) {
+      delete room.backdrop; // the old scenery, no longer drawn
+      return room;
+    }
     if (room?.iso !== 4) return null;
     const out = { iso: 5, blueprint: 'shop', ...fromSpec(BLUEPRINTS.shop), objects: room.objects || [] };
     out.zones.forEach((zn, i) => { if (room.floors?.[i]) Object.assign(zn, { wall: room.floors[i].wall, floor: room.floors[i].floor }); });
     return out;
   }
 
-  const levels = (room) => (room.zones || []).length;
   const floorZ = (room, f) => room.zones?.[f]?.z || 0;
   const floorOf = (room, f) => room.zones?.[f] || { wall: 'brick', floor: 'stone' };
 
   // Every place a character can stand: open area tiles and each step of every open flight.
   function cells(room) {
-    const key = layoutOf(room).id;
-    if (room._cells && room._cells.key === key) return room._cells;
     const L = layoutOf(room);
+    const key = L.id;
+    if (room._cells && room._cells.key === key) return room._cells;
     const list = [];
     const at = new Map();
     const add = (c) => {
@@ -1461,7 +1462,10 @@
       for (const st of def.stations) {
         const x = o.x + (o.flip ? st.dy : st.dx);
         const y = o.y + (o.flip ? st.dx : st.dy);
-        const c = cellAt(room, x, y, o.f || 0);
+        // The tile in front can belong to another layer at the same height (a sofa in the hut
+        // facing out onto the deck): standing there is just as good.
+        const z = floorZ(room, o.f || 0);
+        const c = cellAt(room, x, y, o.f || 0) || (cells(room).at.get(`${x},${y}`) || []).find((k) => k.kind === 'floor' && k.z === z);
         if (!c || !open.has(c.id)) continue;
         let facing = o.flip ? -1 : 1;
         if (st.dx >= def.w) facing = o.flip ? 1 : -1;
@@ -1472,11 +1476,10 @@
     return spots;
   }
 
-  // The default room, furnished on every layer; locked layers keep their furniture for later.
   // A fresh room from a blueprint, furnished on every layer; locked layers keep their furniture.
   function generateRoom(id = 'shop') {
     const bp = BLUEPRINTS[id] || BLUEPRINTS.shop;
-    const room = { iso: 5, blueprint: BLUEPRINTS[id] ? id : 'shop', backdrop: bp.backdrop || null, ...fromSpec(bp), objects: [] };
+    const room = { iso: 5, blueprint: BLUEPRINTS[id] ? id : 'shop', ...fromSpec(bp), objects: [] };
     for (const [f, type, x, y, flip = false] of bp.objects) {
       if (canPlace(room, type, x, y, flip, f)) room.objects.push({ type, x, y, flip, f });
     }
@@ -1521,21 +1524,23 @@
     return null;
   }
   // Which block a layer is made of, for its price.
+  // Walls and floors are paint: a room painted glass is still a room block, and costs as one.
   function blockOf(zn) {
     if (zn.block) return zn.block;
     if (zn.kind === 'water') return 'water';
     if (zn.thin) return zn.kind === 'room' ? 'loft' : 'deck';
-    if (zn.kind === 'room') return zn.wall === 'glass' ? 'glass' : 'room';
+    if (zn.kind === 'room') return 'room';
     return zn.base === 'earth' ? 'grass' : 'brick';
   }
   // What everything built in a room is worth: each tile by its block and height (a solid stack is
-  // one block per half storey), each flight by its steps, each object by its price.
+  // one block per half storey it stands above the ground, a paved tile one block), each flight by
+  // its steps, each object by its price.
   function roomCost(room, priceOf) {
     let total = 0;
     for (const [, , f] of room.tiles) {
       const zn = room.zones[f];
       if (!zn || isLawn(zn)) continue;
-      const blocks = zn.thin || zn.kind === 'water' ? 1 : Math.max(1, Math.round(zn.z / STEP_Z) + 1);
+      const blocks = zn.thin || zn.kind === 'water' ? 1 : Math.max(1, Math.round(zn.z / STEP_Z));
       total += priceOf(`block:${blockOf(zn)}`) * blocks;
     }
     for (const fl of room.flights) total += fl.style === 'spiral' ? priceOf('block:spiral') : priceOf('block:stairs') * fl.cells.length;
@@ -1547,7 +1552,9 @@
     const need = new Set();
     for (const [, , f] of room.tiles) {
       const zn = room.zones[f];
-      if (!zn || isLawn(zn)) continue;
+      if (!zn) continue;
+      // The lawn is free, but a floor painted on it still has to be unlocked.
+      if (isLawn(zn)) { if (zn.floor !== 'grass') need.add(`floor:${zn.floor}`); continue; }
       need.add(`block:${blockOf(zn)}`);
       need.add(`floor:${zn.floor}`);
       if (zn.wall) need.add(`wall:${zn.wall}`);
@@ -1559,7 +1566,6 @@
   // A blueprint built on a plot of n: the design, and lawn on the rest.
   function blueprintRoom(id, n) {
     const room = generateRoom(id);
-    room.backdrop = null;
     room.land = n;
     fillLawn(room, n);
     tidy(room);
@@ -1568,7 +1574,7 @@
   // A new player's plot: an 8x8 lawn with a desk, a server, books, a counter bell, a sofa and a
   // coffee machine out under a tree, so the team has somewhere to work from the start.
   function starterRoom() {
-    const room = { iso: 5, blueprint: null, backdrop: null, land: 8, zones: [], tiles: [], flights: [], door: [7, 7], objects: [] };
+    const room = { iso: 5, blueprint: null, land: 8, zones: [], tiles: [], flights: [], door: [7, 7], objects: [] };
     fillLawn(room, 8);
     room.zones[0].name = '草地';
     resetCells(room);
@@ -1582,13 +1588,6 @@
 
   // ---- Building -----------------------------------------------------------------------
   // Terrain edits for the editor. Each returns an error message, or null when it worked.
-  const LAND = 12; // tiles each way the room may spread over
-  const ZONE_KINDS = {
-    room: { name: '室內', kind: 'room' },
-    outdoor: { name: '戶外', kind: 'outdoor', rails: true },
-    loft: { name: '閣樓', kind: 'room', thin: true, rails: true },
-  };
-
   // The tile under a screen point (fine px) on the plane z.
   function pick(room, fx, fy, z) {
     const o = origin(room);
@@ -1598,14 +1597,6 @@
   }
 
   const tileIndex = (room, x, y, f) => room.tiles.findIndex((t) => t[0] === x && t[1] === y && t[2] === f);
-
-  function addZone(room, type, z) {
-    const k = ZONE_KINDS[type] || ZONE_KINDS.outdoor;
-    const like = room.zones.find((zn) => zn.kind === k.kind) || room.zones[0];
-    const n = room.zones.filter((zn) => zn.name.startsWith(k.name)).length + 1;
-    room.zones.push({ ...k, name: `${k.name} ${n}`, z: Math.max(STEP_Z, z), wall: like?.wall || 'brick', floor: like?.floor || 'stone' });
-    return room.zones.length - 1;
-  }
 
   // Lay a floor tile of zone f at (x, y). A solid floor buries any lower floor in its column;
   // nothing can go under a solid floor.
@@ -1622,16 +1613,19 @@
     return null;
   }
 
-  function removeTile(room, x, y, f) {
-    const i = tileIndex(room, x, y, f);
-    if (i < 0) return null;
-    room.tiles.splice(i, 1);
-    tidy(room);
+  // Stairs in a straight line from tile a to tile b on different heights; the steps fill the
+  // tiles between. Solid stone outdoors, open metal treads indoors.
+  // New steps can't go on another flight's steps or on the floor it starts or ends on, and the new
+  // flight's ends can't be another's steps: either way the older stairs would lose a way on.
+  function stairsClash(room, cells, ends) {
+    const key = (c) => `${c[0]},${c[1]}`;
+    const steps = new Set(room.flights.flatMap((fl) => fl.cells.map(key)));
+    const landings = new Set(room.flights.flatMap((fl) => [key(fl.bottom), key(fl.top)]));
+    if (cells.some((c) => steps.has(key(c)))) return '這裡已經有樓梯了';
+    if (cells.some((c) => landings.has(key(c))) || ends.some((c) => steps.has(key(c)))) return '會擋住另一座樓梯的上下口';
     return null;
   }
 
-  // Stairs in a straight line from tile a to tile b on different heights; the steps fill the
-  // tiles between. Solid stone outdoors, open metal treads indoors.
   function addFlight(room, a, b) {
     const za = room.zones[a.f]?.z;
     const zb = room.zones[b.f]?.z;
@@ -1645,8 +1639,8 @@
     const dx = Math.sign(hi.x - lo.x);
     const dy = Math.sign(hi.y - lo.y);
     const cells = Array.from({ length: n }, (_, k) => [lo.x + dx * (k + 1), lo.y + dy * (k + 1)]);
-    const used = new Set(room.flights.flatMap((fl) => fl.cells.map((c) => `${c}`)));
-    if (cells.some((c) => used.has(`${c}`))) return '這裡已經有樓梯了';
+    const clash = stairsClash(room, cells, [[lo.x, lo.y], [hi.x, hi.y]]);
+    if (clash) return clash;
     const from = room.zones[lo.f];
     const style = !from.thin && from.kind !== 'room' ? 'solid' : 'open';
     room.flights.push({ from: lo.f, to: hi.f, style, cells, bottom: [lo.x, lo.y], top: [hi.x, hi.y] });
@@ -1659,16 +1653,6 @@
     room.flights = room.flights.filter((fl) => !fl.cells.some(([cx, cy]) => cx === x && cy === y));
     if (room.flights.length !== before) tidy(room);
     return room.flights.length !== before;
-  }
-
-  function setZoneZ(room, f, z) {
-    const zn = room.zones[f];
-    if (!zn) return '沒有這一層';
-    z = Math.max(f === 0 ? 0 : STEP_Z, Math.min(8 * STEP_Z, Math.round(z / STEP_Z) * STEP_Z));
-    if (zn.z === z) return null;
-    zn.z = z;
-    tidy(room);
-    return null;
   }
 
   // After an edit: drop stairs whose ends are gone or too steep, furniture that no longer fits,
@@ -1715,6 +1699,9 @@
   // The block face under a screen point: { x, y, f, z, face: 'top' | 'left' | 'right' } for the
   // frontmost block, or a stair step { stair: cell }.
   function pickBlock(room, fx, fy) {
+    return holding(room, () => pickBlockHeld(room, fx, fy));
+  }
+  function pickBlockHeld(room, fx, fy) {
     const lay = layoutOf(room);
     const inside = (pts) => {
       let hit = false;
@@ -1742,7 +1729,6 @@
       if (c.kind !== 'stair') continue;
       if (inside([P(c.x, c.y, c.z), P(c.x + 1, c.y, c.z), P(c.x + 1, c.y + 1, c.z), P(c.x, c.y + 1, c.z)])) consider({ stair: c, x: c.x, y: c.y, z: c.z }, (c.x + c.y) * 1000 + c.z + 3);
     }
-    void lay;
     return best;
   }
 
@@ -1770,16 +1756,13 @@
     const i = tileIndex(room, hit.x, hit.y, hit.f);
     if (i < 0) return null;
     room.tiles.splice(i, 1);
-    if (!zn.thin && zn.kind !== 'water' && zn.z >= STEP_Z) {
-      const id = zn.block || (zn.base === 'earth' ? 'grass' : zn.kind === 'room' ? 'room' : 'brick');
-      room.tiles.push([hit.x, hit.y, zoneFor(room, id, zn.z - STEP_Z)]);
-    }
+    if (!zn.thin && zn.kind !== 'water' && zn.z > STEP_Z) room.tiles.push([hit.x, hit.y, zoneFor(room, blockOf(zn), zn.z - STEP_Z)]);
+    // Nothing left standing here: the lawn grows back, rather than a hole in the plot.
+    if (!room.tiles.some((t) => t[0] === hit.x && t[1] === hit.y)) room.tiles.push([hit.x, hit.y, zoneFor(room, 'grass', 0)]);
     tidy(room);
     return null;
   }
 
-  // Stairs down from the side of a higher block: as long as they need to be, onto the first
-  // floor in front low enough.
   // Stairs are a piece of their own, put down on a floor tile next to higher ground: they climb
   // to it, and a bigger drop takes more steps, running away from the high side. Pointing at the
   // side of a higher block puts them on the floor in front of that side.
@@ -1844,10 +1827,14 @@
   function placeSpiral(room, hit) {
     const plan = spiralPlan(room, hit);
     if (typeof plan === 'string') return plan;
-    if (room.flights.some((fl) => fl.cells.some(([x, y]) => x === plan.cell[0] && y === plan.cell[1]))) return '這裡已經有樓梯了';
-    room.flights.push({ from: plan.from, to: plan.hi.f, style: 'spiral', cells: [plan.cell], bottom: [plan.lo.x, plan.lo.y], top: [plan.hi.x, plan.hi.y] });
+    const clash = stairsClash(room, [plan.cell], [[plan.lo.x, plan.lo.y], [plan.hi.x, plan.hi.y]]);
+    if (clash) return clash;
+    // From the floor it is entered from: that can be another layer at the same height as the
+    // tile it stands on, and a flight whose foot isn't on its own layer is thrown out by tidy.
+    const fl = { from: plan.lo.f, to: plan.hi.f, style: 'spiral', cells: [plan.cell], bottom: [plan.lo.x, plan.lo.y], top: [plan.hi.x, plan.hi.y] };
+    room.flights.push(fl);
     tidy(room);
-    return null;
+    return room.flights.includes(fl) ? null : '這裡蓋不了旋轉樓梯';
   }
   function placeStairs(room, hit) {
     const plan = stairPlan(room, hit);
@@ -1876,226 +1863,65 @@
 
   // ---- Rendering --------------------------------------------------------------------
 
-  // Room canvas in fine pixels: world (0, 0, 0) lands at origin().
-  // Scenery behind the room: rows of trees (or palms, bamboo, rocks...) along the back edges on a
-  // strip of ground, hazed into the distance. It is only painted - nothing walks there and clicks
-  // pass through it. A room keeps either a preset's id or its own mix:
-  // { plants: [...], ground, rows: 1-3, density: 0.3-1, seed }.
-  const BACKDROP_PLANTS = {
-    pine: { name: '松樹', weight: 1 },
-    broadleaf: { name: '闊葉樹', weight: 1 },
-    birch: { name: '白樺', weight: 1 },
-    maple: { name: '楓樹', weight: 1 },
-    sakura: { name: '櫻花樹', weight: 1 },
-    palm: { name: '椰子樹', weight: 2 },
-    jungle: { name: '熱帶灌木', weight: 1, low: true },
-    bamboo: { name: '竹子', weight: 1.5 },
-    bush: { name: '灌木叢', weight: 0.7, low: true },
-    rock: { name: '岩石', weight: 0.5, low: true },
-  };
-  const BACKDROP_GROUNDS = { grass: '草地', sand: '沙灘', snow: '雪地', dirt: '泥土', moss: '苔蘚' };
-  const BACKDROP_PRESETS = {
-    forest: { name: '森林', plants: ['pine', 'broadleaf'], ground: 'grass', rows: 2, density: 1 },
-    beach: { name: '海灘椰林', plants: ['palm', 'jungle'], ground: 'sand', rows: 2, density: 1 },
-    bamboo: { name: '竹林', plants: ['bamboo', 'bush'], ground: 'moss', rows: 2, density: 1 },
-    sakura: { name: '櫻花林', plants: ['sakura', 'broadleaf', 'bush'], ground: 'grass', rows: 2, density: 0.85 },
-    autumn: { name: '秋天楓林', plants: ['maple', 'birch'], ground: 'dirt', rows: 2, density: 0.9 },
-    snow: { name: '雪松林', plants: ['pine', 'rock'], ground: 'snow', rows: 3, density: 0.9 },
-  };
-  const BACKDROPS = Object.fromEntries(Object.entries(BACKDROP_PRESETS).map(([id, p]) => [id, p.name]));
-  // The scenery a room shows, as a full mix, or null.
-  function backdropOf(room) {
-    const b = room.backdrop !== undefined ? room.backdrop : BLUEPRINTS[room.blueprint]?.backdrop;
-    if (!b) return null;
-    const base = typeof b === 'string' ? BACKDROP_PRESETS[b] : b;
-    if (!base) return null;
-    const plants = (base.plants || []).filter((k) => BACKDROP_PLANTS[k]);
-    if (!plants.length) return null;
-    return {
-      plants,
-      ground: BACKDROP_GROUNDS[base.ground] ? base.ground : 'grass',
-      rows: Math.max(1, Math.min(3, Math.round(base.rows || 2))),
-      density: Math.max(0.3, Math.min(1, base.density ?? 1)),
-      seed: base.seed || 0,
-      preset: typeof b === 'string' ? b : base.preset || null,
-    };
-  }
-  const rowHeight = (row) => [0, 58, 78, 96][row];
-  function backdropItems(room) {
-    const bd = backdropOf(room);
-    if (!bd) return [];
-    let mx = 1;
-    let my = 1;
-    for (const [x, y] of room.tiles) { mx = Math.max(mx, x + 1); my = Math.max(my, y + 1); }
-    const total = bd.plants.reduce((a, k) => a + BACKDROP_PLANTS[k].weight, 0);
-    const pickPlant = (u) => {
-      let acc = 0;
-      for (const k of bd.plants) { acc += BACKDROP_PLANTS[k].weight / total; if (u < acc) return k; }
-      return bd.plants[bd.plants.length - 1];
-    };
-    const sd = bd.seed * 17.31;
-    const out = [];
-    for (let row = bd.rows; row >= 1; row--) {
-      for (let k = -row; k < Math.max(mx, my) + 1; k++) {
-        for (const [x, y] of [[-row, k], [k, -row]]) {
-          if (x === -row && y === -row && k !== -row) continue;
-          if ((x >= 0 && x >= mx) || (y >= 0 && y >= my)) continue;
-          const n = hash(x * 3 + row + sd, y * 5 + row * 11);
-          const plant = pickPlant(hash(x * 7 + row * 3 + sd, y * 13 - sd));
-          // Thinned out by the density, but the ground stays.
-          const gap = hash(y * 9 + sd, x * 4 + row) > bd.density;
-          out.push({ x: x + (n - 0.5) * 0.5, y: y + (hash(y + sd, x) - 0.5) * 0.5, gx: x, gy: y, row, n, kind: plant, gap });
-        }
-      }
-    }
-    return out.sort((a, b) => (a.x + a.y) - (b.x + b.y));
-  }
-  function backdropTree(kind, n, row, snowy) {
-    const far = row > 1;
-    const fade = (row - 1) * 0.12;
-    const low = BACKDROP_PLANTS[kind]?.low;
-    const h = Math.round((rowHeight(row) + n * 34) * (low ? (kind === 'jungle' ? 0.45 : 0.32) : 1));
-    const v = Math.floor(n * 3);
-    return cached(`bd|${kind}|${h}|${v}|${row}|${snowy ? 1 : 0}`, () => renderSprite(1, 1, h + 12, (P) => paintPlant(P, kind, h, n, snowy, (c) => (far ? dk(c, 0.06 + fade) : c)), false));
-  }
-  // One plant of the scenery, h tall: shared by the backdrop rows and the plants you place.
-  function paintPlant(P, kind, h, n, snowy, shade = (c) => c) {
-    const v = Math.floor(n * 3);
+  // One plant you place, h tall.
+  function paintPlant(P, kind, h, snowy) {
     const crown = (h0, parts) => {
-      for (const [x, y, zf, r, c] of parts) P.disc(x, y, h0 * zf, r, shade(c));
+      for (const [x, y, zf, r, c] of parts) P.disc(x, y, h0 * zf, r, c);
     };
-    if (kind === 'palm') {
-      // A palm: ringed trunk leaning out, drooping fronds.
-      const lean = 0.02 + n * 0.03;
-      for (let i = 0; i < h / 6; i++) P.box(6 + i * i * lean, 6, i * 6, 4, 4, 6, i % 2 ? shade('#a8865a') : shade('#bf9c6c'), false);
-      const cx = 6 + (h / 6) * (h / 6) * lean + 2;
-      for (let k = 0; k < 7; k++) {
-        const a = (k / 7) * Math.PI * 2 + n;
-        for (let j = 1; j < 12; j++) P.disc(cx + Math.cos(a) * j * 1.6, 8 + Math.sin(a) * j * 1.2, h - 4 - j * j * 0.2, Math.max(0.9, 2.6 - j * 0.15), shade(k % 2 ? '#3f8a3a' : '#56a64a'));
-      }
-      return;
-    }
     if (kind === 'jungle') {
       // Jungle undergrowth: big glossy leaves.
-      for (let i = 0; i < 9; i++) P.disc(4 + (i * 5) % 9, 4 + (i * 3) % 9, (6 + (i % 4) * 6) * (h / 30), 5 - (i % 3), shade(i % 2 ? '#2f7a3a' : '#4f9a4a'));
-      return;
-    }
-    if (kind === 'bush') {
-      crown(h, [[8, 8, 0.35, 7, '#3f7a3a'], [5, 9, 0.5, 5, '#4f8f45'], [11, 7, 0.55, 5, '#4f8f45'], [8, 8, 0.75, 5, '#62a656'], [7, 9, 0.9, 3, '#7cbf6a']]);
-      if (v === 2) for (const [x, y, zf] of [[5, 11, 0.6], [11, 10, 0.7], [8, 12, 0.85]]) P.disc(x, y, h * zf, 1, shade('#f2d0e0'));
+      for (let i = 0; i < 9; i++) P.disc(4 + (i * 5) % 9, 4 + (i * 3) % 9, (6 + (i % 4) * 6) * (h / 30), 5 - (i % 3), i % 2 ? '#2f7a3a' : '#4f9a4a');
       return;
     }
     if (kind === 'rock') {
       // A mossy boulder.
       crown(h, [[8, 8, 0.2, 7, '#6e7280'], [6, 9, 0.45, 6, '#858a98'], [10, 7, 0.5, 5, '#7a7e8c'], [7, 8, 0.75, 4, '#9aa0ae']]);
-      P.disc(9, 7, h * 0.9, 2.5, shade('#6f9a52'));
+      P.disc(9, 7, h * 0.9, 2.5, '#6f9a52');
       return;
     }
     if (kind === 'bamboo') {
       // A clump of stalks with joints, leaves at the tips.
       for (const [x, y, hk] of [[4, 6, 1], [9, 4, 0.85], [7, 10, 0.92], [12, 9, 0.75]]) {
         const top = h * hk;
-        for (let zz = 0; zz < top; zz += 7) P.box(x, y, zz, 2, 2, 6, shade(zz % 14 ? '#7fae4a' : '#6a9a3c'), false);
-        for (let zz = 7; zz < top; zz += 7) P.box(x - 0.5, y - 0.5, zz - 1, 3, 3, 1, shade('#a6c86a'), false);
+        for (let zz = 0; zz < top; zz += 7) P.box(x, y, zz, 2, 2, 6, zz % 14 ? '#7fae4a' : '#6a9a3c', false);
+        for (let zz = 7; zz < top; zz += 7) P.box(x - 0.5, y - 0.5, zz - 1, 3, 3, 1, '#a6c86a', false);
         for (let k = 0; k < 5; k++) {
           const a = k * 1.3 + x;
-          P.disc(x + 1 + Math.cos(a) * 3, y + 1 + Math.sin(a) * 2, top - 6 + k * 2.5, 2.2, shade(k % 2 ? '#4f8a3a' : '#6aa64a'));
+          P.disc(x + 1 + Math.cos(a) * 3, y + 1 + Math.sin(a) * 2, top - 6 + k * 2.5, 2.2, k % 2 ? '#4f8a3a' : '#6aa64a');
         }
       }
       return;
     }
     if (kind === 'birch') {
       // A white trunk with dark marks, a light airy crown.
-      for (let zz = 0; zz < h * 0.62; zz += 3) P.box(7, 7, zz, 2, 2, 3, shade((zz / 3) % 4 === 1 ? '#3a3a40' : '#ecebe4'), false);
+      for (let zz = 0; zz < h * 0.62; zz += 3) P.box(7, 7, zz, 2, 2, 3, (zz / 3) % 4 === 1 ? '#3a3a40' : '#ecebe4', false);
       crown(h, [[8, 8, 0.55, 7, '#8aa64a'], [5, 9, 0.66, 5, '#a6bf5a'], [11, 7, 0.7, 5, '#a6bf5a'], [8, 8, 0.82, 5, '#c8d86a'], [8, 8, 0.94, 3, '#e0e08a']]);
       return;
     }
-    if (kind === 'broadleaf' || kind === 'maple' || kind === 'sakura') {
+    if (kind === 'maple' || kind === 'sakura') {
       const C = {
-        broadleaf: ['#3f7a3a', '#4f8f45', '#62a656', '#7cbf6a'],
         maple: ['#a8402a', '#c85a2a', '#e07a30', '#f0a648'],
         sakura: ['#d88aa8', '#e8a2bc', '#f4bcd0', '#fcdce6'],
       }[kind];
-      P.box(6.5, 6.5, 0, 3, 3, h * 0.4, shade(kind === 'sakura' ? '#5a3a3a' : '#6e4428'), false);
+      P.box(6.5, 6.5, 0, 3, 3, h * 0.4, kind === 'sakura' ? '#5a3a3a' : '#6e4428', false);
       crown(h, [[8, 8, 0.5, 11, C[0]], [4, 9, 0.62, 8, C[1]], [12, 6, 0.66, 8, C[1]], [8, 8, 0.78, 8, C[2]], [7, 9, 0.9, 5, C[3]]]);
       return;
     }
     // A pine: tiers of needles narrowing to a point, snow on each tier on snowy ground.
-    P.box(7, 7, 0, 2, 2, h * 0.22, shade('#5a3a24'), false);
+    P.box(7, 7, 0, 2, 2, h * 0.22, '#5a3a24', false);
     const z0 = h * 0.18;
     for (let zz = z0; zz < h; zz += 1) {
       const t = (zz - z0) / (h - z0);
       const r = 9 * (1 - t) + ((zz - z0) % 12 < 4 ? 1.6 : 0);
       const cap = snowy && (zz - z0) % 12 >= 2 && (zz - z0) % 12 < 4;
-      P.disc(8, 8, zz, r, shade(cap ? '#e8eef8' : (zz - z0) % 12 < 4 ? '#2f5a3a' : '#3d6e47'));
-      P.disc(6.5, 8.5, zz, Math.max(0, r - 3), shade(cap ? '#ffffff' : '#4a7d52'));
+      P.disc(8, 8, zz, r, cap ? '#e8eef8' : (zz - z0) % 12 < 4 ? '#2f5a3a' : '#3d6e47');
+      P.disc(6.5, 8.5, zz, Math.max(0, r - 3), cap ? '#ffffff' : '#4a7d52');
     }
   }
-  // The ground the scenery stands on, one tile at a time.
-  const GROUND_COLORS = {
-    grass: { t: '#4f8a45', l: '#5e3922', r: '#3b2214', fleck: '#6aa857' },
-    sand: { t: '#e2c98e', l: '#c9a46a', r: '#a8844e', fleck: '#f0dcb0' },
-    snow: { t: '#e8eef8', l: '#8a7a6a', r: '#6a5a4a', fleck: '#ffffff' },
-    dirt: { t: '#9a6a3e', l: '#6e4428', r: '#4f2f1a', fleck: '#c8803a' },
-    moss: { t: '#5f8a3a', l: '#4a3a2a', r: '#2f2418', fleck: '#8aae4a' },
-  };
-  function backdropGround(kind) {
-    return cached(`bdg|${kind}`, () => renderSprite(1, 1, 8, (P) => {
-      const c = GROUND_COLORS[kind] || GROUND_COLORS.grass;
-      P.box(0, 0, -6, TU, TU, 6, { t: c.t, l: c.l, r: c.r }, false);
-      for (let i = 0; i < 5; i++) P.top((i * 7) % 14, (i * 5) % 14, 2, 1, c.fleck, 0);
-    }, false, 8));
-  }
-  // A small picture of one plant, for the editor.
-  const backdropThumb = (kind) => backdropTree(kind, 0.5, 1);
-  const BACKDROP_CANVAS = { key: '', canvas: null };
-  function drawBackdrop(ctx, room, z, weather) {
-    const items = backdropItems(room);
-    if (!items.length) return;
-    const W = ctx.canvas.width;
-    const H = ctx.canvas.height;
-    const bd = backdropOf(room);
-    const key = `${layoutOf(room).id}|${JSON.stringify(bd)}|${z}|${W}x${H}|${JSON.stringify(ctx.getTransform())}|${weather || ''}`;
-    if (BACKDROP_CANVAS.key !== key) {
-      const c = makeCanvas(W, H);
-      const g = c.getContext('2d');
-      g.imageSmoothingEnabled = false;
-      g.setTransform(ctx.getTransform());
-      const grounds = new Set();
-      for (const it of items) {
-        const gk = `${it.gx},${it.gy}`;
-        if (grounds.has(gk)) continue;
-        grounds.add(gk);
-        blit(g, room, backdropGround(bd.ground), it.gx * TU, it.gy * TU, 0, z);
-      }
-      // Far row first, hazed further; then the near row.
-      const haze = { sand: '170,215,230', snow: '215,225,240' }[bd.ground] || '90,120,135';
-      for (let row = bd.rows; row >= 1; row--) {
-        for (const it of items.filter((t) => t.row === row && !t.gap)) blit(g, room, backdropTree(it.kind, it.n, row, bd.ground === 'snow'), it.x * TU, it.y * TU, 0, z);
-        g.save();
-        g.setTransform(1, 0, 0, 1, 0, 0);
-        g.globalCompositeOperation = 'source-atop';
-        g.fillStyle = `rgba(${haze},${[0, 0.14, 0.24, 0.2][row]})`;
-        g.fillRect(0, 0, W, H);
-        g.restore();
-      }
-      Object.assign(BACKDROP_CANVAS, { key, canvas: c });
-    }
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(BACKDROP_CANVAS.canvas, 0, 0);
-    ctx.restore();
-  }
-
+  // Room canvas in fine pixels: world (0, 0, 0) lands at origin().
   function bounds(room) {
     const L = layoutOf(room);
     let top = 0; let bottom = 0; let left = 0; let right = 0;
-    // Room for the scenery behind.
-    for (const it of backdropItems(room)) {
-      top = Math.max(top, rowHeight(it.row) + 34 + 12 - ((it.x + it.y) * TU) / 2);
-      left = Math.max(left, (it.y + 1 - it.x) * TU + 8);
-      right = Math.max(right, (it.x + 1 - it.y) * TU + 8);
-    }
     for (const [f, a] of L.areas.entries()) {
       const walls = a.walls.filter((w) => !w[5]);
       const tall = walls.length ? Math.max(...walls.map((w) => w[4])) + 3 : a.rails ? 16 : 4;
@@ -2106,10 +1932,28 @@
         right = Math.max(right, (x + w - y) * TU);
       }
     }
+    // Furniture and plants stand taller than the walls around them, a tree on the back row most of all.
+    for (const o of room.objects || []) {
+      const def = OBJECTS[o.type];
+      if (def) top = Math.max(top, floorZ(room, o.f || 0) + Math.max(def.h, def.top || 0) - ((o.x + o.y) * TU) / 2);
+    }
     return { top: Math.ceil(top) + 6, bottom, left, right };
   }
   const size = (room) => { const b = bounds(room); return { w: b.left + b.right + 40, h: b.top + b.bottom + 24 }; };
-  const origin = (room) => { const b = bounds(room); return { x: b.left + 20, y: b.top + 12 }; };
+  // While one picture is drawn or one point picked, nothing changes the room, so its origin is
+  // worked out once (`holding`) instead of for every sprite: that was hundreds of layout checks,
+  // each stringifying the whole room, in every frame.
+  let held = null;
+  function holding(room, fn) {
+    if (held) return fn();
+    held = { room, o: origin(room) };
+    try { return fn(); } finally { held = null; }
+  }
+  const origin = (room) => {
+    if (held?.room === room) return held.o;
+    const b = bounds(room);
+    return { x: b.left + 20, y: b.top + 12 };
+  };
   const project = (room, x, y, z) => { const o = origin(room); return { x: o.x + x - y, y: o.y + (x + y) / 2 - z }; };
 
   // A cached sprite with its anchor = the world point it was painted relative to.
@@ -2136,9 +1980,15 @@
     return { canvas: P.canvas(flip), ax: flip ? W - ox : ox, ay: oy, glows: P.glows.map((g) => ({ ...g, x: flip ? W - g.x : g.x })) };
   }
 
+  // Which parts of the moment (s) an object's picture depends on, read once off its draw code: a
+  // poster is painted once, a lamp once an hour, a screen once per frame of its loop - instead of
+  // every animated or wall object once per frame, hour and mood, which kept emptying the cache.
+  const MOMENT = ['active', 'frame', 'hour', 'meeting', 'weather'];
+  const readsOf = (def) => (def.reads ??= MOMENT.filter((k) => new RegExp(`\\bs\\.${k}\\b`).test(def.draw.toString())));
   function objectSprite(type, flip, s) {
     const def = OBJECTS[type];
-    const key = `${type}|${flip ? 1 : 0}|${s.weather || ''}|${def.anim || def.wall ? `${s.active ? 1 : 0}|${s.frame % 8}|${s.hour}|${s.meeting ? 1 : 0}` : ''}`;
+    const moment = readsOf(def).map((k) => (k === 'frame' ? s.frame % 8 : k === 'active' || k === 'meeting' ? (s[k] ? 1 : 0) : s[k] ?? ''));
+    const key = `${type}|${flip ? 1 : 0}|${moment.join('|')}`;
     return cached(key, () => renderSprite(def.w, Math.max(def.d, 1), def.h, (P) => {
       // A soft contact shadow on the floor under anything that stands on it.
       if (!def.wall && !def.flat && !def.onWater) {
@@ -2526,7 +2376,6 @@
     }, false));
   }
 
-  // One step. Solid steps are stone blocks down to the ground; open ones are metal treads.
   // One stair tile: four treads climbing the way the flight goes, from half a rise below the
   // tile's height to half a rise above, so neighbouring tiles and the floors at each end meet in an
   // even run of steps. Solid steps are stone built up from the ground; open ones are metal treads
@@ -2691,18 +2540,63 @@
   }
 
   // Back to front: A is drawn first when it lies wholly behind or below B and B is not behind A.
+  const SEP_E = 1e-6;
+  const sep = (a, b) => a.x1 <= b.x0 + SEP_E || a.y1 <= b.y0 + SEP_E || a.z1 <= b.z0 + SEP_E;
+  const drawnBefore = (b, a) => sep(b, a) && !sep(a, b);
+  const outerOrder = (a, b) => (a.z0 - b.z0) || ((a.x0 + a.y0) - (b.x0 + b.y0));
   function sortItems(items) {
-    const e = 1e-6;
-    const sep = (a, b) => a.x1 <= b.x0 + e || a.y1 <= b.y0 + e || a.z1 <= b.z0 + e;
     const out = [];
     const mark = new Set();
     const visit = (a) => {
       if (mark.has(a)) return;
       mark.add(a);
-      for (const b of items) if (b !== a && sep(b, a) && !sep(a, b)) visit(b);
+      for (const b of items) if (b !== a && drawnBefore(b, a)) visit(b);
       out.push(a);
     };
-    [...items].sort((a, b) => (a.z0 - b.z0) || ((a.x0 + a.y0) - (b.x0 + b.y0))).forEach(visit);
+    [...items].sort(outerOrder).forEach(visit);
+    return out;
+  }
+
+  // sortItems(scenery + extra), without comparing all the scenery with itself every frame: its own
+  // order only changes with the room, so what must come before each piece is worked out once per
+  // room state, and each frame only the few moving things (characters, chests, ghosts) are
+  // compared with the rest. Same walk in the same order, so exactly the same result.
+  let ORDER = { key: '', n: 0, before: null, outer: null };
+  function sortScene(room, items, extra) {
+    const n = items.length;
+    const key = `${layoutOf(room).id}|${JSON.stringify(room.objects)}`;
+    if (ORDER.key !== key || ORDER.n !== n) {
+      const before = items.map((a) => {
+        const list = [];
+        items.forEach((b, j) => { if (b !== a && drawnBefore(b, a)) list.push(j); });
+        return list;
+      });
+      const outer = items.map((_, i) => i).sort((i, j) => outerOrder(items[i], items[j]));
+      ORDER = { key, n, before, outer };
+    }
+    const all = items.concat(extra);
+    const out = [];
+    const mark = new Uint8Array(all.length);
+    const visit = (i) => {
+      if (mark[i]) return;
+      mark[i] = 1;
+      const a = all[i];
+      if (i < n) {
+        for (const j of ORDER.before[i]) visit(j);
+        for (let k = n; k < all.length; k++) if (drawnBefore(all[k], a)) visit(k);
+      } else {
+        for (let j = 0; j < all.length; j++) if (j !== i && drawnBefore(all[j], a)) visit(j);
+      }
+      out.push(a);
+    };
+    // The same stable sort as sortItems: the moving things slot in after scenery that sorts level.
+    const moving = extra.map((_, k) => n + k).sort((i, j) => outerOrder(all[i], all[j]));
+    let m = 0;
+    for (const i of ORDER.outer) {
+      while (m < moving.length && outerOrder(all[moving[m]], all[i]) < 0) visit(moving[m++]);
+      visit(i);
+    }
+    while (m < moving.length) visit(moving[m++]);
     return out;
   }
 
@@ -2735,8 +2629,6 @@
     ctx.restore();
   }
 
-  // Light by the hour: night sinks the room into blue and lets every lamp and screen bloom;
-  // dusk and dawn warm it; the day is plain and the lamps fade.
   // Light by the hour and the weather. After dark (and at dusk, and under rain) the room is lit with
   // a light map: everything sinks to a cool ambient colour, and every lamp, screen and lit room
   // gives back a warm circle of its own light, falling off with distance; the edges sink into a
@@ -2956,11 +2848,13 @@
 
   // Draw the whole room. `extra` are more sortable boxes {x0..z1, draw(ctx)} (characters, parcels).
   function drawRoom(ctx, room, z, objState, extra, light) {
+    return holding(room, () => drawRoomHeld(ctx, room, z, objState, extra, light));
+  }
+  function drawRoomHeld(ctx, room, z, objState, extra, light) {
     const st = objState(-1);
     light = light || lightFor(st.hour ?? 12, st.weather);
     const lights = [];
-    drawBackdrop(ctx, room, z, st.weather);
-    for (const it of sortItems([...sceneItems(room, objState), ...extra])) {
+    for (const it of sortScene(room, sceneItems(room, objState), extra)) {
       if (it.draw) { it.draw(ctx); continue; }
       const sp = it.sprite();
       blit(ctx, room, sp, it.wx, it.wy, it.wz, z);
@@ -3067,16 +2961,19 @@
   }
 
   // Screen point (fine px) to the topmost area tile under it.
-  function tileAt(room, fx, fy) {
+  // `water`: pool and lake tiles count too (nobody stands there, but a boat or a lily pad goes there).
+  function tileAt(room, fx, fy, { water = false } = {}) {
     const o = origin(room);
     const sx = fx - o.x;
-    const order = layoutOf(room).areas.map((a, f) => f).sort((a, b) => floorZ(room, b) - floorZ(room, a));
+    const lay = layoutOf(room);
+    const order = lay.areas.map((a, f) => f).sort((a, b) => floorZ(room, b) - floorZ(room, a));
     let best = null;
     for (const f of order) {
       const s2 = (fy - o.y + floorZ(room, f)) * 2;
       const x = Math.floor((s2 + sx) / 2 / TU);
       const y = Math.floor((s2 - sx) / 2 / TU);
-      if (cellAt(room, x, y, f) && (!best || x + y > best.x + best.y + 2)) best = { x, y, f };
+      const here = water && lay.areas[f].kind === 'water' ? lay.tilesAt(x, y).some((t) => t.f === f) : cellAt(room, x, y, f);
+      if (here && (!best || x + y > best.x + best.y + 2)) best = { x, y, f };
     }
     return best;
   }
@@ -3106,9 +3003,12 @@
   // Click-through mask: the diorama's silhouette at 1 fine pixel per pixel.
   let mask = { key: '', data: null, w: 0 };
   function solidAt(room, fx, fy) {
-    const key = layoutOf(room).id;
+    // The picture moves when the canvas grows (a tall tree on the back row, scenery taken away),
+    // not only when the ground changes.
+    const S = size(room);
+    const o = origin(room);
+    const key = `${layoutOf(room).id}|${S.w}x${S.h}|${o.x},${o.y}`;
     if (mask.key !== key) {
-      const S = size(room);
       const c = makeCanvas(S.w, S.h);
       const g = c.getContext('2d');
       for (const it of sceneItems({ ...room, objects: [] }, () => ({ frame: 0, active: false, hour: 12 }))) blit(g, room, it.sprite(), it.wx, it.wy, it.wz, 1);
@@ -3149,7 +3049,7 @@
       drawRoom(oc, room, z, () => st, []);
       ctx.drawImage(one, k * S.w * z, (S.h - size(room).h) * z);
     });
-    // The backdrop goes in last, so the light falls on the rooms only, as it does in the app.
+    // The dark background goes in last, so the light falls on the rooms only, as it does in the app.
     ctx.globalCompositeOperation = 'destination-over';
     ctx.fillStyle = '#1b1826';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -3165,11 +3065,11 @@
   }
 
   return {
-    TU, SLAB, STEP_Z, LAND, WEATHERS, weatherFor, pickAt, tinted, BACKDROPS, BACKDROP_PRESETS, BACKDROP_PLANTS, BACKDROP_GROUNDS, backdropOf, backdropThumb, ZONE_KINDS, FLOORS, WALLS, OBJECTS, BLUEPRINTS, migrate, derive,
-    LAND_SIZES, landOf, setLand, roomCost, needsOf, blueprintRoom, starterRoom, extentOf,
-    pick, addZone, addTile, removeTile, addFlight, removeFlightAt, setZoneZ,
+    TU, SLAB, STEP_Z, WEATHERS, weatherFor, pickAt, tinted, FLOORS, WALLS, OBJECTS, BLUEPRINTS, migrate, derive,
+    LAND_SIZES, landOf, setLand, roomCost, needsOf, blueprintRoom, starterRoom, extentOf, tidy,
+    pick, addTile, addFlight, removeFlightAt,
     BLOCKS, pickBlock, blockTarget, placeBlock, removeBlock, stairPlan, placeStairs, placeSpiral, stairSprite, blockSprite,
-    size, origin, project, floorZ, levels, cells, resetCells, cellAt, neighbours, door, walkable, footprint, canPlace, stationSpots,
+    size, origin, project, floorZ, cells, resetCells, cellAt, neighbours, door, walkable, footprint, canPlace, stationSpots,
     generateRoom, objectSprite, drawRoom, blit, tileAt, wallAt, solidAt, preview,
   };
 });

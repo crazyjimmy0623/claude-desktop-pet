@@ -60,18 +60,52 @@ function mergeDefaults(defaults, value) {
   return value === undefined ? defaults : value;
 }
 
+// Test mode (`npm run test-mode`): coins never run out and everything is unlocked, played
+// on a copy of the real save so nothing done while testing reaches it.
+const TEST_COINS = 999999;
+
 class Store extends EventEmitter {
-  constructor() {
+  constructor({ test = false } = {}) {
     super();
-    this.file = path.join(app.getPath('userData'), 'deskmates.json');
+    this.test = test;
+    const dir = app.getPath('userData');
+    this.file = path.join(dir, test ? 'deskmates-test.json' : 'deskmates.json');
+    if (test && !fs.existsSync(this.file)) {
+      try { fs.copyFileSync(path.join(dir, 'deskmates.json'), this.file); } catch { /* no real save yet: start fresh */ }
+    }
     let raw = {};
     try {
       raw = JSON.parse(fs.readFileSync(this.file, 'utf8'));
-    } catch {
-      // First run, or a corrupt file: start from defaults.
+    } catch (err) {
+      // First run: start from defaults. A save that can't be read is set aside first, so starting
+      // over never writes on top of someone's coins; if even that fails, nothing is written at all.
+      if (err.code !== 'ENOENT') {
+        const aside = `${this.file}.unreadable-${Date.now()}`;
+        try {
+          fs.renameSync(this.file, aside);
+          console.error(`[deskmates] could not read the save (${err.message}); kept it as ${aside}`);
+        } catch {
+          this.readOnly = true;
+          console.error(`[deskmates] could not read the save (${err.message}); not saving this run`);
+        }
+      }
     }
     this.data = mergeDefaults(DEFAULTS, raw);
     for (const id of STARTER_ITEMS) if (!this.data.progress.owned.includes(id)) this.data.progress.owned.push(id);
+    // Things taken out of the game (Bru and Okai) leave the collection, and whoever wore one
+    // changes back to the usual look.
+    const known = new Set(ITEMS.map((i) => i.id));
+    this.data.progress.owned = this.data.progress.owned.filter((id) => known.has(id));
+    const wearable = (skin) => typeof skin !== 'string' || skin === 'auto' || /^(mix|draw|custom):/.test(skin) || known.has(`skin:${skin}`);
+    const chars = this.data.settings.characters;
+    for (const [slot, usual] of [[chars.user, 'office'], [chars.ai, 'droid'], ...Object.values(chars.projects || {}).map((x) => [x, 'droid']),
+      ...(chars.residents || []).map((x) => [x, 'office'])]) {
+      if (slot && !wearable(slot.skin)) slot.skin = usual;
+    }
+    if (test) {
+      for (const i of ITEMS) if (!this.data.progress.owned.includes(i.id)) this.data.progress.owned.push(i.id);
+      this.data.progress.coins = TEST_COINS;
+    }
     const s = this.data.settings;
     if (s.mode !== 'room') s.mode = 'strip';
     // v2 rooms match Pixel Crew's proportions (28x21 tiles, 12x16 people at 2x); older rooms are reset once.
@@ -130,7 +164,9 @@ class Store extends EventEmitter {
   get room() { return this.data.room; }
 
   updateSettings(patch) {
-    this.data.settings = mergeDefaults(this.data.settings, { ...this.data.settings, ...patch });
+    // Against the real defaults: with the current settings as defaults, a key the patch dropped
+    // (a deleted app-map row, a forgotten project) would be copied straight back.
+    this.data.settings = mergeDefaults(DEFAULTS.settings, { ...this.data.settings, ...patch });
     this.save();
     this.emit('settings', this.data.settings);
   }
@@ -142,6 +178,7 @@ class Store extends EventEmitter {
   }
 
   touchProgress() {
+    if (this.test) this.data.progress.coins = TEST_COINS;
     this.save();
     this.emit('progress', this.data.progress);
   }
@@ -153,9 +190,17 @@ class Store extends EventEmitter {
 
   flush() {
     clearTimeout(this.saveTimer);
+    if (this.readOnly) return;
     const tmp = `${this.file}.tmp`;
     fs.mkdirSync(path.dirname(this.file), { recursive: true });
-    fs.writeFileSync(tmp, JSON.stringify(this.data, null, 2));
+    // On disk before the rename, so a power cut can't leave an empty save behind.
+    const fd = fs.openSync(tmp, 'w');
+    try {
+      fs.writeFileSync(fd, JSON.stringify(this.data, null, 2));
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
     fs.renameSync(tmp, this.file);
   }
 }

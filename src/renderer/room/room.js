@@ -1,7 +1,7 @@
 /* global desk, Sprites, Iso, Catalog, Common */
 // Room mode: a little isometric street corner floating above the taskbar. Every character walks (and climbs
 // the stairs) to the furniture that matches what it is doing.
-const DPR = window.devicePixelRatio || 1;
+let DPR = window.devicePixelRatio || 1;
 const TU = Iso.TU;
 const SPEED = 2.5; // tiles per second
 const M = Sprites.MINI;
@@ -116,7 +116,8 @@ function setRoom(room, { save = false, relayout = true } = {}) {
   if (relayout) layout(); else rebuildNav();
   if (save) {
     clearTimeout(setRoom.timer);
-    setRoom.timer = setTimeout(() => desk.invoke('room:set', state.room), 400);
+    // This room, not whatever is showing in 400 ms: a visit may have swapped in a friend's by then.
+    setRoom.timer = setTimeout(() => desk.invoke('room:set', room), 400);
   }
 }
 
@@ -256,6 +257,8 @@ function decide(v, now) {
 
 function createView(actor) {
   const start = door() || Iso.cells(state.room).list[0];
+  // Nowhere to stand (every tile taken away, or a room all water): they come in once there is.
+  if (!start) return null;
   const plate = document.createElement('div');
   plate.className = 'tag nameplate';
   const bubble = document.createElement('div');
@@ -283,6 +286,7 @@ function syncActors(list) {
   for (const actor of list) {
     seen.add(actor.id);
     const v = state.views.get(actor.id) || createView(actor);
+    if (!v) continue;
     v.actor = actor;
     v.plate.textContent = actor.kind === 'user' ? `⭐ ${actor.name}` : actor.name;
     v.plate.classList.toggle('user', actor.kind === 'user');
@@ -536,7 +540,7 @@ function draw(now) {
     if (s?.type === 'meeting') meeting = true;
   }
   // The room's light and weather: the clock, or whatever the settings pin them to.
-  const hour = { day: 13, dusk: 18, night: 22 }[state.settings?.timeOfDay] ?? new Date(now).getHours();
+  const hour = hourOf(now);
   const weather = Iso.weatherFor(state.settings?.weather, now);
   const frame = Math.floor(now / 250);
   const objState = (i) => ({ frame, active: active.has(i), now, hour, meeting, weather });
@@ -572,6 +576,11 @@ function draw(now) {
 }
 
 // Glowing orbs drifting around the diorama, like dust in neon light.
+// The hour the room shows: the settings can hold it at day, dusk or night, or follow the clock.
+function hourOf(now) {
+  return { day: 13, dusk: 18, night: 22 }[state.settings?.timeOfDay] ?? new Date(now).getHours();
+}
+
 function drawOrbs(now, z) {
   const S = Iso.size(state.room);
   if (!state.orbs.length) {
@@ -581,7 +590,7 @@ function drawOrbs(now, z) {
     }
   }
   // After dark they are fireflies, warm and blinking; by day the neon colours dim to drifting motes.
-  const hour = { day: 13, dusk: 18, night: 22 }[state.settings?.timeOfDay] ?? new Date(now).getHours();
+  const hour = hourOf(now);
   const night = hour >= 18 || hour < 6;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
@@ -637,9 +646,10 @@ function actorAt(e) {
 // A friend's character card dropped (or pasted) onto the room: they join the friends' book and
 // move straight in. Any other picture goes to the photo corner to become a character.
 async function pictureArrived(bytes) {
-  const roomCard = await Pixels.readRoomCard(bytes);
+  const img = await Pixels.imageOf(bytes);
+  const roomCard = await Pixels.readRoomCard(bytes, img);
   if (roomCard) { visit(roomCard); return; }
-  const card = await Pixels.readCard(bytes);
+  const card = await Pixels.readCard(bytes, img);
   if (!card) {
     drawer.open('guild', 'studio');
     const f = [...drawer.el.querySelectorAll('iframe')].find((x) => x.src.includes('/guild/'));
@@ -706,23 +716,63 @@ async function roomCard() {
   pic.height = Math.max(1, y1 - y0 + 2);
   pic.getContext('2d').drawImage(canvas, -x0, -y0);
   const name = state.settings?.userName || '我';
-  const card = await Pixels.makeRoomCard({ name, picture: pic, room: JSON.parse(JSON.stringify(state.room, (k, v) => (k.startsWith('_') ? undefined : v))) });
+  const card = await Pixels.makeRoomCard({ name, picture: pic, room: clone(state.room) });
   return { name, dataUrl: card.toDataURL('image/png') };
 }
 
-// Whatever a card says, only known pieces in sensible amounts get in.
+// Whatever a card says, only known pieces in sensible amounts get in. The room is rebuilt from the
+// fields the engine reads, each one checked, so a broken or crafted card can't hang the drawing,
+// spread past the plot, or pass for something cheaper than it is.
 function cleanRoom(r) {
   if (!r || r.iso !== 5 || !Array.isArray(r.zones) || !Array.isArray(r.tiles)) return null;
-  const n = Iso.LAND_SIZES.includes(r.land) ? r.land : 8;
-  const zones = r.zones.slice(0, 64).map((z) => ({
-    ...z,
-    floor: Iso.FLOORS[z?.floor] ? z.floor : 'stone',
-    ...(z?.wall ? { wall: Iso.WALLS[z.wall] ? z.wall : 'brick' } : {}),
-  }));
-  const tiles = r.tiles.filter((t) => Array.isArray(t) && t.length >= 3 && t.slice(0, 3).every(Number.isFinite) && zones[t[2]]).slice(0, 3000);
-  const objects = (r.objects || []).filter((o) => o && Iso.OBJECTS[o.type]).slice(0, 400);
-  const flights = (r.flights || []).filter((f) => f && typeof f === 'object').slice(0, 64);
-  return { ...r, land: n, zones, tiles, objects, flights, blueprint: null, backdrop: r.backdrop ?? null };
+  const known = (table, k) => typeof k === 'string' && Object.hasOwn(table, k);
+  const int = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+  const biggest = Math.max(...Iso.LAND_SIZES);
+  const zones = r.zones.slice(0, 64).map((zn) => {
+    const z = zn && typeof zn === 'object' ? zn : {};
+    const kind = ['street', 'outdoor', 'room', 'water'].includes(z.kind) ? z.kind : 'outdoor';
+    const out = {
+      name: typeof z.name === 'string' ? z.name.slice(0, 20) : '',
+      z: kind === 'water' ? 0 : Math.max(0, Math.min(8 * Iso.STEP_Z, Math.round(Number(z.z)) || 0)),
+      kind,
+      floor: known(Iso.FLOORS, z.floor) ? z.floor : 'stone',
+    };
+    if (z.wall !== undefined) out.wall = known(Iso.WALLS, z.wall) ? z.wall : 'brick';
+    if (['earth', 'stilts'].includes(z.base)) out.base = z.base;
+    for (const k of ['thin', 'rails', 'lights']) if (z[k] === true) out[k] = true;
+    if (kind === 'water' && int(z.depth, 8, 64)) out.depth = z.depth;
+    // What a layer costs follows what it is drawn as, never a label the card gives it - except a
+    // glass house, which looks like a room painted glass but is a dearer block of its own.
+    if (z.block === 'glass' && kind === 'room' && !out.thin) out.block = 'glass';
+    return out;
+  });
+  const inPlot = (x, y, n) => int(x, 0, n - 1) && int(y, 0, n - 1);
+  const zone = (f) => int(f, 0, zones.length - 1);
+  let tiles = [];
+  const seen = new Set();
+  for (const t of r.tiles.slice(0, 6000)) {
+    if (!Array.isArray(t) || !inPlot(t[0], t[1], biggest) || !zone(t[2]) || seen.has(`${t[0]},${t[1]},${t[2]}`)) continue;
+    seen.add(`${t[0]},${t[1]},${t[2]}`);
+    tiles.push([t[0], t[1], t[2]]);
+  }
+  // The plot it says, but never smaller than what is built on it: a 12x12 house is a 12x12 plot.
+  const n = Math.max(Iso.LAND_SIZES.includes(r.land) ? r.land : 0, Iso.landOf({ tiles }));
+  tiles = tiles.filter(([x, y]) => inPlot(x, y, n));
+  const cell = (c) => Array.isArray(c) && inPlot(c[0], c[1], n);
+  const flights = (Array.isArray(r.flights) ? r.flights : []).slice(0, 64).filter((fl) => fl && zone(fl.from) && zone(fl.to)
+    && ['open', 'solid', 'spiral'].includes(fl.style) && Array.isArray(fl.cells) && fl.cells.length >= 1 && fl.cells.length <= 12
+    && fl.cells.every(cell) && cell(fl.bottom) && cell(fl.top))
+    .map((fl) => ({ from: fl.from, to: fl.to, style: fl.style, cells: fl.cells.map(([x, y]) => [x, y]), bottom: [fl.bottom[0], fl.bottom[1]], top: [fl.top[0], fl.top[1]] }));
+  const objects = (Array.isArray(r.objects) ? r.objects : []).slice(0, 400)
+    .filter((o) => o && known(Iso.OBJECTS, o.type) && inPlot(o.x, o.y, n) && (o.f === undefined || zone(o.f)))
+    .map((o) => ({ type: o.type, x: o.x, y: o.y, flip: o.flip === true, f: o.f || 0 }));
+  const room = {
+    iso: 5, blueprint: null, land: n, zones, tiles, flights, objects,
+    door: cell(r.door) ? [r.door[0], r.door[1]] : [0, 0],
+  };
+  // The same checks the editor makes: stairs that lead nowhere and furniture that doesn't fit go.
+  Iso.tidy(room);
+  return room;
 }
 
 let banner = null;
@@ -747,47 +797,46 @@ function goHome() {
 
 // Build the same room at home: every piece must be unlocked, and you pay for all of it (what is
 // there now is taken down and gives half back), like a blueprint.
+// Putting a whole room up in place of yours (a blueprint, a friend's room) is billed one way:
+// every piece in it must be unlocked, it is paid in full, and what stands now comes down for half
+// back. `missing` lists what isn't unlocked yet; `pay` can be negative (money back).
+function replaceBill(now, next) {
+  const owned = new Set(state.progress?.owned || []);
+  const missing = Iso.needsOf(next).filter((k) => Catalog.ITEMS.some((i) => i.id === k) && !owned.has(k));
+  const land = Iso.landOf(next);
+  if (land !== 8 && !owned.has(`land:${land}`)) missing.unshift(`land:${land}`);
+  const total = Iso.roomCost(next, Catalog.priceOf);
+  const back = Math.floor(Iso.roomCost(now, Catalog.priceOf) / 2);
+  return { missing, total, back, pay: total - back, short: total - back > (state.progress?.coins ?? 0) };
+}
+const missingText = (missing, n) => `還缺：${missing.slice(0, n).map((id) => Catalog.ITEMS.find((i) => i.id === id)?.name || id).join('、')}${missing.length > n ? ` 等 ${missing.length} 樣` : ''}`;
+// Pays a replaceBill and puts the room up, saved.
+function putUpRoom(next, bill) {
+  if (bill.pay) {
+    state.progress.coins -= bill.pay;
+    desk.invoke('coins:spend', bill.pay);
+  }
+  setRoom(next, { save: true });
+}
+
+// Build the same room at home, like a blueprint.
 function buildLike() {
   const v = state.visiting;
   if (!v) return;
-  const owned = new Set(state.progress?.owned || []);
-  const land = Iso.landOf(v.room);
-  const missing = Iso.needsOf(v.room).filter((k) => Catalog.ITEMS.some((i) => i.id === k) && !owned.has(k));
-  if (land !== 8 && !owned.has(`land:${land}`)) missing.unshift(`land:${land}`);
-  const nameOf = (id) => Catalog.ITEMS.find((i) => i.id === id)?.name || id;
-  if (missing.length) {
-    showToast(`還缺：${missing.slice(0, 5).map(nameOf).join('、')}${missing.length > 5 ? ` 等 ${missing.length} 樣` : ''}，抽到才能照著蓋`);
-    return;
-  }
-  const total = Iso.roomCost(v.room, Catalog.priceOf);
-  const back = Math.floor(Iso.roomCost(v.home, Catalog.priceOf) / 2);
-  const pay = total - back;
+  const bill = replaceBill(v.home, v.room);
+  if (bill.missing.length) { showToast(`${missingText(bill.missing, 5)}，抽到才能照著蓋`); return; }
   const coins = state.progress?.coins ?? 0;
-  if (pay > coins) { showToast(`照著蓋要 ${pay} 🪙（拆掉現在的房子已經退你 ${back} 🪙），手上只有 ${coins} 🪙`); return; }
-  if (!window.confirm(`照「${v.name}」的房間蓋要 ${total} 🪙。拆掉你現在的房子會退 ${back} 🪙，所以要付 ${pay} 🪙。要蓋嗎？`)) return;
-  if (pay) {
-    state.progress.coins -= pay;
-    desk.invoke('coins:spend', pay);
-  }
+  if (bill.short) { showToast(`照著蓋要 ${bill.pay} 🪙（拆掉現在的房子已經退你 ${bill.back} 🪙），手上只有 ${coins} 🪙`); return; }
+  if (!window.confirm(`照「${v.name}」的房間蓋要 ${bill.total} 🪙。拆掉你現在的房子會退 ${bill.back} 🪙，所以要付 ${bill.pay} 🪙。要蓋嗎？`)) return;
   const built = clone(v.room);
   state.visiting = null;
   banner?.remove();
   banner = null;
-  setRoom(built, { save: true });
+  putUpRoom(built, bill);
   showToast(`照「${v.name}」的房間蓋好了！`);
 }
 
 function showBanner() {
-  if (!document.getElementById('visit-style')) {
-    const st = document.createElement('style');
-    st.id = 'visit-style';
-    st.textContent = `
-      #visit { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 8px;
-        padding: 5px 6px 5px 12px; border: 2px solid var(--ink); border-radius: var(--r); background: var(--paper); color: var(--ink);
-        font: 700 13px/1.3 var(--font); box-shadow: var(--shadow); white-space: nowrap; }
-      #visit .btn { display: inline-flex; align-items: center; gap: 5px; }`;
-    document.head.append(st);
-  }
   banner?.remove();
   banner = document.createElement('div');
   banner.id = 'visit';
@@ -942,7 +991,9 @@ desk.on('assets', (assets) => {
   state.assets = assets;
 });
 
-window.RoomApp = { state, setRoom, layout, tileAt, finePoint, Z, clone, rebuildNav, toolbar, editorEl, drawer };
+Common.onDprChange((dpr) => { DPR = dpr; layout(); });
+
+window.RoomApp = { state, setRoom, replaceBill, missingText, putUpRoom, layout, tileAt, finePoint, Z, clone, rebuildNav, toolbar, editorEl, drawer };
 
 desk.invoke('init').then((init) => {
   state.settings = init.settings;
@@ -961,12 +1012,20 @@ desk.invoke('init').then((init) => {
 });
 
 let last = performance.now();
+let tickError = '';
 function tick(t) {
+  // The next frame is booked first: one bad frame must not leave the room blank for good.
+  requestAnimationFrame(tick);
   const dt = Math.min(0.05, (t - last) / 1000);
   last = t;
   const now = Date.now();
-  for (const v of state.views.values()) updateView(v, dt, now);
-  draw(now);
-  requestAnimationFrame(tick);
+  try {
+    for (const v of state.views.values()) updateView(v, dt, now);
+    draw(now);
+  } catch (err) {
+    // Said once, not sixty times a second.
+    if (String(err) !== tickError) console.error(err);
+    tickError = String(err);
+  }
 }
 requestAnimationFrame(tick);
