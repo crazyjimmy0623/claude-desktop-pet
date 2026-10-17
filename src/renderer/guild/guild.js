@@ -519,9 +519,13 @@ let bookShow = 'all';
 function renderBook() {
   const book = $('book');
   book.replaceChildren();
-  const groups = [['skin', '角色'], ['accessory', '配件'], ['furniture', '家具'], ['plant', '植物'], ['block', '建材'], ['land', '土地'], ['floor', '地板'], ['wall', '牆面']];
-  for (const [type, label] of groups) {
-    const items = ITEMS.filter((i) => i.type === type);
+  // Furniture on the same three shelves as in the room editor.
+  const shelf = (s) => (i) => i.type === 'furniture' && Iso.shelfOf(i.id.slice(4)) === s;
+  const of = (type) => (i) => i.type === type;
+  const groups = [[of('skin'), '角色'], [of('accessory'), '配件'], [shelf('furniture'), '家具'], [shelf('hang'), '牆上'], [shelf('yard'), '戶外'],
+    [of('plant'), '植物'], [of('block'), '建材'], [of('land'), '土地'], [of('floor'), '地板'], [of('wall'), '牆面']];
+  for (const [kind, label] of groups) {
+    const items = ITEMS.filter(kind);
     const shown = items.filter((i) => bookShow === 'all' || owns(i.id) === (bookShow === 'have'));
     if (!shown.length) continue;
     const h = document.createElement('h3');

@@ -352,6 +352,13 @@
   // draw(P, s) paints in local world units: footprint x in [0, w*16), y in [0, d*16), facing +y.
   // stations: tiles in front (dx, dy) where a character works; sit: drawn offset once there.
   const front = (w, d) => Array.from({ length: w }, (_, i) => ({ dx: i, dy: d }));
+  // A filled circle on the plane y, centred at (u, v): something round facing out, like a dial or a flower.
+  const faceDisc = (P, u, v, r, c, y) => {
+    for (let k = -Math.floor(r); k <= Math.floor(r); k++) {
+      const half = Math.sqrt(r * r - k * k);
+      P.left(u - half, v + k, half * 2, 1, c, y);
+    }
+  };
 
   const OBJECTS = {
     desk: { anim: true, w: 2, d: 1, h: 40, station: 'code', stations: front(2, 1), draw: (P, s) => {
@@ -822,6 +829,384 @@
       for (let i = 0; i < 6; i++) P.disc(3 + i * 2.2, 5 + (i % 2), 0.5, 2.4, 'rgba(255,255,255,0.85)');
       P.dot(4 + ((s.frame * 5) % 9), 6, 3 + (s.frame % 3) * 2, '#ffffff', 1, 1);
     } },
+    // ---- Home comforts: somewhere to flop, to talk, to write and to play music.
+    beanbag: { w: 1, d: 1, h: 16, station: 'rest', stations: front(1, 1), sit: [0, -9, 5], draw: (P) => {
+      const c = '#e0913a';
+      // A squashed sack: wide and low, a bump at the back, a dent where you sit.
+      P.disc(6, 9, 3, 6, dk(c, 0.2));
+      P.disc(10, 9, 3, 6, dk(c, 0.2));
+      P.disc(6, 9, 5, 5.5, c);
+      P.disc(10, 9, 5, 5.5, c);
+      P.disc(8, 5, 8, 5, lt(c, 0.06));
+      P.disc(8, 10, 6.5, 3.5, lt(c, 0.16));
+      P.dot(6, 5, 11, lt(c, 0.3), 2, 1);
+    } },
+    armchair: { w: 1, d: 1, h: 24, station: 'rest', stations: front(1, 1), sit: [0, -7, 6], draw: (P) => {
+      const c = '#7a8f4a';
+      for (const [x, y] of [[2, 4], [13, 4], [2, 13], [13, 13]]) P.box(x, y, 0, 1, 1, 3, WOOD_D, false);
+      P.box(1, 3, 3, 14, 11, 5, dk(c, 0.12));
+      P.box(1, 3, 8, 14, 4, 12, c);
+      P.box(1, 3, 3, 3, 11, 10, c);
+      P.box(12, 3, 3, 3, 11, 10, c);
+      P.box(4, 7, 8, 8, 7, 3, lt(c, 0.1));
+      P.box(5, 4, 13, 6, 2, 5, '#e8d9b0', false);
+    } },
+    // A low table under a quilt with oranges on top: where everyone sits and talks.
+    kotatsu: { w: 2, d: 2, h: 18, station: 'chat', stations: [{ dx: -1, dy: 0 }, { dx: -1, dy: 1 }, { dx: 2, dy: 0 }, { dx: 2, dy: 1 }, { dx: 0, dy: 2 }, { dx: 1, dy: 2 }], draw: (P) => {
+      const quilt = '#c2453f';
+      // The quilt spreads out wider than the table top laid on it.
+      P.box(0, 0, 0, 32, 32, 8, { t: lt(quilt, 0.12), l: quilt, r: dk(quilt, 0.3) });
+      for (let u = 3; u < 30; u += 6) { P.left(u, 3, 2, 2, '#f4efe4', 32); P.right(32 - u, 3, 2, 2, '#e0cfb4', 32); }
+      P.box(3, 3, 8, 26, 26, 2, WOOD);
+      P.disc(16, 16, 13, 4.5, '#a87048');
+      P.disc(14, 15, 14.5, 2, '#f08a2a');
+      P.disc(18, 16, 14.5, 2, '#f08a2a');
+      P.disc(16, 18, 15, 2, '#f39a3a');
+      P.dot(14, 15, 16.5, '#4f8f45', 1, 1);
+      P.box(24, 7, 11, 3, 3, 3, '#f4f4f6');
+      P.top(24, 7, 3, 3, '#7a4a2a', 14);
+    } },
+    nightstand: { w: 1, d: 1, h: 26, draw: (P, s) => {
+      P.box(2, 4, 0, 12, 10, 12, WOOD);
+      P.left(3, 6, 10, 4, dk(WOOD, 0.25), 14);
+      P.left(3, 1, 10, 4, dk(WOOD, 0.25), 14);
+      P.left(7, 8, 2, 1, '#d6b36a', 14.2);
+      P.left(7, 3, 2, 1, '#d6b36a', 14.2);
+      P.box(7, 8, 12, 2, 2, 5, '#c9ced8', false);
+      P.box(5, 6, 17, 6, 6, 5, '#f1d9a8');
+      const on = s.hour >= 18 || s.hour < 7;
+      P.top(6, 7, 4, 4, on ? '*#fff3d0' : '#fff3d0', 22);
+      if (on) P.glow(8, 9, 19, 14, 'rgba(255,200,120,0.4)');
+    } },
+    wardrobe: { w: 2, d: 1, h: 58, draw: (P) => {
+      const c = '#b07a4a';
+      P.box(1, 3, 0, 30, 11, 50, c);
+      P.left(3, 4, 12, 43, lt(c, 0.06), 14);
+      P.left(17, 4, 12, 43, lt(c, 0.06), 14);
+      P.left(15, 3, 2, 45, dk(c, 0.3), 14);
+      P.left(13, 22, 1, 6, '#e8c25a', 14.3);
+      P.left(18, 22, 1, 6, '#e8c25a', 14.3);
+      P.left(1, 0, 30, 3, dk(c, 0.3), 14);
+      P.box(0, 2, 50, 32, 13, 3, dk(c, 0.2));
+    } },
+    dresser: { w: 2, d: 1, h: 34, draw: (P) => {
+      const c = '#e8dcc4';
+      P.box(1, 3, 0, 30, 11, 22, c);
+      for (let r = 0; r < 3; r++) {
+        const z = 3 + r * 6;
+        P.left(3, z, 26, 5, lt(c, 0.05), 14);
+        P.left(3, z + 5, 26, 1, dk(c, 0.16), 14);
+        P.left(9, z + 2, 2, 1, '#b08a5a', 14.2);
+        P.left(21, z + 2, 2, 1, '#b08a5a', 14.2);
+      }
+      P.box(0, 2, 22, 32, 13, 2, dk(c, 0.08));
+      // A vase of flowers and a framed photo on top.
+      P.box(5, 6, 24, 4, 4, 5, '#5a8fd9');
+      P.dot(7, 8, 30, '#4f8f45', 1, 1);
+      P.dot(6, 7, 31, '#ff8fb1', 2, 1);
+      P.dot(5, 8, 32, '#ffd65a', 1, 1);
+      P.dot(8, 7, 32, '#ffffff', 1, 1);
+      P.box(20, 6, 24, 7, 2, 8, '#8a5a36', false);
+      P.left(21, 25, 5, 6, '#9fd0e8', 8.1);
+      P.left(22, 25, 3, 3, '#5f9a4e', 8.2);
+    } },
+    // A writing desk with a typewriter: where diaries and documents get written.
+    writingdesk: { anim: true, w: 2, d: 1, h: 34, station: 'write', stations: front(2, 1), draw: (P, s) => {
+      for (const [x, y] of [[1, 3], [1, 11]]) P.box(x, y, 0, 2, 2, 10, WOOD_D, false);
+      P.box(20, 3, 0, 10, 10, 10, WOOD_D);
+      P.left(21, 6, 8, 3, dk(WOOD_D, 0.25), 13);
+      P.left(21, 1, 8, 3, dk(WOOD_D, 0.25), 13);
+      P.box(0, 2, 10, 32, 12, 2, WOOD);
+      P.box(8, 6, 12, 12, 7, 4, '#3d6a52');
+      P.box(9, 4, 16, 10, 4, 2, '#2f5340');
+      P.left(10, 18, 8, 6 + (s.active ? s.frame % 3 : 0), '#fbf6e6', 6);
+      for (let i = 0; i < 5; i++) P.top(9 + i * 2, 10, 1, 1, '#e8e4d8', 16);
+      P.top(9, 12, 10, 1, '#1c1a20', 16);
+      P.box(23, 6, 12, 6, 5, 2, '#f4efe4', false);
+      P.top(24, 7, 4, 1, '#9aa0b0', 14);
+      // A banker's lamp: brass stem, a long green shade.
+      P.box(2, 6, 12, 5, 4, 1, '#c9a24a', false);
+      P.box(4, 7, 13, 1, 1, 6, '#c9a24a', false);
+      P.box(1, 6, 19, 7, 3, 2, '#2f7a5a');
+      P.top(1, 6, 7, 3, '#3f9a72', 21);
+      if (s.active) P.glow(4, 8, 17, 12, 'rgba(255,220,150,0.35)');
+    } },
+    turntable: { anim: true, w: 1, d: 1, h: 30, station: 'music', stations: front(1, 1), draw: (P, s) => {
+      P.box(1, 3, 0, 14, 11, 14, WOOD_D);
+      for (let i = 0; i < 4; i++) P.left(2 + i * 3, 2, 2, 10, ['#c2453f', '#5aa7ff', '#ffd65a', '#7cc47f'][i], 14);
+      P.box(1, 3, 14, 14, 11, 3, '#2a2530');
+      P.disc(7, 8, 17.5, 4.5, '#141218');
+      P.disc(7, 8, 17.6, 1.5, s.active && s.frame % 2 ? '#ffd65a' : '#e0405a');
+      P.box(12, 5, 17, 1, 6, 1, '#c9ced8', false);
+      if (s.active) {
+        const b = s.frame % 3;
+        P.dot(12, 4, 23 + b, '#2b2233', 1, 3);
+        P.dot(11, 4, 23 + b, '#2b2233', 1, 1);
+      }
+    } },
+    // An acoustic guitar leaning on its stand.
+    guitar: { w: 1, d: 1, h: 42, station: 'music', stations: front(1, 1), draw: (P) => {
+      P.box(3, 10, 0, 10, 2, 2, '#2a2b33', false);
+      P.box(7, 6, 0, 2, 2, 16, '#2a2b33', false);
+      // Body (two bouts and a waist), sound hole, bridge, neck and head.
+      const body = [8, 10, 12, 13, 14, 14, 14, 13, 12, 10, 9, 9, 10, 11, 12, 12, 11, 10, 8, 6];
+      body.forEach((wd, i) => P.left(8 - wd / 2, 2 + i, wd, 1, '#d08a3a', 10));
+      P.left(1, 6, 14, 1, '#b8702a', 10.05);
+      P.left(6.5, 14, 3, 3, '#3a2416', 10.1);
+      P.left(5.5, 6, 5, 1, '#3a2416', 10.1);
+      P.left(7, 22, 2, 12, '#6e4428', 10.1);
+      P.left(6.5, 34, 3, 4, '#3a2416', 10.1);
+      P.left(8, 6, 1, 29, 'rgba(240,236,224,0.7)', 10.2);
+    } },
+    fan: { anim: true, w: 1, d: 1, h: 36, draw: (P, s) => {
+      P.disc(8, 9, 1, 4.5, '#c9ced8');
+      P.box(7.5, 8, 1, 1, 1, 19, '#c9ced8', false);
+      P.box(6, 6, 18, 4, 4, 4, '#d9dde6', false);
+      // A round cage facing out, three blades turning inside it.
+      const cz = 28;
+      faceDisc(P, 8, cz, 7, '#7a8396', 10.4);
+      faceDisc(P, 8, cz, 6, '#e4e8ee', 10.5);
+      const turn = ((s.frame % 6) / 6) * ((Math.PI * 2) / 3);
+      for (let k = 0; k < 3; k++) {
+        const a = turn + (k * Math.PI * 2) / 3;
+        for (let r = 1.5; r < 6; r += 0.7) P.left(8 + Math.cos(a) * r - 1, cz + Math.sin(a) * r - 1, 2.2, 2.2, '#5aa7ff', 10.8);
+      }
+      for (let a = 0; a < Math.PI * 2; a += 0.2) P.left(8 + Math.cos(a) * 6.6, cz + Math.sin(a) * 6.6, 1, 1, '#7a8396', 11);
+      P.left(7, cz - 1, 2, 2, '#4a5263', 11.2);
+    } },
+    lavalamp: { anim: true, w: 1, d: 1, h: 26, draw: (P, s) => {
+      P.box(6, 6, 0, 4, 4, 4, '#3a3f50', false);
+      P.box(6, 6, 4, 4, 4, 12, { t: '*#ff7fb8', l: '*#ff5fa0', r: '*#e0488a' }, false);
+      // Blobs of wax drifting up and down.
+      const b = s.frame % 8;
+      P.dot(7, 10, 6 + b, '*#ffd65a', 2, 2);
+      P.dot(8, 9, 14 - b, '*#ffb347', 1, 2);
+      P.box(6, 6, 16, 4, 4, 3, '#3a3f50', false);
+      P.glow(8, 8, 10, 14, 'rgba(255,95,160,0.45)');
+    } },
+    candles: { anim: true, w: 1, d: 1, h: 20, draw: (P, s) => {
+      P.box(3, 4, 0, 10, 9, 1, '#c9a24a', false);
+      [[5, 6, 9], [10, 7, 6], [7, 10, 4]].forEach(([x, y, h], i) => {
+        P.box(x - 1, y - 1, 1, 2, 2, h, '#f4ecd8', false);
+        const f = (s.frame + i) % 3;
+        P.dot(x, y, h + 4 + (f === 1 ? 1 : 0), '*#ffe28a', 1, 2);
+        P.dot(x, y, h + 2, '*#ff9a3a', 1, 1);
+      });
+      P.glow(8, 8, 8, 16, 'rgba(255,180,90,0.45)');
+      P.glow(8, 8, 0, 18, 'rgba(255,180,90,0.22)', true);
+    } },
+    plush: { w: 1, d: 1, h: 20, draw: (P) => {
+      const c = '#c08850';
+      P.disc(5, 11, 2, 2, c);
+      P.disc(11, 11, 2, 2, c);
+      P.disc(8, 8, 6, 4.5, c);
+      P.disc(4, 9, 7, 1.6, c);
+      P.disc(12, 9, 7, 1.6, c);
+      P.disc(8, 9, 6, 2.5, lt(c, 0.25));
+      P.disc(8, 8, 13, 4, c);
+      P.disc(5, 8, 16.5, 1.6, c);
+      P.disc(11, 8, 16.5, 1.6, c);
+      P.disc(8, 10, 12, 1.6, lt(c, 0.3));
+      P.dot(6.5, 10, 14.5, '#2b2233', 1, 1);
+      P.dot(9.5, 10, 14.5, '#2b2233', 1, 1);
+      P.dot(8, 11, 12.5, '#2b2233', 1, 1);
+      P.dot(7, 10, 9.5, '#e24a6a', 3, 1);
+    } },
+    // A kitchen counter: sink, stove and kettle. Residents come to make tea.
+    kitchen: { anim: true, w: 2, d: 1, h: 32, station: 'coffee', stations: front(2, 1), draw: (P, s) => {
+      P.box(0, 2, 0, 32, 12, 18, '#e8e4dc');
+      for (const u of [2, 12, 22]) { P.left(u, 2, 8, 13, '#f4f0e8', 14); P.left(u + 6, 9, 1, 3, '#9aa0aa', 14.2); }
+      P.left(0, 0, 32, 2, '#5a5e6a', 14);
+      P.box(0, 2, 18, 32, 12, 2, '#5a6273');
+      P.top(3, 5, 10, 7, '#9aa6b8', 20);
+      P.top(4, 6, 8, 5, '#6a7488', 20);
+      P.box(7, 3, 20, 1, 1, 6, '#c9ced8', false);
+      P.box(7, 3, 25, 1, 4, 1, '#c9ced8', false);
+      P.top(18, 5, 12, 8, '#2a2b33', 20);
+      P.disc(21, 10, 20.5, 2.2, s.active ? '*#ff6a3a' : '#4a4f5e');
+      P.disc(27, 8, 20.5, 2.2, '#4a4f5e');
+      P.box(25, 6, 20.5, 4, 3, 4, '#c2453f', false);
+      P.box(28.5, 7, 22, 2, 1, 1, '#c2453f', false);
+      if (s.active) P.dot(27, 7, 28 + (s.frame % 3), '#e6e9f0', 1, 2);
+    } },
+    waterdispenser: { anim: true, w: 1, d: 1, h: 46, station: 'coffee', stations: front(1, 1), draw: (P, s) => {
+      P.box(3, 4, 0, 10, 9, 26, '#e8e8ee');
+      P.left(4, 10, 8, 8, '#cfd3dc', 13);
+      P.left(5, 15, 2, 2, '#5aa7ff', 13.2);
+      P.left(9, 15, 2, 2, '#e0405a', 13.2);
+      P.left(5, 11, 6, 1, '#9aa0aa', 13.2);
+      // The big upside-down bottle of water on top.
+      const blue = { t: '#b8e0fa', l: '#8cc8f0', r: '#6aaedc' };
+      P.box(6, 7, 26, 4, 3, 2, blue, false);
+      P.box(4, 5, 28, 8, 7, 11, blue, false);
+      P.left(5, 30, 1, 7, '#e6f6ff', 12.1);
+      if (s.active) P.dot(8, 10, 30 + (s.frame % 6), '#ffffff', 1, 1);
+    } },
+    // ---- Garden and yard.
+    bench: { w: 2, d: 1, h: 24, station: 'rest', stations: front(2, 1), sit: [0, -7, 5], draw: (P) => {
+      const iron = '#2e3240';
+      for (const x of [2, 28]) { P.box(x, 4, 0, 2, 9, 7, iron, false); P.box(x, 3, 7, 2, 2, 13, iron, false); }
+      for (let i = 0; i < 3; i++) P.box(1, 5 + i * 3, 7, 30, 2, 1.5, i % 2 ? '#a8744a' : '#b8845a', false);
+      for (let i = 0; i < 3; i++) P.box(1, 3, 11 + i * 3, 30, 1, 2, '#b8845a', false);
+    } },
+    mailbox: { w: 1, d: 1, h: 32, draw: (P) => {
+      const blue = { t: '#5a9fe0', l: '#3a7ab8', r: '#2e6294' };
+      P.box(7, 7, 0, 2, 2, 18, '#6e4428', false);
+      P.box(4, 3, 18, 8, 10, 6, blue, false);
+      P.box(4.5, 3, 24, 7, 10, 1, blue, false);
+      P.box(5.5, 3, 25, 5, 10, 1, blue, false);
+      P.left(6, 20, 4, 1, '#1e4466', 13.1);
+      P.box(12, 6, 21, 1, 1, 7, '#e0405a', false);
+      P.box(12, 6, 26, 1, 3, 2, '#e0405a', false);
+    } },
+    fence: { w: 1, d: 1, h: 20, draw: (P) => {
+      const c = { t: '#f4efe4', l: '#e2dccb', r: '#b8b0a0' };
+      // Two rails behind, pickets with gaps between them in front.
+      P.box(0, 6, 4, 16, 1, 2, c, false);
+      P.box(0, 6, 10, 16, 1, 2, c, false);
+      for (const x of [1.5, 5.5, 9.5, 13.5]) { P.box(x, 7.5, 0, 1.5, 1.5, 13, c, false); P.box(x + 0.25, 7.5, 13, 1, 1.5, 1.5, c, false); }
+    } },
+    swing: { anim: true, w: 2, d: 1, h: 46, station: 'rest', stations: front(2, 1), sit: [0, -12, 8], draw: (P, s) => {
+      const wood = { t: '#b8845a', l: '#a0703f', r: '#7e5530' };
+      for (const x of [1, 29]) for (const y of [2, 12]) P.box(x, y, 0, 2, 2, 40, wood, false);
+      P.box(0, 7, 40, 32, 2, 3, wood, false);
+      // The seat sways back and forth on its ropes.
+      const sw = [0, 1.5, 2.5, 1.5, 0, -1.5, -2.5, -1.5][s.frame % 8];
+      for (let z = 14; z < 40; z++) { const t = (40 - z) / 26; P.dot(10, 8 + sw * t, z, '#d9c9a0', 1, 1); P.dot(22, 8 + sw * t, z, '#d9c9a0', 1, 1); }
+      P.box(9, 6 + sw, 12, 14, 4, 2, { t: '#e05a4a', l: '#c2453f', r: '#9a3530' }, false);
+    } },
+    fountain: { anim: true, w: 2, d: 2, h: 40, draw: (P, s) => {
+      const stone = { t: '#d6d1c8', l: '#b0aba2', r: '#8c8880' };
+      // An eight-sided basin, a pillar and a bowl, water jumping from the top.
+      P.box(5, 2, 0, 22, 28, 8, stone, false);
+      P.box(2, 5, 0, 28, 22, 8, stone, false);
+      P.top(6, 4, 20, 24, '#5aa7d9', 8);
+      P.top(4, 6, 24, 20, '#5aa7d9', 8);
+      const f = s.frame % 4;
+      P.top(7 + f * 2, 8, 5, 1, '#a8dcf5', 8.1);
+      P.top(20 - f, 22, 4, 1, '#a8dcf5', 8.1);
+      P.box(13, 13, 8, 6, 6, 14, stone, false);
+      P.box(10, 10, 22, 12, 12, 3, stone, false);
+      P.top(11, 11, 10, 10, '#5aa7d9', 25);
+      P.box(15, 15, 25, 2, 2, 5, stone, false);
+      for (let i = 0; i < 4; i++) P.dot(13 + i * 2.5, 16, 31 + ((i + f) % 3), '#d8f2ff', 1, 2);
+      P.dot(16, 16, 35 + (f % 2), '#ffffff', 1, 3);
+      for (const [x, y] of [[10, 18], [18, 22], [22, 14]]) P.dot(x, y, 12 + ((f * 3 + x) % 9), 'rgba(160,215,245,0.9)', 1, 2);
+    } },
+    well: { w: 1, d: 1, h: 44, draw: (P) => {
+      const stone = { t: '#a8a39a', l: '#8f8a82', r: '#77736a' };
+      P.box(1, 1, 0, 14, 14, 9, stone, false);
+      for (let v = 2; v < 9; v += 3) { P.left(1, v, 14, 1, '#6e6a62', 15); P.right(15, v, 14, 1, '#5e5a52', 15); }
+      P.top(3, 3, 10, 10, '#1c2a3a', 9);
+      P.top(5, 5, 4, 3, '#2e4a66', 9.1);
+      P.box(2, 7, 9, 1.5, 2, 22, WOOD_D, false);
+      P.box(12.5, 7, 9, 1.5, 2, 22, WOOD_D, false);
+      P.box(3, 7.5, 24, 10, 1, 1, '#8a6a44', false);
+      P.box(7.5, 8, 17, 0.6, 0.6, 7, '#d9c9a0', false);
+      P.box(6, 7, 13, 4, 3, 4, { t: '#a07040', l: '#8a5a36', r: '#6e4428' }, false);
+      const roof = { t: '#b8553f', l: '#a14b38', r: '#7e3a2c' };
+      for (let i = 0; i < 6; i++) P.box(-1, i * 1.3, 31 + i, 18, 16 - i * 2.6, 1, roof, false);
+    } },
+    birdhouse: { anim: true, w: 1, d: 1, h: 46, draw: (P, s) => {
+      P.box(7, 7, 0, 2, 2, 28, '#6e4428', false);
+      P.box(4, 5, 28, 8, 7, 8, { t: '#e8c25a', l: '#d9a84a', r: '#b8862e' }, false);
+      P.left(7, 31, 2, 2, '#3a2416', 12.1);
+      P.box(7.5, 12, 29.5, 1, 2, 1, '#6e4428', false);
+      const roof = { t: '#d8564a', l: '#c2453f', r: '#9a3530' };
+      P.box(3, 4, 36, 10, 9, 1.5, roof, false);
+      P.box(4, 5, 37.5, 8, 7, 1.5, roof, false);
+      P.box(5.5, 6.5, 39, 5, 4, 1, roof, false);
+      // A little bird comes and goes, hopping on the perch.
+      if (s.frame % 8 < 5) {
+        const hop = s.frame % 2;
+        P.disc(9, 13, 31 + hop, 1.6, '#5aa7ff');
+        P.dot(10, 14, 31.5 + hop, '#ffd65a', 1, 1);
+        P.dot(9, 14, 32.5 + hop, '#2b2233', 1, 1);
+      }
+    } },
+    snowman: { w: 1, d: 1, h: 36, draw: (P) => {
+      const snow = '#f2f6fb';
+      P.disc(8, 8, 5, 6, dk(snow, 0.05));
+      P.disc(8, 8, 15, 4.5, snow);
+      P.disc(8, 8, 23, 3.5, snow);
+      P.disc(6, 8, 17, 1.4, '#ffffff');
+      P.dot(6.5, 10, 24.5, '#2b2233', 1, 1);
+      P.dot(9, 10, 24.5, '#2b2233', 1, 1);
+      P.dot(7.5, 11, 23, '#f08a2a', 2, 1);
+      P.dot(7, 10.5, 16, '#2b2233', 1, 1);
+      P.dot(7, 10.5, 13, '#2b2233', 1, 1);
+      P.box(5, 5, 19, 6, 6, 1.5, '#c2453f', false);
+      P.box(9, 9, 15, 1.5, 1.5, 4, '#c2453f', false);
+      for (let i = 0; i < 5; i++) { P.dot(3 - i * 0.8, 8, 16 + i, '#6e4428', 1, 1); P.dot(13 + i * 0.8, 8, 16 + i, '#6e4428', 1, 1); }
+      P.box(5.5, 5.5, 26, 5, 5, 1, '#2a2b33', false);
+      P.box(6.5, 6.5, 27, 3, 3, 4, '#2a2b33', false);
+    } },
+    gnome: { w: 1, d: 1, h: 24, draw: (P) => {
+      P.box(6, 6, 0, 4, 4, 2, '#5a3a24', false);
+      P.box(5.5, 5.5, 2, 5, 5, 5, { t: '#4f80c4', l: '#3f6fb0', r: '#2e5590' }, false);
+      P.disc(8, 9, 12, 2.6, '#f2c9a0');
+      P.disc(8, 10, 8.5, 2.6, '#ffffff');
+      P.dot(6.5, 10.5, 13.5, '#2b2233', 1, 1);
+      P.dot(9, 10.5, 13.5, '#2b2233', 1, 1);
+      P.dot(7.5, 11, 12, '#e8907a', 2, 1);
+      for (let i = 0; i < 5; i++) P.box(5.5 + i * 0.5, 5.5 + i * 0.5, 14 + i * 1.5, 5 - i, 5 - i, 1.5, '#d8462b', false);
+    } },
+    flowerbed: { w: 1, d: 1, h: 14, plant: true, draw: (P) => {
+      P.box(1, 1, 0, 14, 14, 3, { t: '#5a3a24', l: '#6e4428', r: '#55331d' }, false);
+      const cols = ['#ff5a7a', '#ffd65a', '#ffffff', '#c27bff', '#ff9a3a'];
+      for (let i = 0; i < 9; i++) {
+        const x = 3 + (i % 3) * 5;
+        const y = 3 + Math.floor(i / 3) * 5;
+        P.box(x, y, 3, 0.8, 0.8, 4, '#4f8f45', false);
+        P.dot(x + 1, y, 5, '#62a656', 1, 1);
+        P.dot(x - 0.5, y, 9, cols[(i * 2) % 5], 2, 2);
+      }
+    } },
+    sunflower: { w: 1, d: 1, h: 42, plant: true, draw: (P) => {
+      P.box(7.5, 7.5, 0, 1, 1, 30, '#4f8f45', false);
+      P.box(3.5, 7.5, 12, 4, 1, 1.5, '#62a656', false);
+      P.box(8.5, 7.5, 19, 4, 1, 1.5, '#62a656', false);
+      faceDisc(P, 8, 33, 7, '#ffc83d', 8.9);
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 5) P.left(8 + Math.cos(a) * 5.5 - 1, 33 + Math.sin(a) * 5.5 - 1, 2.5, 2.5, '#ffe066', 9);
+      faceDisc(P, 8, 33, 3.4, '#6e4428', 9.1);
+      P.left(6.5, 33.5, 2, 1, '#8a5a36', 9.2);
+    } },
+    cactus: { w: 1, d: 1, h: 34, plant: true, draw: (P) => {
+      const g = { t: '#7cbf6a', l: '#5a9a4a', r: '#3f7a3a' };
+      P.box(6, 6, 0, 4, 4, 26, g, false);
+      P.box(0.5, 7, 10, 6, 2, 2.5, g, false);
+      P.box(0.5, 7, 12, 2.5, 2, 8, g, false);
+      P.box(9.5, 6.5, 14, 6, 2, 2.5, g, false);
+      P.box(13, 6.5, 16, 2.5, 2, 7, g, false);
+      for (let z = 3; z < 25; z += 4) P.dot(7, 10, z, '#e8f0d0', 1, 1);
+      P.dot(7.5, 8, 27, '#ff8fb1', 2, 1);
+    } },
+    hedge: { w: 1, d: 1, h: 20, plant: true, draw: (P, s) => {
+      P.box(1, 1, 0, 14, 14, 14, { t: '#5fa552', l: '#4a8c42', r: '#3a7234' }, false);
+      for (let i = 0; i < 12; i++) {
+        P.left(1 + ((i * 5) % 12), 2 + ((i * 7) % 11), 2, 1, i % 2 ? '#5aa04e' : '#3f7a3a', 15);
+        P.right(15 - ((i * 3) % 12), 2 + ((i * 5) % 11), 2, 1, i % 2 ? '#478a3e' : '#2f6228', 15);
+      }
+      if (s.weather === 'snow') P.top(1, 1, 14, 14, '#eef3fa', 14);
+    } },
+    // Pumpkins; after dark the big one turns into a lantern.
+    pumpkin: { w: 1, d: 1, h: 16, plant: true, draw: (P, s) => {
+      const gourd = (x, y, z, r) => {
+        P.disc(x, y, z, r, '#e0782a');
+        P.disc(x - r * 0.35, y, z + 0.5, r * 0.5, '#ef8a36');
+        P.box(x - 0.5, y - 0.5, z + r * 0.75, 1, 1, 2, '#5a7a2a', false);
+      };
+      P.top(2, 11, 7, 1, '#4f8f45', 0.5);
+      P.top(9, 3, 1, 6, '#4f8f45', 0.5);
+      gourd(7, 7, 5, 4.5);
+      gourd(12, 11, 3, 3);
+      if (s.hour >= 18 || s.hour < 6) {
+        P.dot(5.5, 9, 6.5, '*#ffd65a', 1, 1);
+        P.dot(8, 9, 6.5, '*#ffd65a', 1, 1);
+        P.dot(6, 9, 4, '*#ffd65a', 3, 1);
+        P.glow(7, 8, 5, 12, 'rgba(255,170,60,0.45)');
+      }
+    } },
     // Wall-mounted: mount height z, drawn on the plane y = 0; `top` is the highest point drawn.
     hangplant: { w: 1, d: 0, h: 60, top: 58, wall: true, z: 30, draw: (P) => {
       P.box(7, 0, 54, 2, 5, 1, '#5a4a3a', false);
@@ -990,7 +1375,90 @@
       P.disc(20, 3, 49, 3, '#4f9e57');
       P.box(26, 2, 40, 3, 3, 4, '#e8b13a', false);
     } },
+    // ---- More for the walls.
+    painting: { w: 2, d: 0, h: 64, top: 58, wall: true, z: 34, draw: (P) => {
+      P.left(3, 34, 26, 22, '#b8862e', 1);
+      P.left(4, 35, 24, 20, '#d9a84a', 1.2);
+      P.left(5, 36, 22, 18, '#9fd0f0', 1.4);
+      P.left(5, 36, 22, 6, '#6aa857', 1.5);
+      for (let k = 0; k < 7; k++) P.left(7 + k, 42 + k, 12 - k * 2, 1, '#7a8fb0', 1.5);
+      for (let k = 0; k < 5; k++) P.left(15 + k, 42 + k, 10 - k * 2, 1, '#8a9fc4', 1.55);
+      P.left(12, 47, 2, 1, '#ffffff', 1.6);
+      P.left(22, 49, 3, 3, '#ffd65a', 1.6);
+      P.left(8, 51, 4, 1, '#ffffff', 1.6);
+      P.left(7, 38, 5, 1, '#5a9a4a', 1.6);
+      P.left(18, 37, 6, 1, '#7cbf6a', 1.6);
+    } },
+    // Photos pegged on a line of twine, and a row taped under it.
+    photowall: { w: 2, d: 0, h: 64, top: 58, wall: true, z: 30, draw: (P) => {
+      const sag = (u) => 54 - Math.round(Math.sin(((u - 2) / 28) * Math.PI) * 2);
+      for (let u = 2; u < 30; u++) P.left(u, sag(u), 1, 1, '#8a6a44', 1);
+      const pics = [[3, '#5aa7ff', true], [12, '#ff8fb1', true], [21, '#7cc47f', true], [7, '#ffd65a', false], [16, '#c27bff', false]];
+      pics.forEach(([u, c, hung], i) => {
+        const v = hung ? sag(u + 3) - 9 : 31 + (i % 2);
+        P.left(u, v, 7, 8, '#fbf8f0', 1.2);
+        P.left(u + 1, v + 2, 5, 5, c, 1.3);
+        P.left(u + 2, v + 3, 2, 2, lt(c, 0.3), 1.4);
+        if (hung) P.left(u + 3, v + 7, 1, 2, '#c9a06a', 1.5);
+        else P.left(u + 2, v + 7, 3, 1, 'rgba(255,255,255,0.8)', 1.5);
+      });
+    } },
+    calendar: { w: 1, d: 0, h: 60, top: 54, wall: true, z: 34, draw: (P) => {
+      P.left(7.5, 51, 1, 2, '#5a4a3a', 1);
+      P.left(3, 35, 10, 15, '#fbf8f0', 1);
+      P.left(3, 46, 10, 4, '#d8462b', 1.2);
+      P.left(5, 47, 6, 1, '#ffe9e0', 1.3);
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) P.left(4 + c * 2.4, 37 + r * 2, 1, 1, '#9a8f80', 1.3);
+      P.left(8.8, 41, 2, 2, '#d8462b', 1.4);
+    } },
+    stringlights: { anim: true, w: 2, d: 0, h: 64, top: 60, wall: true, z: 48, draw: (P, s) => {
+      const night = s.hour >= 18 || s.hour < 7;
+      const cols = ['#ffd65a', '#ff8fb1', '#7ad1ff', '#7cff8c'];
+      // Two swags of wire with a bulb every few units; at night they're lit and twinkle.
+      for (let u = 0; u < 32; u++) {
+        const v = 57 - Math.round(Math.sin(((u % 16) / 16) * Math.PI) * 4);
+        P.left(u, v, 1, 1, '#3a3f50', 1);
+        if (u % 4 !== 2) continue;
+        const n = Math.floor(u / 4);
+        const lit = night && (n + s.frame) % 5 !== 0;
+        P.left(u - 0.5, v - 2, 1.5, 2, lit ? `*${cols[n % 4]}` : dk(cols[n % 4], 0.2), 1.3);
+      }
+      if (night) P.glow(16, 2, 52, 22, 'rgba(255,214,140,0.32)');
+    } },
+    dartboard: { w: 1, d: 0, h: 60, top: 54, wall: true, z: 36, draw: (P) => {
+      faceDisc(P, 8, 45, 7, '#2a2b33', 1);
+      faceDisc(P, 8, 45, 6, '#e8dcc0', 1.1);
+      faceDisc(P, 8, 45, 4.5, '#c2453f', 1.2);
+      faceDisc(P, 8, 45, 3, '#e8dcc0', 1.3);
+      faceDisc(P, 8, 45, 1.6, '#3f8a4a', 1.4);
+      P.left(7.5, 44.5, 1, 1, '#c2453f', 1.5);
+      P.box(9, 1.5, 47, 1, 3, 1, '#c9ced8', false);
+      P.box(9, 4.5, 47, 1, 1, 2, '#ffd65a', false);
+      P.box(5, 1.5, 42, 1, 3, 1, '#c9ced8', false);
+      P.box(5, 4.5, 42, 1, 1, 2, '#5aa7ff', false);
+    } },
+    corkboard: { w: 2, d: 0, h: 60, top: 54, wall: true, z: 32, draw: (P) => {
+      P.left(3, 32, 26, 20, '#8a5a36', 1);
+      P.left(4, 33, 24, 18, '#c99a62', 1.2);
+      for (let i = 0; i < 14; i++) P.left(5 + ((i * 7) % 22), 34 + ((i * 5) % 16), 1, 1, '#b5864e', 1.3);
+      for (const [u, v, w, h, c, pin] of [[6, 41, 7, 7, '#fff27a', '#e0405a'], [15, 43, 6, 6, '#ffb3c8', '#5aa7ff'], [22, 36, 5, 8, '#ffffff', '#7cc47f'], [9, 34, 6, 5, '#b8e6ff', '#ffd65a']]) {
+        P.left(u, v, w, h, c, 1.4);
+        for (let k = 1; k < h - 2; k += 2) P.left(u + 1, v + k, w - 2, 1, dk(c, 0.2), 1.5);
+        P.left(u + w / 2, v + h - 1, 1, 1, pin, 1.6);
+      }
+    } },
   };
+
+  // Which shelf of the editor a piece is kept on: plants, things on the wall, things for outside
+  // (the yard, the street, the beach, the water), or furniture for indoors.
+  const YARD = new Set(['streetlamp', 'telescope', 'planter', 'crate', 'barrel', 'signboard', 'watertank', 'antenna', 'bin',
+    'umbrella', 'lounger', 'surfboard', 'tiki', 'campfire', 'logpile', 'lantern', 'bench', 'mailbox', 'fence', 'swing',
+    'fountain', 'well', 'birdhouse', 'snowman', 'gnome']);
+  function shelfOf(type) {
+    const def = OBJECTS[type];
+    if (!def) return null;
+    return def.plant ? 'plants' : def.wall ? 'hang' : def.onWater || YARD.has(type) ? 'yard' : 'furniture';
+  }
 
   // ---- Room model -----------------------------------------------------------------
   // The room is built, not drawn: the player decides the shape and the engine dresses it.
@@ -3065,7 +3533,7 @@
   }
 
   return {
-    TU, SLAB, STEP_Z, WEATHERS, weatherFor, pickAt, tinted, FLOORS, WALLS, OBJECTS, BLUEPRINTS, migrate, derive,
+    TU, SLAB, STEP_Z, WEATHERS, weatherFor, pickAt, tinted, FLOORS, WALLS, OBJECTS, shelfOf, BLUEPRINTS, migrate, derive,
     LAND_SIZES, landOf, setLand, roomCost, needsOf, blueprintRoom, starterRoom, extentOf, tidy,
     pick, addTile, addFlight, removeFlightAt,
     BLOCKS, pickBlock, blockTarget, placeBlock, removeBlock, stairPlan, placeStairs, placeSpiral, stairSprite, blockSprite,

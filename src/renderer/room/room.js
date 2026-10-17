@@ -11,7 +11,7 @@ const TOOLBAR_H = 34;
 // Station → acceptable furniture, best first.
 const FALLBACK = {
   code: ['code', 'terminal'], terminal: ['terminal', 'code'], read: ['read', 'web'], web: ['web', 'read'],
-  write: ['code', 'read'], art: ['art', 'code'], game: ['game', 'code'], music: ['music', 'rest'], chat: ['code'],
+  write: ['write', 'code', 'read'], art: ['art', 'code'], game: ['game', 'code'], music: ['music', 'rest'], chat: ['chat', 'meeting', 'code'],
   meeting: ['meeting', 'code'], wait: ['wait'], rest: ['rest', 'coffee'], coffee: ['coffee', 'rest'],
 };
 

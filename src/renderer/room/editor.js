@@ -29,6 +29,8 @@
 
   const HINTS = {
     furniture: '點家具放進房間，按 R 或右下的按鈕轉方向。點房間裡的家具可以搬，右鍵刪掉',
+    hang: '點一下掛到牆上，按 R 換另一面牆。點牆上的東西可以搬，右鍵拿掉',
+    yard: '院子、街上、海邊用的。點一下放下去，按 R 轉方向，點放好的可以搬',
     terrain: '半透明的就是會放下去的位置。點頂面往上疊，點側面往旁邊接，點空地鋪地',
     stairs: '樓梯放在高台旁邊的地板上，會自己往高的那邊接上去，落差越大階數越多',
     spiral: '旋轉樓梯放在高處旁邊的地板上，一格就能繞上去，最多五層',
@@ -39,6 +41,8 @@
     plants: '點植物種在草地上，沿外圍種一圈就是背景。點已經種好的可以搬',
   };
 
+  // The tabs that are shelves of pieces to put in the room (Iso.shelfOf says which one each is on).
+  const SHELVES = new Set(['furniture', 'hang', 'yard', 'plants']);
   const itemName = (id) => Catalog.ITEMS.find((i) => i.id === id)?.name || id;
   const owned = (type) => (state.progress?.owned || []).filter((id) => id.startsWith(`${type}:`)).map((id) => id.split(':')[1]);
   const owns = (id) => (state.progress?.owned || []).includes(id);
@@ -194,9 +198,9 @@
       return;
     }
     hint.textContent = tab === 'terrain' && build.tool !== 'block' ? HINTS[build.tool] : HINTS[tab];
-    if (tab === 'furniture' || tab === 'plants') {
+    if (SHELVES.has(tab)) {
       for (const type of owned('obj')) {
-        if (!Iso.OBJECTS[type] || !!Iso.OBJECTS[type].plant !== (tab === 'plants')) continue;
+        if (Iso.shelfOf(type) !== tab) continue;
         const sp = Iso.objectSprite(type, false, still);
         palette.append(button(itemName(`obj:${type}`), thumb(sp.canvas), tool?.type === type && !tool.moving, () => {
           cancelMove();
@@ -553,7 +557,7 @@
     if (i >= 0) {
       const [o] = r.objects.splice(i, 1);
       tool = { type: o.type, flip: !!o.flip, moving: true, orig: { x: o.x, y: o.y, flip: !!o.flip, f: o.f || 0 } };
-      tab = Iso.OBJECTS[o.type]?.plant ? 'plants' : 'furniture';
+      tab = Iso.shelfOf(o.type) || 'furniture';
       // Not saved while it is in hand: quitting halfway leaves it where it stood.
       RoomApp.setRoom(r, { relayout: false });
       refresh();
