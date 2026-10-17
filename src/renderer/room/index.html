@@ -13,6 +13,7 @@
     <div id="roomcol">
     <div id="toolbar" class="dockbar">
       <span id="grip" title="拖曳移動房間" data-icon="grip"></span>
+      <span id="level" class="badge level"></span>
       <span id="coins" class="badge coin"></span>
       <span class="spacer"></span>
       <button id="btn-edit" class="icon-btn" title="編輯房間" data-icon="edit"></button>
@@ -33,23 +34,25 @@
     </div>
     </div>
     <div id="editor" class="hidden ui">
-      <div class="modes">
-        <div class="seg big">
-          <button data-mode="build" class="active">建造</button>
-          <button data-mode="erase">拆除</button>
+      <div class="rail" id="build-tabs">
+        <button data-tab="furniture" data-icon="chair" class="active">家具</button>
+        <button data-tab="plants" data-icon="sprout">植物</button>
+        <button data-tab="terrain" data-icon="cube">方塊</button>
+        <button data-tab="floor" data-icon="tiles">地板</button>
+        <button data-tab="wall" data-icon="bricks">牆面</button>
+        <button data-tab="room" data-icon="flag">土地與藍圖</button>
+      </div>
+      <div class="editor-main">
+        <div class="modes">
+          <div class="seg big">
+            <button data-mode="build" class="active">建造</button>
+            <button data-mode="erase">拆除</button>
+          </div>
+          <span id="editor-coins" class="badge coin"></span>
+          <span id="editor-hint" class="hint"></span>
         </div>
-        <span id="editor-coins" class="badge coin"></span>
-        <span id="editor-hint" class="hint"></span>
+        <div id="palette"></div>
       </div>
-      <div class="tabs cats" id="build-tabs">
-        <button data-tab="furniture" class="active">家具</button>
-        <button data-tab="plants">植物</button>
-        <button data-tab="terrain">方塊</button>
-        <button data-tab="floor">地板</button>
-        <button data-tab="wall">牆面</button>
-        <button data-tab="room">土地與藍圖</button>
-      </div>
-      <div id="palette"></div>
     </div>
   </div>
   <script src="../sideways.js"></script>

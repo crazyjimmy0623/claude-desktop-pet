@@ -113,6 +113,57 @@
 .seg > button:hover { color: var(--text) !important; background: var(--paper-3) !important; }
 .seg > button.active, .seg > button.on { background: var(--ink) !important; color: var(--paper) !important; }
 
+/* Side tabs: a column of bookmarks down the left edge, the open one pulled out onto the page.
+   Second-level choices sit here, so the short drawer keeps its height for what's on the page. */
+.rail {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0 8px 6px;
+  background: var(--paper-2);
+  border-right: 2px solid var(--ink);
+}
+
+.rail > button {
+  font: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  margin: 0 -2px 0 0;
+  padding: 5px 12px 5px 8px;
+  border: 2px solid transparent;
+  border-right: none;
+  border-radius: var(--r) 0 0 var(--r);
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-2);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rail > button .px-icon { color: var(--text-3); }
+.rail > button:hover { color: var(--text); background: var(--paper-3); }
+.rail > button:active { padding-top: 5px; padding-bottom: 5px; box-shadow: none; }
+.rail > button.active { color: var(--text); background: var(--paper); border-color: var(--ink); box-shadow: inset 3px 0 0 var(--accent); }
+.rail > button.active .px-icon { color: var(--accent); }
+
+/* A thin bar that fills up: XP to the next level, how much of a collection is found. */
+.meter {
+  flex: none;
+  display: inline-block;
+  width: 48px;
+  height: 6px;
+  background: var(--paper-3);
+  border: 1px solid var(--ink);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.meter > i { display: block; height: 100%; width: var(--fill, 0%); background: var(--good); }
+
 /* Small labels: coins, level, counts. */
 .pill, .badge {
   display: inline-flex;

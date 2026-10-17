@@ -448,3 +448,5 @@ html, body {
 .dockbar button.on { background: var(--accent-soft); color: var(--accent); }
 .dockbar .sep { width: 2px; height: 16px; margin: 0 4px; background: var(--line); }
 .dockbar .badge { font-size: 11px; padding: 0 6px; }
+.dockbar .badge.level { gap: 5px; padding-right: 5px; }
+.dockbar .badge.coin { margin-left: 3px; }

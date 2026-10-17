@@ -559,12 +559,17 @@ desk.on('command', (cmd) => {
   });
 });
 
+// The level and coins on the dock, like the counter by a desktop pet.
+const showPurse = (p) => Common.showPurse(document.getElementById('level'), document.getElementById('coins'), p);
+desk.on('progress', showPurse);
+
 desk.invoke('init').then((init) => {
   scale = init.settings.scale;
   settings = init.settings;
   Sprites.useCustoms(init.settings.characters?.customs); Sprites.useDrawings(init.settings.characters?.drawings);
   Common.loadSheets(init.assets);
   syncActors(init.actors);
+  showPurse(init.progress);
 });
 
 setInterval(() => { if (Math.random() < 0.08) maybeButterfly(); }, 60000);

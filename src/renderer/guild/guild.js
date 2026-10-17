@@ -162,33 +162,38 @@ function renderEquip() {
   const skins = ITEMS.filter((i) => i.type === 'skin' && owns(i.id)).map((i) => ({ key: i.id.slice(5), name: i.name }));
   for (const m of settings.characters.customs || []) skins.push({ key: `mix:${m.id}`, name: `👗 ${m.name}` });
   for (const d of settings.characters.drawings || []) skins.push({ key: `draw:${d.id}`, name: `${d.friend ? '💌' : '🖌️'} ${d.name}` });
-  for (const c of assets.characters) skins.push({ key: c.id, name: `${c.name}（自訂）`, custom: true });
-  if (target === 'ai' || target.startsWith('project:')) skins.unshift({ key: 'auto', name: '🎲 每開一個新對話就換', custom: true });
+  for (const c of assets.characters) skins.push({ key: c.id, name: c.name, custom: true, mark: '自訂' });
+  if (target === 'ai' || target.startsWith('project:')) skins.unshift({ key: 'auto', name: '每次都換', custom: true, mark: '🎲', title: '每開一個新對話就換一個角色' });
+  // Tiles like a wardrobe: the picture on top, the name under it.
+  const tile = (picture, name, active, onClick, title = name) => {
+    const b = document.createElement('button');
+    if (picture) b.append(picture);
+    const n = document.createElement('span');
+    n.className = 'name';
+    n.textContent = name;
+    b.append(n);
+    b.title = title;
+    b.classList.toggle('active', active);
+    b.addEventListener('click', onClick);
+    return b;
+  };
+  const mark = (text) => Object.assign(document.createElement('span'), { className: 'mark', textContent: text });
+  const mini = (skin, opts = {}, rows = Sprites.MINI.H) => canvasOf((Sprites.MINI.W * 3) / DPR, (rows * 3) / DPR, (x) => Sprites.drawMiniAt(x, 3, 0, 0, skin, 'rest', 0, Sprites.colorsFor(210), 1, opts));
   const skinList = $('skin-list');
   skinList.replaceChildren();
   for (const s of skins) {
-    const b = document.createElement('button');
-    if (!s.custom) b.append(canvasOf((Sprites.MINI.W * 4) / DPR, (Sprites.MINI.H * 4) / DPR, (x) => Sprites.drawMiniAt(x, 4, 0, 0, s.key, 'rest', 0, Sprites.colorsFor(210), 1, {})));
-    b.append(document.createTextNode(s.name));
-    b.classList.toggle('active', slot.skin === s.key);
-    b.addEventListener('click', () => desk.invoke('equip', { target, skin: s.key }));
-    skinList.append(b);
+    skinList.append(tile(s.custom ? mark(s.mark) : mini(s.key), s.name, slot.skin === s.key, () => desk.invoke('equip', { target, skin: s.key }), s.title));
   }
+  // Each accessory tried on whoever is being dressed (just the head and shoulders, where it goes).
+  const wearer = Sprites.SKINS[slot.skin] ? slot.skin : 'office';
   const accList = $('acc-list');
   accList.replaceChildren();
   const accs = [{ key: null, name: '無' }, ...ITEMS.filter((i) => i.type === 'accessory' && owns(i.id)).map((i) => ({ key: i.id.slice(4), name: i.name }))];
   for (const a of accs) {
-    const b = document.createElement('button');
-    b.textContent = a.name;
-    b.classList.toggle('active', (slot.accessory || null) === a.key);
-    b.addEventListener('click', () => desk.invoke('equip', { target, accessory: a.key }));
-    accList.append(b);
+    accList.append(tile(mini(wearer, a.key ? { accessory: a.key } : {}, 15), a.name, (slot.accessory || null) === a.key, () => desk.invoke('equip', { target, accessory: a.key })));
   }
   if (target.startsWith('project:') && Object.hasOwn(settings.characters.projects, target.slice(8))) {
-    const b = document.createElement('button');
-    b.textContent = '↺ 改回 AI 預設';
-    b.addEventListener('click', () => desk.invoke('project:forget', target.slice(8)));
-    accList.append(b);
+    accList.append(tile(mark('↺'), '改回 AI 預設', false, () => desk.invoke('project:forget', target.slice(8))));
   }
   const res = target.startsWith('resident:') ? residents().find((r) => r.id === target.slice(9)) : null;
   $('equip-name').textContent = target === 'user' ? settings.userName : target === 'ai' ? 'AI 夥伴' : res ? res.name : target.slice(8);
@@ -508,29 +513,55 @@ function renderRates() {
 
 // ---- Book & achievements -------------------------------------------------------------
 
+// Which cards the book shows: all of them, only the ones you have, or only the ones still to find.
+let bookShow = 'all';
+
 function renderBook() {
   const book = $('book');
   book.replaceChildren();
   const groups = [['skin', '角色'], ['accessory', '配件'], ['furniture', '家具'], ['plant', '植物'], ['block', '建材'], ['land', '土地'], ['floor', '地板'], ['wall', '牆面']];
   for (const [type, label] of groups) {
-    const h = document.createElement('h3');
     const items = ITEMS.filter((i) => i.type === type);
+    const shown = items.filter((i) => bookShow === 'all' || owns(i.id) === (bookShow === 'have'));
+    if (!shown.length) continue;
+    const h = document.createElement('h3');
     h.textContent = `${label}（${items.filter((i) => owns(i.id)).length}/${items.length}）`;
     const grid = document.createElement('div');
     grid.className = 'grid';
-    for (const i of items) grid.append(itemCard(i.id, { locked: !owns(i.id) }));
+    for (const i of shown) grid.append(itemCard(i.id, { locked: !owns(i.id) }));
     const group = document.createElement('div');
     group.className = 'group';
     group.append(h, grid);
     book.append(group);
   }
-  $('book-count').textContent = `${progress.owned.length}/${ITEMS.length}`;
+  if (!book.children.length) book.textContent = bookShow === 'missing' ? '全部都收集到了！' : '還沒有收集到東西';
+  // How far along the collection is, overall and for each rarity.
+  const fill = Math.round((progress.owned.length / ITEMS.length) * 100);
+  $('book-count').innerHTML = `<span class="meter"><i style="--fill:${fill}%"></i></span>`;
+  $('book-count').append(`${progress.owned.length}/${ITEMS.length}`);
+  const counts = $('book-rarity');
+  counts.replaceChildren();
+  // The ones you start with are always there, so only the ones to recruit are counted.
+  for (const [r, { name, color, weight }] of Object.entries(RARITY)) {
+    const all = ITEMS.filter((i) => i.rarity === r);
+    if (!all.length || !weight) continue;
+    const c = document.createElement('span');
+    c.className = 'rarity-count';
+    c.style.setProperty('--rarity', color);
+    c.textContent = `${name} ${all.filter((i) => owns(i.id)).length}/${all.length}`;
+    counts.append(c);
+  }
+  document.querySelectorAll('#book-filter button').forEach((b) => b.classList.toggle('active', b.dataset.show === bookShow));
 }
+document.querySelectorAll('#book-filter button').forEach((b) => b.addEventListener('click', () => { bookShow = b.dataset.show; renderBook(); }));
 
 function renderAchievements() {
   const box = $('achievements');
   box.replaceChildren();
   let got = 0;
+  // The same counts the achievements are tested on; hours are kept in minutes.
+  const counts = { ...progress.stats, owned: progress.owned.length, totalItems: ITEMS.length };
+  const shown = (count, v) => Math.floor(count === 'activeMinutes' ? v / 60 : v);
   ACHIEVEMENTS.forEach((a, idx) => {
     const at = progress.achievements[a.id];
     if (at) got += 1;
@@ -539,6 +570,16 @@ function renderAchievements() {
     el.innerHTML = `<span class="icon">${ACH_ICONS[idx % ACH_ICONS.length]}</span><div><b></b><small></small></div>`;
     el.querySelector('b').textContent = `${a.name}（+${a.reward} 🪙）`;
     el.querySelector('small').textContent = at ? `${a.desc}・${new Date(at).toLocaleDateString()}` : a.desc;
+    // Still to get, and more than once to do: how far along it is.
+    const goal = typeof a.goal === 'string' ? counts[a.goal] : a.goal;
+    if (!at && goal > 1) {
+      const have = Math.min(goal, counts[a.count] || 0);
+      const bar = document.createElement('span');
+      bar.className = 'ach-progress';
+      bar.innerHTML = `<span class="meter"><i style="--fill:${Math.round((have / goal) * 100)}%"></i></span>`;
+      bar.append(`${shown(a.count, have)}/${shown(a.count, goal)}`);
+      el.querySelector('div').append(bar);
+    }
     box.append(el);
   });
   $('ach-count').textContent = `${got}/${ACHIEVEMENTS.length}`;
@@ -662,12 +703,12 @@ $('share-copy').addEventListener('click', async () => {
 
 function showTab(name) {
   tab = name;
-  document.querySelectorAll('nav.tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('nav.rail button').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('hidden', t.id !== `tab-${name}`));
   render();
 }
 
-document.querySelectorAll('nav.tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+document.querySelectorAll('nav.rail button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 document.querySelectorAll('.studio-modes .mode').forEach((b) => b.addEventListener('click', () => { studio.mode = b.dataset.mode; renderStudio(); }));
 
 function render(full = true) {
@@ -692,7 +733,7 @@ desk.on('settings', (s) => { settings = s; looksRev++; Sprites.useCustoms(s.char
 // Progress comes with every tool call a Claude session makes. Rebuilding the open tab that often
 // swallows clicks (a button replaced between press and release), so a tab is only drawn again when
 // what it shows changed; the coins and level always are.
-const SHOWS = { achievements: ['achievements'], stats: ['days', 'stats', 'level', 'achievements', 'owned'] };
+const SHOWS = { achievements: ['achievements', 'stats', 'owned'], stats: ['days', 'stats', 'level', 'achievements', 'owned'] };
 desk.on('progress', (p) => {
   const before = progress;
   progress = p;

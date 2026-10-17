@@ -15,14 +15,14 @@
     <span id="level" class="pill"></span>
     <span id="coins" class="pill"></span>
   </header>
-  <nav class="tabs">
-    <button data-tab="equip" class="active">夥伴</button>
-    <button data-tab="studio">創角</button>
-    <button data-tab="friends">朋友</button>
-    <button data-tab="gacha">招募</button>
-    <button data-tab="book">圖鑑</button>
-    <button data-tab="achievements">成就</button>
-    <button data-tab="stats">戰績卡</button>
+  <nav class="rail">
+    <button data-tab="equip" data-icon="person" class="active">夥伴</button>
+    <button data-tab="studio" data-icon="shirt">創角</button>
+    <button data-tab="friends" data-icon="heart">朋友</button>
+    <button data-tab="gacha" data-icon="capsule">招募</button>
+    <button data-tab="book" data-icon="book">圖鑑</button>
+    <button data-tab="achievements" data-icon="trophy">成就</button>
+    <button data-tab="stats" data-icon="chart">戰績卡</button>
   </nav>
   <main>
     <div id="tab-equip" class="tab">
@@ -35,9 +35,9 @@
         <div class="equip-preview"><canvas id="equip-canvas" class="pixel"></canvas><div id="equip-name"></div></div>
         <div class="equip-lists">
           <h2>角色</h2>
-          <div id="skin-list" class="chips"></div>
-          <h2>配件</h2>
-          <div id="acc-list" class="chips"></div>
+          <div id="skin-list" class="chips tiles"></div>
+          <h2>配件 <small>試戴在他身上</small></h2>
+          <div id="acc-list" class="chips tiles"></div>
           <div id="resident-tools" class="resident-tools hidden">
             <h2>居民</h2>
             <input type="text" id="resident-name" maxlength="12" placeholder="名字">
@@ -191,7 +191,13 @@
 
     <div id="tab-book" class="tab hidden">
       <section class="card">
-        <h2>圖鑑 <span id="book-count" class="pill"></span></h2>
+        <h2>圖鑑 <span id="book-count" class="pill"></span> <span id="book-rarity" class="rarity-counts"></span>
+          <span class="seg book-filter" id="book-filter">
+            <button data-show="all" class="active">全部</button>
+            <button data-show="have">已收集</button>
+            <button data-show="missing">還沒有</button>
+          </span>
+        </h2>
         <div id="book" class="book"></div>
       </section>
     </div>

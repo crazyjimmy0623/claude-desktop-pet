@@ -10,7 +10,7 @@
   const palette = document.getElementById('palette');
   const hint = document.getElementById('editor-hint');
   const btnEdit = document.getElementById('btn-edit');
-  const tabButtons = [...document.querySelectorAll('.tabs button[data-tab]')];
+  const tabButtons = [...document.querySelectorAll('#build-tabs button[data-tab]')];
   const modeButtons = [...document.querySelectorAll('.modes button[data-mode]')];
   const buildTabs = document.getElementById('build-tabs');
   const coinsEl = document.getElementById('editor-coins');
@@ -99,8 +99,6 @@
     return out;
   }
 
-  // A tile (a picture, a name, a price in the corner) when there is something to show, otherwise
-  // a small chip. `preview` may be a canvas or an emoji.
   // A row of the palette with its name at the front.
   function labelledRow(text) {
     const el = document.createElement('div');
@@ -112,6 +110,8 @@
     return el;
   }
 
+  // A tile (a picture, a name, the price along the bottom) when there is something to show,
+  // otherwise a small chip. `preview` may be a canvas or an emoji.
   function button(label, preview, selected, onClick, { price: cost = null, wide = false, tile = false } = {}) {
     const b = document.createElement('button');
     b.className = preview || tile ? 'tile' : 'chip';
@@ -129,7 +129,8 @@
     if (cost !== null) {
       const p = document.createElement('span');
       p.className = 'price';
-      p.textContent = `${cost} 🪙`;
+      p.innerHTML = window.Icons?.svg('coin') || '';
+      p.append(String(cost));
       b.append(p);
     }
     if (selected) b.classList.add('selected');
@@ -176,7 +177,10 @@
 
   function refresh() {
     if (!state.editing) return;
-    if (coinsEl) coinsEl.textContent = `🪙 ${coins()}`;
+    if (coinsEl) {
+      coinsEl.innerHTML = window.Icons?.svg('coin') || '';
+      coinsEl.append(String(coins()));
+    }
     modeButtons.forEach((b) => b.classList.toggle('active', b.dataset.mode === mode));
     buildTabs.classList.toggle('hidden', mode === 'erase');
     tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));

@@ -177,28 +177,30 @@
     return BUILD_PRICE[item.rarity] || 3;
   }
 
+  // What an achievement counts and how far it has to get; `goal` may name another count (all the items).
+  const reach = (count, goal) => ({ count, goal, test: (s) => s[count] >= (typeof goal === 'string' ? s[goal] : goal) });
   const ACHIEVEMENTS = [
-    { id: 'first_turn', name: '第一個任務', desc: 'AI 夥伴做完第一件事', reward: 5, test: (s) => s.turns >= 1 },
-    { id: 'turns_100', name: '做完一百件', desc: 'AI 一共做完 100 件事', reward: 20, test: (s) => s.turns >= 100 },
-    { id: 'tools_1000', name: '工具狂人', desc: 'AI 一共動手 1000 次', reward: 20, test: (s) => s.toolCalls >= 1000 },
-    { id: 'edits_500', name: '改檔職人', desc: '一共改了 500 次檔案', reward: 20, test: (s) => s.edits >= 500 },
-    { id: 'reads_500', name: '博覽群書', desc: '一共看了 500 次檔案', reward: 15, test: (s) => s.reads >= 500 },
-    { id: 'helpers_5', name: '人多好辦事', desc: '同時有 5 位小幫手', reward: 15, test: (s) => s.maxHelpers >= 5 },
-    { id: 'night_owl', name: '夜貓子', desc: '凌晨 0–5 點還在上工', reward: 10, test: (s) => s.nightTurns >= 1 },
-    { id: 'early_bird', name: '早起的鳥兒', desc: '早上 5–7 點就開工', reward: 10, test: (s) => s.earlyTurns >= 1 },
-    { id: 'bugs_10', name: '除蟲專家', desc: '抓到 10 隻 bug', reward: 15, test: (s) => s.bugs >= 10 },
-    { id: 'focus_1', name: '專注新手', desc: '完成第一個番茄鐘', reward: 5, test: (s) => s.focus >= 1 },
-    { id: 'focus_25', name: '心流大師', desc: '完成 25 個番茄鐘', reward: 25, test: (s) => s.focus >= 25 },
-    { id: 'streak_7', name: '全勤獎', desc: '連續 7 天上工', reward: 25, test: (s) => s.streak >= 7 },
-    { id: 'collector_10', name: '收藏家', desc: '收集 10 件物品', reward: 15, test: (s) => s.owned >= 10 },
-    { id: 'collector_all', name: '圖鑑完成', desc: '收集所有物品', reward: 100, test: (s) => s.owned >= s.totalItems },
-    { id: 'gacha_first', name: '第一抽', desc: '第一次招募', reward: 3, test: (s) => s.pulls >= 1 },
-    { id: 'chest_10', name: '拆箱達人', desc: '打開 10 個包裹', reward: 15, test: (s) => s.chests >= 10 },
-    { id: 'ufo', name: '第三類接觸', desc: '目睹 UFO 飛過', reward: 10, test: (s) => s.ufos >= 1 },
-    { id: 'hours_100', name: '百小時夥伴', desc: '一起待了 100 小時', reward: 30, test: (s) => s.activeMinutes >= 6000 },
-    { id: 'flow_1', name: '進入心流', desc: '同一件事專注 25 分鐘', reward: 5, test: (s) => s.flowSessions >= 1 },
-    { id: 'flow_50', name: '專注職人', desc: '專心滿 25 分鐘，累積 50 次', reward: 25, test: (s) => s.flowSessions >= 50 },
-    { id: 'checkin_7', name: '天天報到', desc: '連續簽到 7 天', reward: 15, test: (s) => s.checkInBest >= 7 },
+    { id: 'first_turn', name: '第一個任務', desc: 'AI 夥伴做完第一件事', reward: 5, ...reach('turns', 1) },
+    { id: 'turns_100', name: '做完一百件', desc: 'AI 一共做完 100 件事', reward: 20, ...reach('turns', 100) },
+    { id: 'tools_1000', name: '工具狂人', desc: 'AI 一共動手 1000 次', reward: 20, ...reach('toolCalls', 1000) },
+    { id: 'edits_500', name: '改檔職人', desc: '一共改了 500 次檔案', reward: 20, ...reach('edits', 500) },
+    { id: 'reads_500', name: '博覽群書', desc: '一共看了 500 次檔案', reward: 15, ...reach('reads', 500) },
+    { id: 'helpers_5', name: '人多好辦事', desc: '同時有 5 位小幫手', reward: 15, ...reach('maxHelpers', 5) },
+    { id: 'night_owl', name: '夜貓子', desc: '凌晨 0–5 點還在上工', reward: 10, ...reach('nightTurns', 1) },
+    { id: 'early_bird', name: '早起的鳥兒', desc: '早上 5–7 點就開工', reward: 10, ...reach('earlyTurns', 1) },
+    { id: 'bugs_10', name: '除蟲專家', desc: '抓到 10 隻 bug', reward: 15, ...reach('bugs', 10) },
+    { id: 'focus_1', name: '專注新手', desc: '完成第一個番茄鐘', reward: 5, ...reach('focus', 1) },
+    { id: 'focus_25', name: '心流大師', desc: '完成 25 個番茄鐘', reward: 25, ...reach('focus', 25) },
+    { id: 'streak_7', name: '全勤獎', desc: '連續 7 天上工', reward: 25, ...reach('streak', 7) },
+    { id: 'collector_10', name: '收藏家', desc: '收集 10 件物品', reward: 15, ...reach('owned', 10) },
+    { id: 'collector_all', name: '圖鑑完成', desc: '收集所有物品', reward: 100, ...reach('owned', 'totalItems') },
+    { id: 'gacha_first', name: '第一抽', desc: '第一次招募', reward: 3, ...reach('pulls', 1) },
+    { id: 'chest_10', name: '拆箱達人', desc: '打開 10 個包裹', reward: 15, ...reach('chests', 10) },
+    { id: 'ufo', name: '第三類接觸', desc: '目睹 UFO 飛過', reward: 10, ...reach('ufos', 1) },
+    { id: 'hours_100', name: '百小時夥伴', desc: '一起待了 100 小時', reward: 30, ...reach('activeMinutes', 6000) },
+    { id: 'flow_1', name: '進入心流', desc: '同一件事專注 25 分鐘', reward: 5, ...reach('flowSessions', 1) },
+    { id: 'flow_50', name: '專注職人', desc: '專心滿 25 分鐘，累積 50 次', reward: 25, ...reach('flowSessions', 50) },
+    { id: 'checkin_7', name: '天天報到', desc: '連續簽到 7 天', reward: 15, ...reach('checkInBest', 7) },
   ];
 
   const PULL_COST = 10;

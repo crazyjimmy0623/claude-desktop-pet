@@ -30,6 +30,11 @@
 
 .chips button canvas { image-rendering: pixelated; }
 
+/* Wardrobe tiles: the picture on top, the name underneath, all the same size. */
+.chips.tiles button { flex-direction: column; justify-content: flex-end; gap: 2px; width: 78px; padding: 4px 3px 4px; font-size: 11px; line-height: 14px; }
+.chips.tiles button .name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chips.tiles button .mark { flex: 1; display: grid; place-items: center; min-height: 40px; font-size: 16px; font-weight: 800; color: var(--text-3); }
+
 .equip-panel {
   display: flex;
   gap: 20px;
@@ -113,6 +118,15 @@
   from { transform: rotateY(90deg) scale(0.8); opacity: 0; }
 }
 
+/* The book's heading: how much is found, by rarity, and which cards to show. It stays put while
+   the book scrolls sideways under it. */
+#tab-book h2 { width: max-content; position: sticky; left: 16px; }
+#book-count { gap: 6px; }
+.rarity-counts { display: inline-flex; gap: 5px; font-size: 11px; font-weight: 700; color: var(--text-2); }
+.rarity-count { padding: 0 6px 0 5px; border-left: 4px solid var(--rarity); background: var(--paper-2); border-radius: var(--r-s); }
+.book-filter { margin-left: 6px; font-size: 11px; }
+.book-filter > button { font: inherit; font-weight: 700; padding: 1px 9px !important; cursor: pointer; }
+
 .book h3 {
   margin: 16px 0 8px;
   font-size: 12px;
@@ -148,6 +162,8 @@
 .achievement.locked b { color: var(--text-2); }
 .achievement b { display: block; }
 .achievement small { color: var(--text-2); }
+.achievement .ach-progress { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.achievement .ach-progress .meter { width: 120px; }
 
 canvas.share {
   width: 100%;

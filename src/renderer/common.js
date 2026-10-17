@@ -115,5 +115,17 @@
     watch();
   }
 
-  window.Common = { colorOf, drawMiniAt, STATE_LABEL, poseFor, bubbleFor, infoRows, loadSheets, drawActorAt, mmss, sheets, onDprChange };
+  // The level with a bar of how far it is to the next one, and the coins, for a toolbar.
+  function showPurse(levelEl, coinsEl, p) {
+    const span = p.levelCeil - p.levelFloor;
+    const got = p.xp - p.levelFloor;
+    const fill = span > 0 ? Math.max(0, Math.min(100, Math.round((got / span) * 100))) : 100;
+    levelEl.innerHTML = `<b>Lv.${p.level}</b><span class="meter"><i style="--fill:${fill}%"></i></span>`;
+    levelEl.title = `經驗值 ${got}/${span}，再 ${Math.max(0, span - got)} 就升到 Lv.${p.level + 1}`;
+    coinsEl.innerHTML = window.Icons?.svg('coin') || '';
+    coinsEl.append(String(p.coins));
+    coinsEl.title = `${p.coins} 金幣`;
+  }
+
+  window.Common = { colorOf, drawMiniAt, STATE_LABEL, poseFor, bubbleFor, infoRows, loadSheets, drawActorAt, mmss, sheets, onDprChange, showPurse };
 })();

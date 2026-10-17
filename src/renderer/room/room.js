@@ -21,6 +21,7 @@ const viewport = document.getElementById('viewport');
 const overlay = document.getElementById('overlay');
 const toastEl = document.getElementById('toast');
 const coinsEl = document.getElementById('coins');
+const levelEl = document.getElementById('level');
 const toolbar = document.getElementById('toolbar');
 const editorEl = document.getElementById('editor');
 // Editor, guild book and settings open in a drawer beside the room, along the taskbar.
@@ -973,7 +974,7 @@ function applySettings(s) {
 
 function applyProgress(p) {
   state.progress = p;
-  coinsEl.textContent = `Lv.${p.level} · ${p.coins} 🪙`;
+  Common.showPurse(levelEl, coinsEl, p);
   window.RoomEditor?.refresh();
 }
 

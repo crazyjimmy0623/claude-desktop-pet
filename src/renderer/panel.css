@@ -22,33 +22,6 @@ header.top {
 header.top h1 { margin: 0; font-size: 17px; }
 header.top .spacer { flex: 1; }
 
-/* Second-level tabs: plain labels, the chosen one underlined in tomato. */
-nav.tabs {
-  display: flex;
-  gap: 4px;
-  padding: 0 12px;
-  background: var(--paper);
-  border-bottom: 2px solid var(--line);
-  position: sticky;
-  top: 53px;
-  z-index: 4;
-}
-
-nav.tabs button {
-  font: inherit;
-  padding: 6px 10px 5px;
-  margin-bottom: -2px;
-  border: none;
-  border-bottom: 3px solid transparent;
-  background: transparent;
-  color: var(--text-2);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-nav.tabs button:hover { color: var(--text); border-bottom-color: var(--paper-3); }
-nav.tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
-
 main {
   padding: 16px 18px 40px;
   max-width: 980px;
@@ -205,11 +178,12 @@ canvas.pixel { image-rendering: pixelated; }
 html.docked, html.docked body { height: 100%; overflow: hidden; }
 html.docked body { display: flex; flex-direction: column; font-size: 12px; }
 html.docked header.top { display: none; }
-html.docked nav.tabs { position: static; flex: none; padding: 0 10px; }
-html.docked nav.tabs button { padding: 6px 9px 4px; }
+/* The guild's tabs run down the left, like the bookmarks of a game menu. */
+html.docked body.guild { flex-direction: row; }
 html.docked main {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   max-width: none;
   margin: 0;
   padding: 10px 0 8px;

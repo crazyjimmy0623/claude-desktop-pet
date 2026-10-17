@@ -31,7 +31,7 @@ html, body {
   transition: opacity 0.15s;
 }
 
-#frame:hover #toolbar, #toolbar.pinned { opacity: 1; }
+#frame:hover #toolbar, #roomcol #toolbar.pinned { opacity: 1; }
 
 #grip {
   cursor: move;
@@ -95,11 +95,19 @@ html, body {
 }
 
 /* ---- The editor, in the drawer ---- */
+/* Categories down the left like the guild book's tabs; building or taking away, and what's in
+   that category, on the page beside them. */
 #editor {
   display: flex;
-  flex-direction: column;
   min-height: 0;
   color: var(--text);
+}
+
+#editor .editor-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .modes {
@@ -113,29 +121,6 @@ html, body {
 .modes .seg > button[data-mode="erase"].active { background: var(--danger) !important; color: #fff !important; }
 .modes .hint { flex: 1; text-align: right; color: var(--text-2); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Categories: plain labels, the chosen one underlined in tomato. */
-.tabs.cats {
-  display: flex;
-  gap: 4px;
-  padding: 0 10px;
-  border-bottom: 2px solid var(--line);
-}
-
-.tabs.cats button {
-  margin-bottom: -2px;
-  background: transparent;
-  border: none;
-  border-bottom: 3px solid transparent;
-  border-radius: 0;
-  box-shadow: none;
-  color: var(--text-2);
-  padding: 5px 9px 4px;
-  font-weight: 700;
-}
-
-.tabs.cats button:hover { background: transparent; color: var(--text); border-bottom-color: var(--paper-3); }
-.tabs.cats button.active { color: var(--text); border-bottom-color: var(--accent); }
-
 #palette {
   flex: 1;
   min-height: 0;
@@ -148,7 +133,7 @@ html, body {
   overflow-y: hidden;
 }
 
-/* One thing to pick: its picture, its name, its price in the corner. */
+/* One thing to pick: its picture, its name, and its price along the bottom like a shop shelf. */
 #palette button.tile {
   position: relative;
   display: flex;
@@ -160,11 +145,13 @@ html, body {
   min-height: 78px;
   padding: 6px 4px 6px;
   background: var(--paper-2);
+  overflow: hidden;
 }
 
 #palette button.tile canvas { image-rendering: pixelated; max-width: 70px; max-height: 56px; object-fit: contain; }
 #palette button.tile .name { font-size: 11px; line-height: 14px; color: var(--text); text-align: center; }
-#palette button.tile .price { position: absolute; top: 3px; right: 3px; padding: 0 4px; font-size: 10px; font-weight: 700; line-height: 14px; border-radius: var(--r-s); color: var(--gold); background: var(--ink); }
+#palette button.tile .price { align-self: stretch; display: flex; align-items: center; justify-content: center; gap: 4px; margin: 1px -4px -6px; padding: 1px 0 2px; font-size: 11px; font-weight: 700; line-height: 14px; color: var(--gold); background: var(--ink); font-variant-numeric: tabular-nums; }/* Shelf tiles all one height, so their price strips line up along a row. */
+#palette button.tile:not(.wide) { height: 96px; }
 #palette button.tile.wide { width: 128px; }
 #palette button.tile.wide canvas { max-width: 118px; max-height: 70px; }
 #palette button.tile .emoji { font-size: 30px; line-height: 44px; }
